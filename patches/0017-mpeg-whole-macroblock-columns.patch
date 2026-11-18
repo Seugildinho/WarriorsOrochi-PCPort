@@ -1,0 +1,41 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp b/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
+index 47b6a69..939116e 100644
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
+@@ -783,9 +783,12 @@ namespace ps2_stubs
+                        : 0u;
+         }
+ 
+-        uint32_t align16(uint32_t value)
++        // Games size and read the macroblock-column image with width >> 4 and
++        // height >> 4. A 640x360 movie therefore has 352-line columns; padding
++        // each column to 368 lines skews every column and overruns the buffer.
++        uint32_t wholeMacroblocks(uint32_t value)
+         {
+-            return (value + 15u) & ~15u;
++            return std::max(value & ~15u, 16u);
+         }
+ 
+         uint32_t readStackArg(uint8_t *rdram, R5900Context *ctx, uint32_t offset)
+@@ -1678,8 +1681,8 @@ namespace ps2_stubs
+                 return;
+             }
+ 
+-            const uint32_t outWidth = align16(width == 0u ? kStubMovieWidth : width);
+-            const uint32_t outHeight = align16(height == 0u ? kStubMovieHeight : height);
++            const uint32_t outWidth = wholeMacroblocks(width == 0u ? kStubMovieWidth : width);
++            const uint32_t outHeight = wholeMacroblocks(height == 0u ? kStubMovieHeight : height);
+             const uint32_t macroblockColumns = outWidth / 16u;
+             for (uint32_t mbx = 0u; mbx < macroblockColumns; ++mbx)
+             {
+@@ -1714,8 +1717,8 @@ namespace ps2_stubs
+ 
+             const uint32_t width = static_cast<uint32_t>(frame.width);
+             const uint32_t height = static_cast<uint32_t>(frame.height);
+-            const uint32_t outWidth = align16(width);
+-            const uint32_t outHeight = align16(height);
++            const uint32_t outWidth = wholeMacroblocks(width);
++            const uint32_t outHeight = wholeMacroblocks(height);
+             const uint32_t macroblockColumns = outWidth / 16u;
+ 
+             for (uint32_t mbx = 0u; mbx < macroblockColumns; ++mbx)

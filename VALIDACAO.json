@@ -1,0 +1,315 @@
+{
+  "date": "2026-10-23",
+  "executable": "WarriorsOrochi-native-prototype.exe",
+  "bytes": 209068032,
+  "sha256": "a972ca58d0084c17d4922c7856673ac0cfada032b247a8dfd65fc8f9eef1ce83",
+  "regression_suites_passed": 15,
+  "regressions": {
+    "executable_sha256": "a972ca58d0084c17d4922c7856673ac0cfada032b247a8dfd65fc8f9eef1ce83",
+    "tests": [
+      {
+        "test": "--test-dma",
+        "exit_code": 0,
+        "stdout": "[DMA regression] normal DMA reads main RAM: PASS\n[DMA regression] normal DMA SPR bit reads scratchpad: PASS\n[DMA regression] REFE tag preserves ADDR.SPR: PASS\n[DMA regression] chain TADR.SPR reads scratchpad: PASS\n[DMA regression] CPU KSEG0 remains main RAM: PASS\n[DMA regression] IPU STR survives status reads until real completion: PASS\n",
+        "stderr": ""
+      },
+      {
+        "test": "--test-vsync",
+        "exit_code": 0,
+        "stdout": "[VSync regression] three callbacks preserve cause, GP and isolated stack: PASS hits=3 failures=0\n",
+        "stderr": ""
+      },
+      {
+        "test": "--test-gif",
+        "exit_code": 0,
+        "stdout": "[gs:reg] idx=0 reg=0x50 value=0x1004000000000\n[gs:reg] idx=1 reg=0x51 value=0x0\n[gs:reg] idx=2 reg=0x52 value=0x400000004\n[gs:reg] idx=3 reg=0x53 value=0x0\n[gs:gif] idx=0 size=80 nloop=4 flg=0 nreg=1 ctx0fbp=0 ctx1fbp=0\n[gs:reg] idx=4 reg=0x50 value=0x1004000000000\n[gs:reg] idx=5 reg=0x51 value=0x0\n[gs:reg] idx=6 reg=0x52 value=0x400000004\n[gs:reg] idx=7 reg=0x53 value=0x0\n[gs:gif] idx=1 size=80 nloop=4 flg=2 nreg=16 ctx0fbp=0 ctx1fbp=0\n[GIF regression] fragmented IMAGE matches complete upload and preserves display registers: PASS\n[GIF regression] interleaved paths retain their own incomplete image packet: PASS\n[gs:gif] idx=2 size=80 nloop=4 flg=0 nreg=1 ctx0fbp=0 ctx1fbp=0\n[gs:reg] idx=8 reg=0x50 value=0x1004000000000\n[gs:reg] idx=9 reg=0x51 value=0x0\n[gs:reg] idx=10 reg=0x52 value=0x400000004\n[gs:reg] idx=11 reg=0x53 value=0x0\n[gs:gif] idx=3 size=80 nloop=4 flg=2 nreg=16 ctx0fbp=0 ctx1fbp=0\n[GIF regression] separate VIF DIRECTHL commands preserve IMAGE payload: PASS\n[gs:reg] idx=12 reg=0x50 value=0x1004000000000\n[gs:reg] idx=13 reg=0x51 value=0x0\n[gs:reg] idx=14 reg=0x52 value=0x400000004\n[gs:reg] idx=15 reg=0x53 value=0x0\n[GIF regression] a truncated VIF DIRECTHL resumes its own payload: PASS\n",
+        "stderr": ""
+      },
+      {
+        "test": "--test-display",
+        "exit_code": 0,
+        "stdout": "[Display regression] interlaced FRAME reads half-height then doubles lines: PASS\n[Display regression] progressive and interlaced FIELD remain distinct: PASS\n",
+        "stderr": ""
+      },
+      {
+        "test": "--test-pad",
+        "exit_code": 0,
+        "stdout": "[padread] port=0 slot=0 data2=0xf7 data3=0xff guestButtons=0x0800 enter=0 gamepadStart=0\n[padread] port=0 slot=0 data2=0xf7 data3=0xff guestButtons=0x0800 enter=0 gamepadStart=0\n[Pad regression] successful read returns 32 and preserves packet/guards: PASS\n[padread] port=0 slot=0 data2=0xf7 data3=0xff guestButtons=0x0800 enter=0 gamepadStart=0\n[Pad regression] original game caller accepts the packet: PASS\n[Pad regression] unopened port stays a failed read without writes: PASS\n[Pad regression] packet crossing RAM boundary fails without writes: PASS\n",
+        "stderr": ""
+      },
+      {
+        "test": "--test-overlay",
+        "exit_code": 0,
+        "stdout": "[Overlay regression] unsupported module stops before loader writes or constructors: PASS\n",
+        "stderr": "[Orochi:blocker] Overlay not compiled; requested=1 caller=0x152030\n"
+      },
+      {
+        "test": "--test-switch",
+        "exit_code": 0,
+        "stdout": "[Switch regression] all eight entries execute their own case, both branches: PASS cases=16/16\n",
+        "stderr": ""
+      },
+      {
+        "test": "--test-sif",
+        "exit_code": 0,
+        "stdout": "[Orochi:sif-sreg] index=24 received=0x1 guest=0x1\n[SIF regression] native transport delivers packet to original handler and game reader: PASS\n[SIF regression] repeated initialization preserves received state: PASS\n",
+        "stderr": ""
+      },
+      {
+        "test": "--test-iop-memory",
+        "exit_code": 0,
+        "stdout": "[IOP memory regression] 100 music-buffer allocation/free cycles reuse space: PASS\n[IOP memory regression] fragmented heap reports largest and total free bytes: PASS\n[IOP memory regression] fixed blocks, overflow, overlap, alignment and ownership: PASS\n",
+        "stderr": ""
+      },
+      {
+        "test": "--test-iop-loader",
+        "exit_code": 0,
+        "stdout": "[IOP loader regression] modules and large audio buffers share real RAM without overlap: PASS\n[IOP loader regression] released image reservation is reusable: PASS\n[IOP loader regression] malformed, wrapped and colliding images preserve live allocations: PASS\n",
+        "stderr": ""
+      },
+      {
+        "test": "--test-syncv",
+        "exit_code": 0,
+        "stdout": "[SyncV regression] original movie handshake completes from either field with guest-programmed SMODE2: PASS\n[SyncV regression] progressive mode retains the SDK return value: PASS\n",
+        "stderr": ""
+      },
+      {
+        "test": "--test-mpeg-audio",
+        "exit_code": 0,
+        "stdout": "[MPEG audio regression] original SDK audio selectors 3 and 4 preserve their private headers: PASS\n[MPEG audio regression] split PES preserves payload address/length and rejects a different stream ID: PASS\n[MPEG audio regression] original game callback copies only the audio header into its own queue: PASS\n",
+        "stderr": "[MPEG:DemuxPss] mpeg=0x8000 data=0x10000 bytes=21 consumed=21 decoded=0 callbacks=1\n[MPEG:DemuxPss] mpeg=0x8000 data=0x10000 bytes=21 consumed=21 decoded=0 callbacks=1\n[MPEG:DemuxPss] mpeg=0x8000 data=0x10000 bytes=8 consumed=8 decoded=0 callbacks=0\n[MPEG:DemuxPss] mpeg=0x8000 data=0x30000 bytes=13 consumed=13 decoded=0 callbacks=1\n[MPEG:DemuxPss] mpeg=0x8000 data=0x10000 bytes=21 consumed=21 decoded=0 callbacks=0\n[MPEG:DemuxPss] mpeg=0x8000 data=0x801100 bytes=21 consumed=21 decoded=0 callbacks=1\n"
+      },
+      {
+        "test": "--test-mpeg-transport",
+        "exit_code": 0,
+        "stdout": "[Orochi:mpeg-native] accepted bytes=1\n[MPEG transport regression] wrong/foreign/duplicate receipts rejected and EOF waits for acknowledgment: PASS\n[MPEG transport regression] SDK end queries wait for decoded output and presentation; physical IPU ring unchanged: PASS\n",
+        "stderr": "[MPEG:feedES] #0 size=1 first4=55 decoderFailed=0 waitSeq=1\n[MPEG:DemuxPss] mpeg=0x8000 data=0x10000 bytes=10 consumed=10 decoded=0 callbacks=1\n[MPEG:IsEnd] mpeg=0x8000 ended=0 producerEof=0 seqEnd=0 streamEnded=0 presentationComplete=1 frames=1 sawInput=1\n[MPEG:IsEnd] mpeg=0x8000 ended=1 producerEof=1 seqEnd=0 streamEnded=1 presentationComplete=1 frames=1 sawInput=1\n[MPEG:GetPicture:FRAME] mpeg=0x8000 generation=0 frame=0 queued=0 size=16x16\n[MPEG:IsEnd] mpeg=0x8000 ended=1 producerEof=1 seqEnd=0 streamEnded=1 presentationComplete=0 frames=0 sawInput=1\n[MPEG:IsEnd] mpeg=0x8000 ended=1 producerEof=1 seqEnd=0 streamEnded=1 presentationComplete=1 frames=0 sawInput=1\n"
+      },
+      {
+        "test": "--test-gpu",
+        "exit_code": 0,
+        "stdout": "[Orochi:gpu] hardware=D3D11 adapter=AMD Radeon RX 9060 XT feature=11.0 scope=constant-color-sprites\n[gs:prim] idx=0 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[Orochi:gpu-draw] sprites=1 pixels=12508 cpuFallbacks=0\n[gs:prim] idx=1 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30401 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=2 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x31401 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=3 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x32401 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=4 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x33401 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=5 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30403 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=6 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x31403 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=7 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x32403 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=8 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x33403 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=9 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30405 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=10 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x31405 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=11 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x32405 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=12 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x33405 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=13 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30407 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=14 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x31407 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=15 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x32407 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=16 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x33407 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=17 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30409 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=18 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x31409 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=19 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x32409 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=20 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x33409 alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=21 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3040b alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=22 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3140b alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=23 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3240b alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=24 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3340b alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=25 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3040d alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=26 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3140d alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=27 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3240d alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=28 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3340d alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=29 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3040f alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=30 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3140f alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=31 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3240f alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=32 type=6 tme=0 abe=0 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x3340f alpha=0x0 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=33 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000000 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=34 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000001 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=35 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000002 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=36 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000003 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=37 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000004 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=38 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000005 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=39 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000006 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=40 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000007 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=41 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000008 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=42 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000009 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=43 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x610000000a v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=44 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x610000000b v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=45 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x610000000c v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=46 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x610000000d v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=47 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x610000000e v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=48 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x610000000f v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=49 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000010 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=50 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000011 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=51 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000012 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=52 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000013 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=53 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000014 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=54 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000015 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=55 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000016 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=56 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000017 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=57 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000018 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=58 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x6100000019 v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=59 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x610000001a v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=60 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x610000001b v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=61 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x610000001c v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=62 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x610000001d v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[gs:prim] idx=63 type=6 tme=0 abe=1 fst=0 ctxt=0 fbp=4 fbw=8 psm=0x0 tex0=(tbp0=0 tbw=0 psm=0x0 tw=0 th=0 tcc=0 tfx=0 cbp=0 cpsm=0x0 csm=0 csa=0) texclut=(cbw=0 cou=0 cov=0) ofx=0 ofy=0 scissor=(3,5)-(120,110) test=0x30000 alpha=0x610000001e v0=(0,0) uv0=(0,0) stq0=(0,0,1) v1=(128,112) uv1=(0,0) stq1=(0,0,1) v2=(0,0) uv2=(0,0) stq2=(0,0,1) rgba0=(0,0,0,0) rgba1=(213,109,47,64) rgba2=(0,0,0,0)\n[GPU regression] 298 complete-VRAM comparisons PASS; hardwareSprites=297 fallbacks=1\n[Orochi:gpu-summary] sprites=297 pixels=3714876 cpuFallbacks=1 uploads=2 readbacks=297\n",
+        "stderr": ""
+      },
+      {
+        "test": "orochi_ipu_check",
+        "exit_code": 0,
+        "stdout": "[ipu-check] PASS size=512x384 payload=12401 diffBytes=0 maxDelta=0 iterations=50 avgMs=0.311\n",
+        "stderr": ""
+      }
+    ],
+    "passed": true
+  },
+  "title_screen_visually_verified": true,
+  "main_menu_verified": true,
+  "story_select_verified": true,
+  "shu_camp_verified": true,
+  "weapon_and_ability_screens_verified": true,
+  "gameplay_verified": false,
+  "audio_verified": false,
+  "physical_controller_verified": false,
+  "saves_verified": false,
+  "graphics_backend": "D3D11 Compute (OrochiGpuBackend) with CPU fallback",
+  "window_presentation": "OpenGL/raylib",
+  "vulkan_integrated": false,
+  "verified_overlays": [
+    "ovl_00.bin"
+  ],
+  "latest_boot_seconds": 291.2,
+  "first_missing_function": null,
+  "runtime_blocker": null,
+  "next_work": "Trace live IOP allocations and frees around movie transitions: 0x52000-byte music request fails with largestFree=0x43670, totalFree=0x6d8f0. Then repeat Ueda/difficulty/chapter and first battle; do not force music state or enlarge RAM",
+  "scenario_select_verified": false,
+  "difficulty_select_verified": false,
+  "chapter_intro_verified": false,
+  "chapter_exit_black_screen_verified": false,
+  "semantic_blocker": "Known music buffer allocation failure after the startup movies: fragmented IOP RAM; menus remain navigable; no battle tested",
+  "github_updates_paused": true,
+  "code_map": {
+    "main_ranges": 5922,
+    "overlay_ranges": 166,
+    "jump_case_splits": 2,
+    "ranges": 6090,
+    "non_overlapping": true,
+    "aligned": true,
+    "known_indirect_entries": 149,
+    "all_known_indirect_entries_registered": true
+  },
+  "iop_heap_comparison": {
+    "upstream_commit": "eb8688b2fd191129f103a39543002c005b33409c",
+    "buffer_bytes": 335872,
+    "before": {
+      "exit_code": 1,
+      "failed_cycle": 3
+    },
+    "after": {
+      "exit_code": 0,
+      "cycles_passed": 100
+    },
+    "test_sources_private_directory": "local/tests/iop-heap-comparison",
+    "corrected_source_sha256": "aff4c30e8af5839fddd0d825e5290089092fd6eeb0f92e3b0f7f222db26a61fd"
+  },
+  "local_source_checkpoint": "local/checkpoints/20261022-native-video-menus-202829",
+  "historical_verification": {
+    "executable_sha256": "923828cd170aff20d22404b7c5aaf10607d75a38c3a888a7eabbdf752447ae88",
+    "note": "Observed in the prior build before enabling the corrected IOP pool and MPEG decoding; must be repeated after resolving startup movie",
+    "verified_overlays": [
+      "ovl_00.bin"
+    ],
+    "title_screen_visually_verified": true,
+    "main_menu_verified": true,
+    "story_select_verified": true,
+    "shu_camp_verified": true,
+    "scenario_select_verified": true,
+    "difficulty_select_verified": true,
+    "chapter_intro_verified": true,
+    "chapter_exit_black_screen_verified": true
+  },
+  "iop_compatibility": {
+    "tests": 4,
+    "passed": true,
+    "exit_code": 0,
+    "output": "Internal ctest changing into directory: D:/Ps2/Warriors/port_pc/build-iop-checks\nTest project D:/Ps2/Warriors/port_pc/build-iop-checks\n    Start 1: ps2_iop_emulator_tests\n1/4 Test #1: ps2_iop_emulator_tests ...........   Passed    0.09 sec\n    Start 2: ps2_iop_import_tests\n2/4 Test #2: ps2_iop_import_tests .............   Passed    0.76 sec\n    Start 3: ps2_iop_compatibility_tests\n3/4 Test #3: ps2_iop_compatibility_tests ......   Passed    0.11 sec\n    Start 4: ps2_iop_import_version_tests\n4/4 Test #4: ps2_iop_import_version_tests .....   Passed    0.62 sec\n\n100% tests passed, 0 tests failed out of 4\n\nTotal Test time (real) =   1.59 sec\n"
+  },
+  "patch_reproduction": {
+    "upstream_commit": "eb8688b2fd191129f103a39543002c005b33409c",
+    "patches": {
+      "0001-dmac-addressing-and-status.patch": "5417b65bf65d09941a219921e102dd57092956a562bb2313e6ba302fe8d5a2a3",
+      "0002-vsync-callback-cause.patch": "4e6ff7dd865a2b696c1c072ea1dddc6e696695376c05ca8c2596f01146aea6be",
+      "0003-gif-fragmented-stream.patch": "4b783e7a342591fa63781ff4959c09d5c6f759265d09d0836eba8a2cc9273034",
+      "0004-vif-direct-payload.patch": "2907c3986deaf99383dbdd0b410e6f247e9f6cef7c20671e1d010783b8e95c4f",
+      "0005-interlaced-frame-presentation.patch": "95c54281cd972b3c8099b3ace3d170247d99bae85daee8916a09de268effb7d5",
+      "0006-iop-heap-reuse.patch": "38789986a42b917f99a9d2be034da7d259f660081ef252549ce901d6fbf18f81",
+      "0007-iop-rpc-diagnostics.patch": "3fd383719d53ce15e8630c7ef4935c96094344c0f7db5278c811d1f422140d07",
+      "0008-iop-shared-memory-pool.patch": "92bcb366880d508fb898e6886f631d11a9d6dc036c0082a3f715e1b579b3e2ed",
+      "0009-ffmpeg-package-hash.patch": "3f9b692b55be6b575449d4107634422510d49562992a22f820ece975a0265ffc",
+      "0010-syncv-effective-interlace.patch": "7f61ed589a2114f344d635b9771c43a0d053a65c493f4d227dac0737df089ee1",
+      "0011-mpeg-stream-selectors.patch": "f2f7115defd69bf4b7ed7299569bbf175a1478d7761211e3e504ef148ba27356",
+      "0012-mpeg-native-input-ownership.patch": "c1ee3bc4d299764395886aa429f0d8db841f8bc33e7d0456660b5f1b0d233117"
+    },
+    "files_match_working_tree": {
+      "ps2xIOP/src/emulator/core/iop_memory.cpp": true,
+      "ps2xIOP/src/emulator/core/iop_memory.h": true,
+      "ps2xIOP/src/emulator/imports/iop_sysmem.cpp": true,
+      "ps2xIOP/src/emulator/iop_emulator.cpp": true,
+      "ps2xIOP/src/emulator/services/iop_module_loader.cpp": true,
+      "ps2xIOP/src/emulator/services/iop_rpc.cpp": true,
+      "ps2xIOP/src/emulator/services/iop_rpc.h": true,
+      "ps2xRuntime/CMakeLists.txt": true,
+      "ps2xRuntime/include/runtime/gs/gs_frontend.h": true,
+      "ps2xRuntime/include/runtime/gs/ps2_gif_arbiter.h": true,
+      "ps2xRuntime/include/runtime/ps2_memory.h": true,
+      "ps2xRuntime/src/lib/Kernel/EeScheduler.cpp": true,
+      "ps2xRuntime/src/lib/Kernel/Stubs/GS.cpp": true,
+      "ps2xRuntime/src/lib/Kernel/Stubs/Helpers/Support.h": true,
+      "ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp": true,
+      "ps2xRuntime/src/lib/Kernel/Stubs/MPEG.h": true,
+      "ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp": true,
+      "ps2xRuntime/src/lib/gs/gs_frontend.cpp": true,
+      "ps2xRuntime/src/lib/gs/ps2_gif_arbiter.cpp": true,
+      "ps2xRuntime/src/lib/ps2_memory.cpp": true,
+      "ps2xRuntime/src/lib/ps2_vif1_interpreter.cpp": true
+    },
+    "passed": true
+  },
+  "mpeg_ffmpeg_enabled": true,
+  "native_ffmpeg_package": {
+    "tag": "n7.1-241205",
+    "url": "https://github.com/System233/ffmpeg-msvc-prebuilt/releases/download/n7.1-241205/ffmpeg-n7.1-241205-lgpl-amd64-shared.zip",
+    "bytes": 35240955,
+    "sha256": "b985887dbca8c0a9a4c47f9d2bac7ec3ab994335b1b7fe7000bdb1dcd772ac68",
+    "usage": "Native MPEG-2 playback through the PS2Recomp FFmpeg integration; separate from the FFmpeg 8.1 CLI used for IPU images"
+  },
+  "previous_mpeg_audio_diagnostics": {
+    "executable_sha256": "c9ba1d3d734ba4c763b3bb7dce2c69a22257f154db635a2e14621823b4841ba6",
+    "boot_seconds": 119.95,
+    "iop_modules_loaded": 8,
+    "decoded_pictures_served": 149,
+    "frame_size": [
+      640,
+      448
+    ],
+    "original_audio_queue_state": 2,
+    "audio_header_bytes": 40,
+    "audio_bytes_transferred_to_iop": 262176,
+    "video_input_queue_pending_bytes": 518144,
+    "movie_start_flag": 1,
+    "movie_pending_display_flag": 0,
+    "sdk_stream_table": "0x306b80",
+    "sdk_audio_selectors": [
+      3,
+      4
+    ],
+    "private_header_preserved": true,
+    "image_visually_verified": false,
+    "audible_audio_verified": false,
+    "semantic_blocker": "Movie producer awaits original video input queue drain (0x114358 -> 0x116c68/0x116b48); native decoder awaits input with ended=0; screenshot remains black",
+    "previous_probe_directory": "local/tests/mpeg-selector-before-20261022-200346",
+    "before_correct_sdk_stream_selectors": {
+      "decoded_pictures_served": 2,
+      "audio_queue_state": 0,
+      "audio_bytes_transferred_to_iop": 0,
+      "movie_start_flag": 0,
+      "last_decoded_picture_index": 1
+    },
+    "last_decoded_picture_index": 148
+  },
+  "ability_equip_behavior_verified": false,
+  "startup_logos_visually_verified": true,
+  "native_video_end_verified": true,
+  "mpeg_transport_progress": {
+    "executable_sha256": "901d49b67b7be2db4cb8f3eefc4dda2d03007c6b84bd5f381326f59cea8916c8",
+    "boot_seconds": 291.2,
+    "previous_checkpoint_sha256": "c9ba1d3d734ba4c763b3bb7dce2c69a22257f154db635a2e14621823b4841ba6",
+    "native_input_ownership_verified": true,
+    "native_video_end_verified": true,
+    "physical_ipu_ring_counter_clear_used": false,
+    "startup_logos_visually_verified": true,
+    "verified_screens": {
+      "title": {
+        "source_ui_frame": 4800,
+        "path": "relatorios/title-native-20261022.png",
+        "sha256": "228d1ab32d15f14ba2bfc08c93bc4cd31d28712d81fbafd771f3880a6e30414f"
+      },
+      "main_menu": {
+        "source_ui_frame": 7800,
+        "path": "relatorios/main_menu-native-20261022.png",
+        "sha256": "f2efa11145021238619f93640c8a6dfe69b9d60a1d0632b22f6c85d73d74cc23"
+      },
+      "story_select": {
+        "source_ui_frame": 9360,
+        "path": "relatorios/story_select-native-20261022.png",
+        "sha256": "5815a831a2603799b9543555306bd0f84588ae657f21ac7ebdc23c2568194ab3"
+      },
+      "shu_camp": {
+        "source_ui_frame": 12000,
+        "path": "relatorios/shu_camp-native-20261022.png",
+        "sha256": "71ffea47c33804b37ef344f151ecc8a3592509615562c089a90f7b5ca49d9ac1"
+      },
+      "weapon_detail": {
+        "source_ui_frame": 14880,
+        "path": "relatorios/weapon_detail-native-20261022.png",
+        "sha256": "4313c71e3e13083103e78ddc163db91b783b5daac78e957c2a7b1678e1d240f6"
+      },
+      "abilities_empty": {
+        "source_ui_frame": 16320,
+        "path": "relatorios/abilities_empty-native-20261022.png",
+        "sha256": "3589cdd977f637150fbc34bd10c5efc7670b9046e03871d66f8011c697a4e963"
+      }
+    },
+    "ability_screen_limit": "Initial acquired/equipped slots are empty; equipping acquired abilities not tested",
+    "gameplay_verified": false,
+    "audible_audio_verified": false,
+    "iop_music_allocation_issue": {
+      "requested_bytes": 335872,
+      "largest_free_bytes": 276080,
+      "total_free_bytes": 448752,
+      "rpc_function": "0x92",
+      "rpc_result": -3,
+      "menus_remain_navigable": true
+    },
+    "previous_probe_directory": "local/tests/before-native-mpeg-transport-20261022-201830"
+  },
+  "github_backup_authorized_date": "2026-10-22",
+  "github_update_policy": "This checkpoint upload authorized; future automatic updates remain paused"
+}

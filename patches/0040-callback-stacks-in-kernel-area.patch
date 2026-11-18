@@ -1,0 +1,68 @@
+diff --git a/ps2xRuntime/include/ps2_runtime.h b/ps2xRuntime/include/ps2_runtime.h
+index 8b9ab83..c7262a8 100644
+--- a/ps2xRuntime/include/ps2_runtime.h
++++ b/ps2xRuntime/include/ps2_runtime.h
+@@ -519,6 +519,9 @@ private:
+     bool m_guestHeapConfigured = false;
+     uint32_t m_asyncCallbackStackFloor = 0x01F00000u;
+     uint32_t m_asyncCallbackStackTop = PS2_RAM_SIZE;
++    // Interrupt/callback stacks come first from the EE kernel's area, which
++    // guest programs never use (see reserveAsyncCallbackStack).
++    uint32_t m_kernelCallbackStackTop = 0x00080000u;
+ 
+     std::atomic<uint32_t> m_missingFunctionPolicy{static_cast<uint32_t>(MissingFunctionPolicy::ContinueToTarget)};
+     std::atomic<bool> m_missingFunctionReported{false};
+diff --git a/ps2xRuntime/src/lib/ps2_runtime.cpp b/ps2xRuntime/src/lib/ps2_runtime.cpp
+index 54551df..d3b4a89 100644
+--- a/ps2xRuntime/src/lib/ps2_runtime.cpp
++++ b/ps2xRuntime/src/lib/ps2_runtime.cpp
+@@ -94,6 +94,11 @@ namespace
+     constexpr uint32_t kGuestHeapDefaultAlignment = 16u;
+     constexpr uint32_t kGuestHeapSafetyPad = 0x1000u;
+     constexpr uint32_t kGuestHeapHardLimit = 0x01F00000u;
++    // EE kernel area (below the ELF's 0x100000) the runtime keeps its own
++    // interrupt and callback stacks in, as the console's kernel does. The
++    // syscall table mirror (0x11F80) and probe (0x2F0) stay below the floor.
++    constexpr uint32_t kKernelCallbackStackFloor = 0x00020000u;
++    constexpr uint32_t kKernelCallbackStackTop = 0x00080000u;
+ 
+     constexpr uint32_t COP0_CAUSE_EXCCODE_MASK = 0x0000007Cu;
+     constexpr uint32_t COP0_CAUSE_BD = 0x80000000u;
+@@ -503,6 +508,7 @@ PS2Runtime::PS2Runtime()
+     m_guestHeapConfigured = false;
+     m_asyncCallbackStackFloor = std::min(kGuestHeapHardLimit, PS2_RAM_SIZE);
+     m_asyncCallbackStackTop = PS2_RAM_SIZE;
++    m_kernelCallbackStackTop = kKernelCallbackStackTop;
+ }
+ 
+ void PS2Runtime::setDebugUiCallbacks(DebugUiCallback initCallback,
+@@ -983,6 +989,7 @@ bool PS2Runtime::loadELF(const std::string &elfPath)
+         const uint32_t hardLimit = std::min(kGuestHeapHardLimit, PS2_RAM_SIZE);
+         m_asyncCallbackStackFloor = std::min(std::max(hardLimit, suggestedHeapBase), PS2_RAM_SIZE);
+         m_asyncCallbackStackTop = PS2_RAM_SIZE;
++        m_kernelCallbackStackTop = kKernelCallbackStackTop;
+     }
+ 
+     LoadedModule module;
+@@ -2035,6 +2042,21 @@ uint32_t PS2Runtime::reserveAsyncCallbackStack(uint32_t size, uint32_t alignment
+     }
+ 
+     std::lock_guard<std::mutex> lock(m_asyncCallbackStackMutex);
++    // The top of RAM belongs to the game (Orochi loads its pause background
++    // there): handler frames written in it showed as dashed lines every 16 KB.
++    const uint32_t kernelBase = (m_kernelCallbackStackTop - allocSize) & ~(normalizedAlignment - 1u);
++    if (m_kernelCallbackStackTop > allocSize && kernelBase >= kKernelCallbackStackFloor)
++    {
++        const uint32_t kernelTop = m_kernelCallbackStackTop;
++        m_kernelCallbackStackTop = kernelBase;
++        return kernelTop - 0x10u;
++    }
++    static bool reported = false;
++    if (!reported)
++    {
++        reported = true;
++        std::cerr << "[runtime] kernel-area callback stacks exhausted; using the top of guest RAM" << std::endl;
++    }
+     uint32_t top = m_asyncCallbackStackTop;
+     if (top > PS2_RAM_SIZE)
+     {

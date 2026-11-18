@@ -1,0 +1,1766 @@
+{
+  "elf_sha256": "40e68b87a4a000000a1b22b07f71f601073109c77fa3b8840d5286afe2eb75db",
+  "initializer_table_start": "0x00357f20",
+  "initializer_table_end": "0x00357f54",
+  "evidence": "First native boot: JALR at 0x001250e4 reads constructor targets from this table; a0=0x00357f20, a1=0x00357f54.",
+  "traced_entry_points": [
+    "0x00100c60",
+    "0x2ae5a0"
+  ],
+  "recompile_sdk_functions": [
+    "sceVu0ApplyMatrix",
+    "sceVu0MulMatrix",
+    "sceVu0InnerProduct",
+    "sceVu0Normalize",
+    "sceVu0TransposeMatrix",
+    "sceVu0InversMatrix",
+    "sceVu0DivVector",
+    "sceVu0DivVectorXYZ",
+    "sceVu0InterVector",
+    "sceVu0TransMatrix",
+    "sceVu0CopyMatrix",
+    "sceVu0UnitMatrix",
+    "_sceVu0ecossin",
+    "sceVu0RotMatrixZ",
+    "sceVu0RotMatrixX",
+    "sceVu0RotMatrixY",
+    "sceVu0RotMatrix",
+    "sceVu0ClampVector",
+    "sceVu0CameraMatrix",
+    "sceVu0NormalLightMatrix",
+    "sceVu0LightColorMatrix",
+    "sceVu0ViewScreenMatrix",
+    "sceVu0DropShadowMatrix",
+    "sceVu0RotTransPersN",
+    "sceVu0RotTransPers",
+    "sceVu0InterVectorXYZ",
+    "sceVu0ClipScreen",
+    "sceVu0ClipScreen3",
+    "sceVu0ClipAll",
+    "sceGsResetGraph",
+    "sceGsResetPath",
+    "sceGsSetDefDispEnv",
+    "sceGsPutDispEnv",
+    "sceGszbufaddr",
+    "sceGsSetDefDrawEnv",
+    "sceGsSetDefClear",
+    "sceGsPutDrawEnv",
+    "sceGsSetDefDBuff",
+    "sceGsSwapDBuff",
+    "sceGsSetDefLoadImage",
+    "sceGsExecLoadImage",
+    "sceGsSetDefDrawEnv2",
+    "sceGsSetDefDBuffDc",
+    "sceGsSwapDBuffDc"
+  ],
+  "indirect_tables": [
+    {
+      "start": "0x003377f0",
+      "end": "0x00337fd0",
+      "stride": 48,
+      "pointer_offsets": [
+        0,
+        4,
+        8,
+        12,
+        20,
+        24,
+        28,
+        32,
+        36,
+        40,
+        44
+      ],
+      "allow_null": true,
+      "evidence": "Native object initialization: JALR 0x266914 selected record 31 at s0=0x337dc0 -> 0x27bb80. Original 0x2668fc sets base 0x3377f0, 0x266924 limits 42 records, and 0x26692c advances 48 bytes. All listed fields contain callbacks or null; offset 16 contains numeric flags and is excluded. The following string is ObjAction.c."
+    },
+    {
+      "start": "0x00320fe0",
+      "end": "0x00321038",
+      "stride": 8,
+      "evidence": "After exiting the Ueda chapter introduction, JALR 0x1ad1e0 loads callbacks at 0x320fe0+s1*8 with an argument in the next word. Captured s1=9 and t0=0x321028 select 0x236020. Eleven records end at the DistantView.c string."
+    },
+    {
+      "start": "0x00313bc0",
+      "end": "0x00313be4",
+      "evidence": "After the DMA fix, JALR at 0x002b871c called 0x002babb0. This contiguous callback table also contains 0x002bab80, 0x002bab30 and 0x002bab40."
+    }
+  ],
+  "jump_tables": [
+    {
+      "start": "0x003387b0",
+      "end": "0x003387d0",
+      "branch": "0x00270ddc",
+      "expected_targets": [
+        "0x270de8",
+        "0x270de8",
+        "0x270de8",
+        "0x270de8",
+        "0x270e00",
+        "0x270e00",
+        "0x270e18",
+        "0x270e18"
+      ],
+      "evidence": "Native Ueda chapter exit: JR s3 at 0x270ddc, t0=0x3387b0, s1=4, target=0x270e00. The verified ELF table contains eight entries inside already decoded function ranges."
+    },
+    {
+      "start": "0x0031da40",
+      "end": "0x0031da60",
+      "branch": "0x00158a64",
+      "expected_targets": [
+        "0x158a70",
+        "0x158a78",
+        "0x158a80",
+        "0x158a88",
+        "0x158a90",
+        "0x158a98",
+        "0x158aa0",
+        "0x158ab0"
+      ],
+      "evidence": "First battle after the story scene (manual run 2026-10-24): JR a0 at 0x158a64 jumped to 0x158a78 with a2=0x31da40. Original 0x158a48 computes index t2-9, 0x158a4c SLTIU limits it to 8, 0x158a58-0x158a60 load the word from this table. All eight targets lie in the decoded blocks 0x158a70-0x158aac and 0x158ab0-0x158af4."
+    }
+  ],
+  "overlay_direct_calls": {
+    "0x1d5190": [
+      "0x81d8ac"
+    ],
+    "0x2ae390": [
+      "0x8248fc",
+      "0x8259b4",
+      "0x825a38",
+      "0x827484",
+      "0x827a34",
+      "0x827ab8"
+    ],
+    "0x2a2740": [
+      "0x8286fc"
+    ],
+    "0x2e97b0": [
+      "0x828b4c",
+      "0x828bac",
+      "0x828e54",
+      "0x8290bc",
+      "0x829258",
+      "0x8292b8",
+      "0x829560",
+      "0x8296ac",
+      "0x82970c",
+      "0x8299b4",
+      "0x82a8e4",
+      "0x82a9d0",
+      "0x82abcc",
+      "0x82ae60",
+      "0x82af4c",
+      "0x82b148",
+      "0x82b3b0",
+      "0x82b624",
+      "0x82b710",
+      "0x82b90c"
+    ],
+    "0x2a2730": [
+      "0x829e8c"
+    ],
+    "0x113d40": [
+      "0x82a058"
+    ],
+    "0x113d30": [
+      "0x82a064"
+    ],
+    "0x2ae5a0": [
+      "0x82ccbc",
+      "0x82f138",
+      "0x836144",
+      "0x83a978"
+    ],
+    "0x2ae510": [
+      "0x839498"
+    ]
+  },
+  "verified_return_leaves": [
+    {
+      "start": "0x001f2360",
+      "bytes": "0800e00300000000",
+      "caller": "0x00100630",
+      "evidence": "Idle main-menu transition in local/tests/performance-20261023/final-auto.json reached this exact target. Original ELF words are JR $ra (0x03e00008), NOP (0). Preserve all registers and return to ra; no fabricated success value."
+    }
+  ],
+  "traced_functions": [
+    {
+      "name": "orochi_traced_2949a0",
+      "start": "0x2949a0",
+      "end": "0x294b9c",
+      "sha256": "f444fe3cd7dafef0947b7b337931ce3abcd557f37be10ce0369f5d4caed583b7",
+      "evidence": "Actual JALR 0x221558 with s0=3 after executing 0x294ba0; final-geometry.json. All conditional branches stay in these 508 bytes; final JR ra at 0x294b94 and NOP delay slot end at 0x294b9c; following four bytes are alignment padding."
+    },
+    {
+      "name": "orochi_traced_294ba0",
+      "start": "0x294ba0",
+      "end": "0x294da0",
+      "sha256": "72ec58096258e9fe55893b9c2daa7a88756324e32f2b67d780c3df91d2becd81",
+      "evidence": "Actual JALR 0x221558 during idle/attract transition after the return-leaf fix. All decoded conditional branch targets stay within these 512 original bytes; the final JR ra at 0x294d98 has a NOP delay slot, ending exactly at the next mapped function 0x294da0."
+    },
+    {
+      "name": "orochi_traced_2e2020",
+      "start": "0x2e2020",
+      "end": "0x2e2078",
+      "sha256": "360c4fcd76d2fe82875172188b03b29d182139cf4d1713a04bc65d1acc9dba4d",
+      "evidence": "Actual indirect jump 0x2e3c84 -> 0x2e2020 in local/tests/performance-20261023/final-two-geometry.json; pointer is table word 0x3508c4 (table 0x3508c0 = 0x2e2080, 0x2e2020, 0x2e2000). Prologue addiu sp,-0x30 at 0x2e2020; branch targets 0x2e2044/0x2e2048 stay inside; final JR ra at 0x2e2070 with addiu sp delay slot ends at 0x2e2078; 0x2e2078-0x2e2080 is NOP padding before mapped FUN_002e2080."
+    },
+    {
+      "name": "orochi_traced_2e2000",
+      "start": "0x2e2000",
+      "end": "0x2e2018",
+      "sha256": "f796a1542b6881fb04a0d12d7111253f4c03d4952372322c4bf88f15c9d6b494",
+      "evidence": "Sibling entry of the same proven table (word 0x3508c8, also referenced from 0x336fb4). Leaf: lh 0x50(a0), BGEZL to 0x2e2010, tail J 0x2cb3e0 at 0x2e2010 with lw a0,0(a2) delay slot ending at 0x2e2018; 0x2e2018-0x2e2020 is NOP padding before 0x2e2020."
+    },
+    {
+      "name": "orochi_traced_2e1500",
+      "start": "0x2e1500",
+      "end": "0x2e1570",
+      "sha256": "5c013ea8353539d2fac8a058a204799237a1a4b27ae24eeb55cc8006f58173c6",
+      "evidence": "Unmapped pointer target from data table word(s) 0x350a5c; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e1570; ends exactly at the next start 0x2e1570. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e1570",
+      "start": "0x2e1570",
+      "end": "0x2e15e0",
+      "sha256": "688f361e100b65a929cbb0d04366d9f8387f65c89f4021740ce5c44ade0abfe2",
+      "evidence": "Unmapped pointer target from data table word(s) 0x350a58; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e15e0; ends exactly at the next start 0x2e15e0. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e15e0",
+      "start": "0x2e15e0",
+      "end": "0x2e1650",
+      "sha256": "3eae71e97a50360656643cbe7c78df18d5fb0a5aed6a26ac24a10f92d742bd58",
+      "evidence": "Unmapped pointer target from data table word(s) 0x350a54; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e1650; ends exactly at the next start 0x2e1650. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e1bf0",
+      "start": "0x2e1bf0",
+      "end": "0x2e1bf8",
+      "sha256": "4fb70670f067d779a370c99f462b5d2031ebc239be3119dace0e536f77474a54",
+      "evidence": "Unmapped pointer target from data table word(s) 0x350994; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e1bf8; 2 zero padding word(s) up to the next start 0x2e1c00. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e1c10",
+      "start": "0x2e1c10",
+      "end": "0x2e1c80",
+      "sha256": "c596ec5d3cff6d90f8fa6c6c6aa055abf873b0b0d007097dfd1b32fad10790b0",
+      "evidence": "Unmapped pointer target from data table word(s) 0x35094c; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e1c80; ends exactly at the next start 0x2e1c80. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e1c80",
+      "start": "0x2e1c80",
+      "end": "0x2e1cf0",
+      "sha256": "0a2dfd18da2e9449acf725c8de367b6434b9c700f2ad479b82644c2dbd739df6",
+      "evidence": "Unmapped pointer target from data table word(s) 0x350948; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e1cf0; ends exactly at the next start 0x2e1cf0. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e1cf0",
+      "start": "0x2e1cf0",
+      "end": "0x2e1d60",
+      "sha256": "d2bebd3528bc00987e0cb7e2d78b438a949a604a12283a0947495299ffc3d1e7",
+      "evidence": "Unmapped pointer target from data table word(s) 0x350944; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e1d60; ends exactly at the next start 0x2e1d60. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e1dd0",
+      "start": "0x2e1dd0",
+      "end": "0x2e1dfc",
+      "sha256": "e259373da0808e215e58c2a032c0ba18c277a83d189f410e43eab2ee568dd3b0",
+      "evidence": "Unmapped pointer target from data table word(s) 0x35093c; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e1dfc; 1 zero padding word(s) up to the next start 0x2e1e00. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e1e00",
+      "start": "0x2e1e00",
+      "end": "0x2e1e94",
+      "sha256": "55e490e1510503e965eae46b0cad0538b25e1c4589ad5c337e8411c3905c5a04",
+      "evidence": "Unmapped pointer target from data table word(s) 0x350938; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e1e94; 3 zero padding word(s) up to the next start 0x2e1ea0. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e1ea0",
+      "start": "0x2e1ea0",
+      "end": "0x2e1eec",
+      "sha256": "f82cc2a664842b6a9fea05e21a97255b682dd000a7c572217011ddeb47e6d4a4",
+      "evidence": "Unmapped pointer target from data table word(s) 0x350934; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e1eec; 1 zero padding word(s) up to the next start 0x2e1ef0. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e1f00",
+      "start": "0x2e1f00",
+      "end": "0x2e1f18",
+      "sha256": "33395db1b1abc17096c9f7f6a44c50159175bcf3750787a33353519ce6125245",
+      "evidence": "Unmapped pointer target from data table word(s) 0x3508d8; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e1f18; 2 zero padding word(s) up to the next start 0x2e1f20. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e1f20",
+      "start": "0x2e1f20",
+      "end": "0x2e1f78",
+      "sha256": "94553465a8e485576f94f125cfc88630d2e1b1578b9c2c5a2fa80983b9e082bc",
+      "evidence": "Unmapped pointer target from data table word(s) 0x3508d4; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e1f78; 2 zero padding word(s) up to the next start 0x2e1f80. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e4f20",
+      "start": "0x2e4f20",
+      "end": "0x2e4f30",
+      "sha256": "99221e09e613c28d66f97bb5a3224cfe7364106114326395414b249d0f205fd8",
+      "evidence": "Unmapped pointer target from data table word(s) 0x3580bc; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e4f30; ends exactly at the next start 0x2e4f30. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2e4f30",
+      "start": "0x2e4f30",
+      "end": "0x2e4f94",
+      "sha256": "e5b9b89147b5fcce2db7964d6c6e0621b95574b88bca019670d9ab925a02ad27",
+      "evidence": "Unmapped pointer target from data table word(s) 0x3580b8; same handler-table family as 0x2e2020 (local/tests/performance-20261023/after-2e2020.json blocked at 0x2e3b94 -> 0x2e1e00). Linear decode: every conditional branch target stays inside, no JR other than ra, final JR ra/J plus delay slot ends at 0x2e4f94; 3 zero padding word(s) up to the next start 0x2e4fa0. No overlap with mapped ranges."
+    },
+    {
+      "name": "orochi_traced_2c17c0",
+      "start": "0x2c17c0",
+      "end": "0x2c1850",
+      "sha256": "acbabaab6da866adb32aa49efe4c4446ebedc270f14902c327bce61e2f5ab378",
+      "evidence": "Tail-jump target of the 0x2c8f90 thunk (J 0x2c17c0), reached in the demo battle with the asynchronous VIF1 thread on 2026-10-26. Unmapped gap between FUN_002c1690 (ends 0x2c17b8, two NOPs of padding) and FUN_002c1850. All conditional branches (BC1F/BC1T/BEQL/BEQ) target 0x2c1834 or the final JR ra at 0x2c1848; its NOP delay slot ends exactly at 0x2c1850."
+    },
+    {
+      "name": "orochi_traced_2c8f90",
+      "start": "0x2c8f90",
+      "end": "0x2c8f9c",
+      "sha256": "437fb0a2c77c658f7c3131291f0dd115ffe149bccf9608bce3b3ac17fab16946",
+      "evidence": "Actual JALR from 0x2d32a0 (missing-target report 2026-10-26, demo battle). Three instructions between FUN_002c8ec0 (ends 0x2c8f90) and FUN_002c8fa0: SB a2,0xb(a1); J 0x2c17c0 with ADDIU a0,a0,4 in the delay slot; the following word is padding."
+    },
+    {
+      "name": "orochi_traced_2943d0",
+      "start": "0x2943d0",
+      "end": "0x2943e4",
+      "sha256": "984b4d353cb95a995808a3c5b26b1370911dee206461c1ac423b76f911bb8a8e",
+      "evidence": "Actual JALR from 0x24a784 (missing-target report 2026-10-26, title/attract sequence during the user's manual test). Five instructions in the gap between FUN_00293ce0 (JR ra at 0x2943c4, delay slot 0x2943c8, NOP padding at 0x2943cc) and FUN_002943f0: LW a0,16(a0); LW v1,-30728(gp); SW v1,0(a0); JR ra with SW a0,-30728(gp) in the delay slot (a list push), followed by NOP padding."
+    },
+    {
+      "name": "orochi_traced_104570",
+      "start": "0x104570",
+      "end": "0x1045c8",
+      "sha256": "1f26f7514873c5b24f9a80161cf0d4480f04a9c290559dd416b454881ad43966",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_113f98",
+      "start": "0x113f98",
+      "end": "0x113fa4",
+      "sha256": "b6ce25a0648b9514d230dc296c442bc9e1c88b954e8c1f80bd8996a77e5612d1",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1182d0",
+      "start": "0x1182d0",
+      "end": "0x1182dc",
+      "sha256": "258f55872fa46b55c4ef80751ba27db003095f75b2ab9dfb9b94ab9a8a568fc7",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_124d10",
+      "start": "0x124d10",
+      "end": "0x124d1c",
+      "sha256": "99beab1c3f2049248291034965e3ce4db21271cf3cacf87187a0dbade47d5a64",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_126840",
+      "start": "0x126840",
+      "end": "0x12684c",
+      "sha256": "1604c07d6f580e20fcc2f06a7e97bcbcfe49da62dced5b09d0148f879c61f551",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_127d80",
+      "start": "0x127d80",
+      "end": "0x127e1c",
+      "sha256": "2287fb7afe252e0ee422d9eff1601d898643cf8ef4225febb1864b55aea7da8c",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_128928",
+      "start": "0x128928",
+      "end": "0x1289d8",
+      "sha256": "17c63ac21ad21659315de45c048a554969f8e6b02a158d4acf11f67cc72088e6",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_12a040",
+      "start": "0x12a040",
+      "end": "0x12a078",
+      "sha256": "9c7716bd10aef1950761033142eea783a07157dbf31105446615053c1e3f91ec",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_12a078",
+      "start": "0x12a078",
+      "end": "0x12a08c",
+      "sha256": "b4efab26d115521552eba5224570127d33736ca3cb4bed9d4776d5b960db25e7",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_12a438",
+      "start": "0x12a438",
+      "end": "0x12a44c",
+      "sha256": "01e15e6c318732f044c68ed0efebb71769678948a9960e6d3956237b650e2441",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_12be00",
+      "start": "0x12be00",
+      "end": "0x12be1c",
+      "sha256": "c8875670b6e49ce8d5bc87310f187c88b1cd6198037aeaac0b4d7598fb4e5f57",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_12e6c0",
+      "start": "0x12e6c0",
+      "end": "0x12e790",
+      "sha256": "2f4ccbd776940d79b2a1342d398b0a87e1aa95b5cd6f9f524b09699714d50bcf",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_12f248",
+      "start": "0x12f248",
+      "end": "0x12f264",
+      "sha256": "a25d598ae148fa20b5d22e3892ec2617a1c5fb0c7b9f9daf10c9c3d6acd75d5a",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_12f268",
+      "start": "0x12f268",
+      "end": "0x12f288",
+      "sha256": "40f184d2496b3ffb77b0c10157d236087792c59a81c005ffb9f9a410866e7b67",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136870",
+      "start": "0x136870",
+      "end": "0x136880",
+      "sha256": "8066a9ddf86cbf3b2ffb65f87253b86433f9c42d1488af8b8791378d5aad345d",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136890",
+      "start": "0x136890",
+      "end": "0x1368a0",
+      "sha256": "6b7475a7cdd447533670619a18908c1ccd329c55fd97eb18e33fde7184afb1d9",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1368b0",
+      "start": "0x1368b0",
+      "end": "0x1368c0",
+      "sha256": "eef8b2985f64d6eae94cc4d5194352616094e5358f5d9392d3ce5a4b71ced6e2",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1368c0",
+      "start": "0x1368c0",
+      "end": "0x1368d0",
+      "sha256": "c9954b4c2ee25878782512ca07bee21492bb788a99853a51ad97739f2d595e3c",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1368d0",
+      "start": "0x1368d0",
+      "end": "0x1368e0",
+      "sha256": "2ad8e1c3f53686162abb35a13f3ce0e407f24faebfa80b2631f3bbbb50ceb491",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1368e0",
+      "start": "0x1368e0",
+      "end": "0x1368f0",
+      "sha256": "8b355c58d27263300c11a2604010845199d322282b9caffcce849a51b5a441bc",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1368f0",
+      "start": "0x1368f0",
+      "end": "0x136900",
+      "sha256": "fd130a7978031251186223d8df8df08f516104dae336fe18831a1823fc7aca76",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136900",
+      "start": "0x136900",
+      "end": "0x136910",
+      "sha256": "e615d275e085aef1652de7355bd971d67c3492473c64e566e7580c95e3e68c41",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136920",
+      "start": "0x136920",
+      "end": "0x136930",
+      "sha256": "36e9e5edba060d89c2b88d436fd82be2ede917544c24d5df29f96ca2306021cc",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136930",
+      "start": "0x136930",
+      "end": "0x136940",
+      "sha256": "bffddb5dd80deb092ec1defade678db3f82cb8baa993c1c200dbf2c0ccf7e574",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1369e0",
+      "start": "0x1369e0",
+      "end": "0x1369f0",
+      "sha256": "3c59284c95f244a03b900f24f843463a12d41b1e26c74a7227802c1a05f4cac0",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1369f0",
+      "start": "0x1369f0",
+      "end": "0x136a00",
+      "sha256": "f0b005ad39fdf49c92aab9c743efcb69e40bae1845bb2e039efb2166fb94aaf5",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136a40",
+      "start": "0x136a40",
+      "end": "0x136a50",
+      "sha256": "92dfe4bcae6129aaa697f14c861b091ff60255a966cb6da1cb12baee1192e6ec",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136a50",
+      "start": "0x136a50",
+      "end": "0x136a60",
+      "sha256": "da7a1d16c508ddf51d05a4859e673550113a0ac4a1a41c69a3a7335d8cc1a806",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136ac0",
+      "start": "0x136ac0",
+      "end": "0x136ad0",
+      "sha256": "cb36ff3be60c8a5902a9c224e807d2f095f48331076bacf06f6f34e76ab32a2f",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136ad0",
+      "start": "0x136ad0",
+      "end": "0x136ae0",
+      "sha256": "4f32a2872b22f8a7302eee6b7749805f31be6b1203d932a276993b2a57bf98e0",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136ae0",
+      "start": "0x136ae0",
+      "end": "0x136af0",
+      "sha256": "773ff37cc3cfc2236ddefa5578f5dbf6ce5f66aa5e468d0784c5a200b881c216",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136b00",
+      "start": "0x136b00",
+      "end": "0x136b10",
+      "sha256": "5d8b7d1dc85e0c2f2d316779f93f6ccdb5a9e5bc8d01174e0fa929f837e6c4f5",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136b20",
+      "start": "0x136b20",
+      "end": "0x136b30",
+      "sha256": "38cfd818d5fc50413c10e22a619d4bf39c2b37caa61ddad978536c0e3c631b6d",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136b30",
+      "start": "0x136b30",
+      "end": "0x136b40",
+      "sha256": "64adfb31977fb29487c92e8a045430198c02fbfbc3324f536083d106014e4246",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136b40",
+      "start": "0x136b40",
+      "end": "0x136b50",
+      "sha256": "4e44f15d1e780571f4532ef3f189fccee59847692472ee45d581e42fefa99b0b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136b70",
+      "start": "0x136b70",
+      "end": "0x136b80",
+      "sha256": "0bfbd15cb2871d5685aa93a4140a9b22fcc1a4691e63d2cb7aa309d1b82d6b40",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136bb0",
+      "start": "0x136bb0",
+      "end": "0x136bc0",
+      "sha256": "ea5cbd193010114e86b4d9405038a1a983f99feb837a9c5d863f43751f23bdc5",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136bc0",
+      "start": "0x136bc0",
+      "end": "0x136bd0",
+      "sha256": "88c0a2ff039963b5c7cfa047ff672913fe5768ec87585ae7078f6625b6efc41d",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136bf0",
+      "start": "0x136bf0",
+      "end": "0x136c00",
+      "sha256": "1e35a8f1d57d3a7d4812ac9d98194947bb637a102f018dbe12f94230ada33e9f",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136c00",
+      "start": "0x136c00",
+      "end": "0x136c10",
+      "sha256": "744e117d8c5c88115d9dd6f9fc07797a486cfdfaf7bd8bbbe2ac4e9273247d30",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136c10",
+      "start": "0x136c10",
+      "end": "0x136c20",
+      "sha256": "79b1453488a24283eeb888bbd783af4711fb5423bfd3402e09635dd02fce8094",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136c20",
+      "start": "0x136c20",
+      "end": "0x136c30",
+      "sha256": "75831fa24a2ca24b0f9e0726025e3490bcf68e855eef7295503e460245b37ddf",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136c30",
+      "start": "0x136c30",
+      "end": "0x136c40",
+      "sha256": "460fc6dacb45468d935ecbee51f4b5dafa52d2dbf9c707ba64ef70d018b64a22",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136c50",
+      "start": "0x136c50",
+      "end": "0x136c60",
+      "sha256": "f766e10c2a338c73556f74e508a2af782d03cb0010b2afc7e650efada9e3fdc4",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136cc0",
+      "start": "0x136cc0",
+      "end": "0x136cd0",
+      "sha256": "e5219c493daf7da52e963b11a4e2dc3e058471e1dacbd000a8e5df143d4fd7d7",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136cd0",
+      "start": "0x136cd0",
+      "end": "0x136ce0",
+      "sha256": "ef2da384d211ab502924f0829d97483ea97ae7a1b8f7826c463ebb9d383a3829",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136cf0",
+      "start": "0x136cf0",
+      "end": "0x136d00",
+      "sha256": "86224202681ebaa04c28726170bd8fad72c049794e96472f1e246d064511911e",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136d20",
+      "start": "0x136d20",
+      "end": "0x136d30",
+      "sha256": "8a22bb35788a3d649df250b1ed17ce33f13af3dabc8ca6cf6b503d6bdb05cd83",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136d30",
+      "start": "0x136d30",
+      "end": "0x136d40",
+      "sha256": "323a5b4f4056e83c33527a906a9c4a75fb5ab0b5d79e088b000eec093952fae3",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136d40",
+      "start": "0x136d40",
+      "end": "0x136d50",
+      "sha256": "87086634a02582129a11ecde51726beee3918fe385abcfe0e3cd35af144fe12f",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136d50",
+      "start": "0x136d50",
+      "end": "0x136d60",
+      "sha256": "da079fabde7d53b2eb015f87e50ef0c009c580c3223e707ef75091e643f50152",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136d60",
+      "start": "0x136d60",
+      "end": "0x136d70",
+      "sha256": "1009d138effae8d6d71d156d58cea876908cbf12c827584860b596f466404553",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136d70",
+      "start": "0x136d70",
+      "end": "0x136d80",
+      "sha256": "7f81d3fc77d60819b3494c45e0e93b537b3f85a16af6f6adcb1dd7238cf56096",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136d80",
+      "start": "0x136d80",
+      "end": "0x136d90",
+      "sha256": "6f9ea10bef7aa52438052a1d26ab7a64d6fd95a4f0eb4190f76b4bdc88bd49d0",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136d90",
+      "start": "0x136d90",
+      "end": "0x136da0",
+      "sha256": "a82fe0c1082e69cf49f035355420d87743ebaf8b55604d6ea9ec68a512307f8f",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136da0",
+      "start": "0x136da0",
+      "end": "0x136db0",
+      "sha256": "29f0458053cb8b2477b7b3d46f0b3c651dda0d26c8dd5263a69944672ccf4b88",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136db0",
+      "start": "0x136db0",
+      "end": "0x136dc0",
+      "sha256": "e7998dbfd39ccf4998b041907f9650c5f23b294ce3eac9bab2d7e5f0de1d3f63",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136dc0",
+      "start": "0x136dc0",
+      "end": "0x136dd0",
+      "sha256": "5b9f78f3e73c7ea6c207f1fafa3eb08bd39824a946d5255efe46e7b639ebe3bd",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136dd0",
+      "start": "0x136dd0",
+      "end": "0x136de0",
+      "sha256": "048f07323bfe12b91e27146205c25b493ddbf051c42303fbc46ce9dc59d6a52b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136de0",
+      "start": "0x136de0",
+      "end": "0x136df0",
+      "sha256": "9c762169b17054d7cd7118474c194f7a87f6e63490aa1e9d07e5833ca8e4ee6e",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136df0",
+      "start": "0x136df0",
+      "end": "0x136e00",
+      "sha256": "3c23830425305d37e4f8b5dcb8ddd3009bda937f35efda3b22dc157e13670adf",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136e00",
+      "start": "0x136e00",
+      "end": "0x136e10",
+      "sha256": "56ab875a3a76c3cdc5227c5fe3198a4d79340aaf455a31466bac61ec05128e2b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136e10",
+      "start": "0x136e10",
+      "end": "0x136e20",
+      "sha256": "5cffb5c83dc7ac7cf5c0983aec069574a8c40c492e5b8ce7f0544a82699a4574",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136e20",
+      "start": "0x136e20",
+      "end": "0x136e30",
+      "sha256": "4176237c1544651365ccb5a8348f7eef58448b872ff26ca48fd009a04fa199a8",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136e30",
+      "start": "0x136e30",
+      "end": "0x136e40",
+      "sha256": "8658d6634a8d88f9a6fe29c70e4fd8f163a901d5949ff0f06e99686386b4c501",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136e40",
+      "start": "0x136e40",
+      "end": "0x136e50",
+      "sha256": "5e3079a2e45198e352865a18879fa9d283896e3f3cf869d4c2ca03cc64107531",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136e50",
+      "start": "0x136e50",
+      "end": "0x136e60",
+      "sha256": "9cdf0990a26018c0461662648f6b3e1df5efa74743675446713dd459cca0699f",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136e60",
+      "start": "0x136e60",
+      "end": "0x136e70",
+      "sha256": "019a48dda49a51bf5bf29c7719b8617d66c1f21199b37fbd859895a48452cdc4",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136e70",
+      "start": "0x136e70",
+      "end": "0x136e80",
+      "sha256": "a41b04b30cbf378cd4f87f3ab7534fe134c158b2efbc9696ba7b2f89cdf9c3b9",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136e80",
+      "start": "0x136e80",
+      "end": "0x136e90",
+      "sha256": "f4942373aeab070bccafaab925505650a2bb73123770fb6a42d88e8164201d57",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136e90",
+      "start": "0x136e90",
+      "end": "0x136ea0",
+      "sha256": "3252d0dbb59bca71f472f8c8448ba2560bae4511301d927e2ba6dfa45e34d0a3",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136ea0",
+      "start": "0x136ea0",
+      "end": "0x136eb0",
+      "sha256": "cc098c6f4e1a84b177eb435c59830559e71f1707a58e4871d12d195a11d172bb",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136eb0",
+      "start": "0x136eb0",
+      "end": "0x136ec0",
+      "sha256": "83b70a958b55c3f20f9c0c6f2ffae5b4636f23dc89ed6019316bc3d87b891977",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136ec0",
+      "start": "0x136ec0",
+      "end": "0x136ed0",
+      "sha256": "0c274e66ac8dbee83c8297ad8a63994112040016fa3b74a32dcbef33956a03eb",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136ed0",
+      "start": "0x136ed0",
+      "end": "0x136ee0",
+      "sha256": "1344bfb92e3622b12313439b8bb3068f0473cc2e019652532d5d2eb7a3a09b33",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136ef0",
+      "start": "0x136ef0",
+      "end": "0x136f00",
+      "sha256": "f6fdf576c7f02f378868455c3cd3be82852e97b4a2c4b95c09b85003c344db07",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136f00",
+      "start": "0x136f00",
+      "end": "0x136f10",
+      "sha256": "640c583d21e8b9e2261f9854667bb2dad2376ff5e3f85611ea52ece4d65d8d0c",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136f20",
+      "start": "0x136f20",
+      "end": "0x136f30",
+      "sha256": "ed3ee6b299358b4a0cbba493b2446bd2b7addc9d5ed1226fc380b50ad50b36a1",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136f40",
+      "start": "0x136f40",
+      "end": "0x136f50",
+      "sha256": "c6ae6c171de5f1cde66407bcf2ed03f9f3b4fdc6b2e03d102b6b525bd50269e5",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136f50",
+      "start": "0x136f50",
+      "end": "0x136f60",
+      "sha256": "de4f83199278310f6299ae5c0b1494407e426b9b0c49340385248a60cec8648d",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136f60",
+      "start": "0x136f60",
+      "end": "0x136f70",
+      "sha256": "081dbba6f76deeb98a34bae4d5f4a9c5b7c8bb0614fba26dc077bd2b04766d21",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136f70",
+      "start": "0x136f70",
+      "end": "0x136f80",
+      "sha256": "c138d3f89d0ccab5167eb9d37d787f228841108d87ab1f8362be0bbc878a15c3",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136f80",
+      "start": "0x136f80",
+      "end": "0x136f90",
+      "sha256": "239633d72d27eb4019da55751bd678703d5beeb2f3a69956cc0b0bb5d0ab82e2",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136f90",
+      "start": "0x136f90",
+      "end": "0x136fa0",
+      "sha256": "c3e8d50d512cfdf2507c528a37e918569aafdd239f73de64f270b06544a90d49",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136fb0",
+      "start": "0x136fb0",
+      "end": "0x136fc0",
+      "sha256": "51f9fc322861bd91d78d6d833824230b6f497b9445f229c8646e2d9d7506dd2b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136fc0",
+      "start": "0x136fc0",
+      "end": "0x136fd0",
+      "sha256": "42a25c4fae4b837f5d8ab3a63f4821dc4874a8769dd131bd8390b675b171798f",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136fe0",
+      "start": "0x136fe0",
+      "end": "0x136ff0",
+      "sha256": "01ace03e1efe48bdf1100ed060d468ba2b2623ee9360601bd53789edf49c71ea",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_136ff0",
+      "start": "0x136ff0",
+      "end": "0x137000",
+      "sha256": "778c84a15596134eea0b0a47a070a188521e557240431258aca068e722fc5c0b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_137010",
+      "start": "0x137010",
+      "end": "0x137020",
+      "sha256": "8e1cb196dde9ab36c7b1c047bf6ce05a7cea4ba0124f15211461b830553670b0",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1370a0",
+      "start": "0x1370a0",
+      "end": "0x1370b0",
+      "sha256": "0c4fe83e4d25ae54381b31f419eff6b0aaf456fec7c2d8d353627bfba1e9ad62",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1370b0",
+      "start": "0x1370b0",
+      "end": "0x1370c0",
+      "sha256": "ea246bd401a4215c18470bf23e346359c576076e5068d9051db5e5d86e09f25d",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_137350",
+      "start": "0x137350",
+      "end": "0x137358",
+      "sha256": "d042b87232f554e54621d0446a6f2fbbb0a0ccbe8bc1743fda1093a677991dc2",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1375d8",
+      "start": "0x1375d8",
+      "end": "0x1375ec",
+      "sha256": "c0f3f0572f493c5441556804df769668602242ccc18d64cb9ded927c3f94a959",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_137718",
+      "start": "0x137718",
+      "end": "0x13772c",
+      "sha256": "618e5dfac32780ac086152fe2143f57ee7c37cf3a6f29122ce294c4e057e00ed",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1380d0",
+      "start": "0x1380d0",
+      "end": "0x138100",
+      "sha256": "e51b98ae7e97f6969b6433520402ca152c6cfb1dcf59373ca4ee0530ef175003",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_139ab0",
+      "start": "0x139ab0",
+      "end": "0x139abc",
+      "sha256": "0310405f455e931e65fa6a68f4f97249b8422bfd7e1810240c8a6dbf210f61f1",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_139d78",
+      "start": "0x139d78",
+      "end": "0x139d90",
+      "sha256": "a2e13e86de1e5a1c8e0ae2b48d7d46d80a1fe88b0c84fd7b0561d6f74097f4a3",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_139d90",
+      "start": "0x139d90",
+      "end": "0x139da8",
+      "sha256": "78db283b787c59a7988f319ae7d30a9866a46c4ffa6673380a180e4e1f0c5a81",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_13ae80",
+      "start": "0x13ae80",
+      "end": "0x13af50",
+      "sha256": "7d54af2291def90d019025abdfafe69b828620b8e8ad354471a157fd8d5c3e40",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_13ba00",
+      "start": "0x13ba00",
+      "end": "0x13baa0",
+      "sha256": "e56d5d0a30ba95018fc3188633420d86d3f2cdae3fa87dfbfb480c6827ce1c23",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_13ffc8",
+      "start": "0x13ffc8",
+      "end": "0x13fff0",
+      "sha256": "8e85f29f4a168785729d946eb119de8e914b814c89bafc2ad85f70fcf35807dc",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1406b8",
+      "start": "0x1406b8",
+      "end": "0x1406c8",
+      "sha256": "6a9991766bb806b5ba0dde2d9c3a29715617a89ec6bd41b6791477c428c42cbd",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1406c8",
+      "start": "0x1406c8",
+      "end": "0x1406d8",
+      "sha256": "e7998dbfd39ccf4998b041907f9650c5f23b294ce3eac9bab2d7e5f0de1d3f63",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_140718",
+      "start": "0x140718",
+      "end": "0x140728",
+      "sha256": "c64775078ddbc2fce8ba2659f880957e0e02969d94cb0e2ae6f66169c8cbc054",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_140728",
+      "start": "0x140728",
+      "end": "0x140738",
+      "sha256": "048f07323bfe12b91e27146205c25b493ddbf051c42303fbc46ce9dc59d6a52b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_140738",
+      "start": "0x140738",
+      "end": "0x140748",
+      "sha256": "3cd0b6abd8f59c3c64d577406ac2c01636a0304c6267870b86e83bcd49c31035",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_140748",
+      "start": "0x140748",
+      "end": "0x140758",
+      "sha256": "79d08530a18a4764e269a95d22987cd9024c8f0a2871810819799fcbc0960801",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_140758",
+      "start": "0x140758",
+      "end": "0x140768",
+      "sha256": "9c762169b17054d7cd7118474c194f7a87f6e63490aa1e9d07e5833ca8e4ee6e",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_140768",
+      "start": "0x140768",
+      "end": "0x140778",
+      "sha256": "3c23830425305d37e4f8b5dcb8ddd3009bda937f35efda3b22dc157e13670adf",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_140de8",
+      "start": "0x140de8",
+      "end": "0x140df4",
+      "sha256": "99426e281c803a47b7dbef75589e9817148a2cb501a9fbc2d1c8918aae2b2708",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1415f8",
+      "start": "0x1415f8",
+      "end": "0x141600",
+      "sha256": "6d64edf91449c1b17746c1ef18afa2eb25c70bdf1322ab3df5a2630993b7e2f1",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14185c",
+      "start": "0x14185c",
+      "end": "0x14186c",
+      "sha256": "3466b78d6c7b974bf13b61c7c5b3f98b1deb09fbdb31fe37bfc38a1f86ce5005",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1428c8",
+      "start": "0x1428c8",
+      "end": "0x1428fc",
+      "sha256": "fb0de8df90ea23077914f012ccb48e1044cbb5c2f10c1923100ab3c478c8c793",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_142d18",
+      "start": "0x142d18",
+      "end": "0x142d94",
+      "sha256": "0dabf70e8a353d374ba0c9d10a18b9361d55646727c78fa6f7d8d4478df48c4e",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_142e94",
+      "start": "0x142e94",
+      "end": "0x142ea4",
+      "sha256": "18bc8ee7ff34629d14ee4cde3710d240a66297f0d34a4d43c3debde2a4eec25a",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_149a30",
+      "start": "0x149a30",
+      "end": "0x149a3c",
+      "sha256": "a369e90c8c19d46800060f24804bb0e952e96576c6409f758bcca970a033449b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_149c38",
+      "start": "0x149c38",
+      "end": "0x149c44",
+      "sha256": "a8e9c5afa8d337d5f61322d3c32eb9fedbfce7d09d9dce532324845da8fc1f1b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14af68",
+      "start": "0x14af68",
+      "end": "0x14afa4",
+      "sha256": "b33677ac149e88634902301b7e6c7efa85ee8c2753930f4ff4ede8f326c9dba0",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b038",
+      "start": "0x14b038",
+      "end": "0x14b048",
+      "sha256": "f7299b281d52cc83699372be8f5c69cd5da8a91ee6ef9ce01c70a3f8ce387d97",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b100",
+      "start": "0x14b100",
+      "end": "0x14b120",
+      "sha256": "2382097a3220ef118214da1fbae855947f12ff5ed57699ae9e6f56cc8c27f330",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b190",
+      "start": "0x14b190",
+      "end": "0x14b19c",
+      "sha256": "2a828cd2662de15285fb9161535d3914e90c88bd5593953d4f3f7cc3e3a7f767",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b380",
+      "start": "0x14b380",
+      "end": "0x14b398",
+      "sha256": "3850b79a4d592a1e97d8be80f09cedd617264636e4f41802276e7d0923c6816f",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b398",
+      "start": "0x14b398",
+      "end": "0x14b3ac",
+      "sha256": "fdbf16d13449094821e1f99086178b752ca215c342edb13fdb46a840e2d72f1b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b3b0",
+      "start": "0x14b3b0",
+      "end": "0x14b3c0",
+      "sha256": "e2bd5862c56318bae9d869df491a5f9fde191ff674c4c525d2e99a1bf1dfa8b6",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b3c0",
+      "start": "0x14b3c0",
+      "end": "0x14b3cc",
+      "sha256": "e433395b2bb4d2ddfdf5d190c45bbd46092aac6783041c9c1e50f25aeee6a006",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b3d0",
+      "start": "0x14b3d0",
+      "end": "0x14b3dc",
+      "sha256": "ef476095066c4f991734b2a0e1b25790f8c7173f15ce5c1ad276df6dfd2367e7",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b3e0",
+      "start": "0x14b3e0",
+      "end": "0x14b3ec",
+      "sha256": "f98bba5b9aa2cfc5cc089c938c9854d762576424741c05fe9d9a9fabfcadd298",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b3f0",
+      "start": "0x14b3f0",
+      "end": "0x14b3fc",
+      "sha256": "f98bba5b9aa2cfc5cc089c938c9854d762576424741c05fe9d9a9fabfcadd298",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b400",
+      "start": "0x14b400",
+      "end": "0x14b410",
+      "sha256": "ac695b7e6b9f1fd80d945808f23922bf76c96dffb70014feb364ed3295a791a4",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b410",
+      "start": "0x14b410",
+      "end": "0x14b428",
+      "sha256": "f5244b9bd9ad83dfc68aa903c9026ad97eee4f633dcc47b211e2d7a0f2d660b6",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14b5a0",
+      "start": "0x14b5a0",
+      "end": "0x14b5b8",
+      "sha256": "f705613d6d7daa0fc28c9d4acab5bebd36336cb1deedf33a9e761dff327f42b6",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14f758",
+      "start": "0x14f758",
+      "end": "0x14f778",
+      "sha256": "b7ece48b59c806336e4c083dcd751d5d1ce317d4eda5e4cb2c46bd4af96e46df",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_14fc18",
+      "start": "0x14fc18",
+      "end": "0x14fcd4",
+      "sha256": "cb2607eb491ecf7d83cc5b94675d0fa90f29376e3ae365f4cc69b83d5128ac8d",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1508c8",
+      "start": "0x1508c8",
+      "end": "0x150a08",
+      "sha256": "23766aac4196509022668fb9fb6282a10a1e62e1479f33a4ba1b8783ea7af778",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_151398",
+      "start": "0x151398",
+      "end": "0x1513b8",
+      "sha256": "9292474156e747d6fd40346817ae778581f986093a1af5a77daaae7d9ac93e1b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1513b8",
+      "start": "0x1513b8",
+      "end": "0x1513e0",
+      "sha256": "d19e0e73c95ccd3e7bd688455a2a41720f66ba123ee734a74ef9ddfaf6580f12",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1514a8",
+      "start": "0x1514a8",
+      "end": "0x1514b8",
+      "sha256": "1cdd47a8dedaa763fc00aff28abae2e7984a971737710c37acac01011d78b902",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1514b8",
+      "start": "0x1514b8",
+      "end": "0x1514c8",
+      "sha256": "81105a5a22ca697d1ac62670f8dd81c92f5a5192fa31a0359608e501dedd473a",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1514c8",
+      "start": "0x1514c8",
+      "end": "0x1514d8",
+      "sha256": "710e7f48e888b23b199bac28c22b259927b2248453c4e922f987b57fd48cfe17",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1514d8",
+      "start": "0x1514d8",
+      "end": "0x1514e8",
+      "sha256": "11f34e2a51a4af6904ba8bc2f3ba2e88c9effe440bad877ce9d91ae377f01a2f",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1517d0",
+      "start": "0x1517d0",
+      "end": "0x1517f4",
+      "sha256": "4a450b6162c32464379119166da0a7f98fbe32224afec374d7591656fe1792db",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_151b88",
+      "start": "0x151b88",
+      "end": "0x151c68",
+      "sha256": "c0f179c8c2c9b53f0a09be9b6661929f2f53afd7d48669e675a35a6a2f1c1189",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_151c68",
+      "start": "0x151c68",
+      "end": "0x151cc0",
+      "sha256": "93dde3341bbc0dbec222afd480c82ed70721564f9926150b94989002af59b5ff",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_151cc0",
+      "start": "0x151cc0",
+      "end": "0x151d04",
+      "sha256": "e64353cdaff6261a1c6b9167d845691473c4128c4a6244957ea93a2e3f53de40",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_151d28",
+      "start": "0x151d28",
+      "end": "0x151d54",
+      "sha256": "dd70428d45aeb5ddf1b215285ccc220ffbe3bf25edf35ceb91406187bb473f86",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_151d70",
+      "start": "0x151d70",
+      "end": "0x151db8",
+      "sha256": "0d316e77a02eb474140ed3e2cdc4eb6d0421fc867fcbc09267a2f282583b8a79",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_151db8",
+      "start": "0x151db8",
+      "end": "0x151e18",
+      "sha256": "e6e2bb2cca8e46e906e82fd326e22991041a12ce5ec11e9bb7885aae093fb064",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_151e18",
+      "start": "0x151e18",
+      "end": "0x151ea4",
+      "sha256": "790e27bb7d59bbd1d93be05dc0ba59a00ab817e3f118fd3c1367684ee5bbaf8b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_151ea8",
+      "start": "0x151ea8",
+      "end": "0x151f04",
+      "sha256": "a210adc43a24657709430c92a3ac6277eb4121d165ee34f83075c34cfbb88ad9",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_18eb18",
+      "start": "0x18eb18",
+      "end": "0x18eb70",
+      "sha256": "83b83a2bf3b48ce92163a0843685ba71ba59cf90737a1bdd7a1506f732f2ed1f",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_18ec88",
+      "start": "0x18ec88",
+      "end": "0x18ec94",
+      "sha256": "b4f5f7e1a29425f10741f2a47d490466c89c57fc567716f1e5477bccd1e0a56b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_18edd0",
+      "start": "0x18edd0",
+      "end": "0x18eddc",
+      "sha256": "b4f5f7e1a29425f10741f2a47d490466c89c57fc567716f1e5477bccd1e0a56b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_18ede0",
+      "start": "0x18ede0",
+      "end": "0x18eef8",
+      "sha256": "8619194c45d981720855ccf817dbbc6ba542281ca9bf2ec4b43bbd9526ef3b8a",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_18eef8",
+      "start": "0x18eef8",
+      "end": "0x18f00c",
+      "sha256": "841b899e4d59c7dbbe6639d7729b1b6936f90b32e1da5c5f494aaddb76db8984",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_18f010",
+      "start": "0x18f010",
+      "end": "0x18f144",
+      "sha256": "16769a087575b7f3ebc47207be542e0fdb883f197e55abf187fdf9f9991b9f64",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_18f3a0",
+      "start": "0x18f3a0",
+      "end": "0x18f450",
+      "sha256": "c9cbf9f8d7cae73de4b30bad75d5efbde5e1e3d43bf25b0b2720b794753250f4",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_18f5d8",
+      "start": "0x18f5d8",
+      "end": "0x18f62c",
+      "sha256": "267ab684656f347f6700a2199341b80a8ee3294b5c0e1ad2ac892cff99f18c3c",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_18f9ec",
+      "start": "0x18f9ec",
+      "end": "0x18f9f8",
+      "sha256": "1c1b6c51e839ee3684d1cb20a330c4b890f7a9d005c0ea3283ea204b2109d624",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1d84f0",
+      "start": "0x1d84f0",
+      "end": "0x1d859c",
+      "sha256": "a65844445d51c03967f469b53c88bf9d701f372006df1a252f9f67a2a2cf5c51",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1d8c70",
+      "start": "0x1d8c70",
+      "end": "0x1d8cd4",
+      "sha256": "c45eaddbc46020808c919d8669dc43179d43ec8fe8623fee6cf2f72dad701a4c",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1d8fd0",
+      "start": "0x1d8fd0",
+      "end": "0x1d9028",
+      "sha256": "01f4f7c4da1759991f12913f9e8b5841f86134487aeea4fac754a8d20939a813",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1f02d0",
+      "start": "0x1f02d0",
+      "end": "0x1f02d8",
+      "sha256": "6d64edf91449c1b17746c1ef18afa2eb25c70bdf1322ab3df5a2630993b7e2f1",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1f2360",
+      "start": "0x1f2360",
+      "end": "0x1f2368",
+      "sha256": "6d64edf91449c1b17746c1ef18afa2eb25c70bdf1322ab3df5a2630993b7e2f1",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1f9d60",
+      "start": "0x1f9d60",
+      "end": "0x1f9d70",
+      "sha256": "309999d62adca7a0309a4ac73fcaa8dc55090f5fdd5a920af89c5c9e2e7f2947",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1f9d70",
+      "start": "0x1f9d70",
+      "end": "0x1f9d80",
+      "sha256": "ff1fa640c0f335b263507e6306b9318af9baa72070ca029c3f1ff4cf81cb321d",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_1f9d80",
+      "start": "0x1f9d80",
+      "end": "0x1f9d90",
+      "sha256": "5d80d95ffe5c835931752f1057f5a37d2f8e267e3cc1f61970df958dbe652aa3",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_24b7b0",
+      "start": "0x24b7b0",
+      "end": "0x24b7c4",
+      "sha256": "e6ee51419409dbfe44b11a4f4aa9073647afd4fd15eded4477275d3b09bcb2e7",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_24b7d0",
+      "start": "0x24b7d0",
+      "end": "0x24b7e4",
+      "sha256": "4fbdf292961e0cf688bc4fea4d46c603a1088aca0a6f25774b1dfa26ed3261e1",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_24b7f0",
+      "start": "0x24b7f0",
+      "end": "0x24b82c",
+      "sha256": "4ddcbc557d08d54338b6b17456b8d2d65dea1a5d4b97397de1a0b532e6180d72",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_24b830",
+      "start": "0x24b830",
+      "end": "0x24b854",
+      "sha256": "e5545c5f17b568f9e9d6e6e41356489ec401a64501bb5c7d7635b448f7ba84d9",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_24b8d0",
+      "start": "0x24b8d0",
+      "end": "0x24b900",
+      "sha256": "02e3bc022975500cc97409e6308aae8857bb730d8f7257b6264c322c369be578",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_24b900",
+      "start": "0x24b900",
+      "end": "0x24b914",
+      "sha256": "2768497eaae53bf09738fa7092813ef9f5aa912f827b4e829b26f8f86ee19408",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_24bb70",
+      "start": "0x24bb70",
+      "end": "0x24bba4",
+      "sha256": "1013ce20f7b0d8f6966821c5163d8c470a519427163631531dbc4962bb034ea6",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_24be90",
+      "start": "0x24be90",
+      "end": "0x24bf84",
+      "sha256": "575e8efc6d3c94af895f25480493eac51bdf2183c6d5672dd51bdaff5bd10a5a",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_24bf90",
+      "start": "0x24bf90",
+      "end": "0x24c0a8",
+      "sha256": "1c67a0ad510d0d1befcb3900e35526eeae4b6e77378edc8afa6c7f2b293a6112",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_24c0b0",
+      "start": "0x24c0b0",
+      "end": "0x24c1e8",
+      "sha256": "51473d52732eff07e728b9decc9fb33f07135d5ac981572b565a52e4a54b5171",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_28f3e0",
+      "start": "0x28f3e0",
+      "end": "0x28f3f4",
+      "sha256": "5fa394fa6f9b57072980369690d786ead0919315caa3535c29891fa7cf28377d",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_28f9d0",
+      "start": "0x28f9d0",
+      "end": "0x28f9dc",
+      "sha256": "7dba7ba6b7ce34ca7b0f9d751c677309014023c711caaf21a32a8b8b36a96794",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_2906e0",
+      "start": "0x2906e0",
+      "end": "0x2906f4",
+      "sha256": "f64f4cfabd388c3e7d6feb07534997959a684950b4195826e46ca92fd627f8c7",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_291700",
+      "start": "0x291700",
+      "end": "0x291714",
+      "sha256": "1d8f197d3caa3a9852aa62f0ea6002278031ef52659e4999e81e14eda151cd77",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_292600",
+      "start": "0x292600",
+      "end": "0x292614",
+      "sha256": "cb22377deaeda284555cf19c1893289ca7b203ca27b324f93364a5dcbb1c7202",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_2932c0",
+      "start": "0x2932c0",
+      "end": "0x2932d4",
+      "sha256": "650450604474167b0f99375c548482a0018ca5735f4fac291c2b8c31b6825ed2",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_293a60",
+      "start": "0x293a60",
+      "end": "0x293ab0",
+      "sha256": "5d1cb3657be236c59b64a9f6a510e56eac4d66d9e5014b363650ba3e80a9251b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_2bb000",
+      "start": "0x2bb000",
+      "end": "0x2bb034",
+      "sha256": "d399b8c2b2f1177d134708c828f044b63ab35e6027713168a6bfafbc82f0e3ee",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_2ca8b0",
+      "start": "0x2ca8b0",
+      "end": "0x2ca9a8",
+      "sha256": "984006ea95fbd46a704ce73ad22ac81d9c6b65dfc384336bd7f50e205d7b02cf",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_2d9fe0",
+      "start": "0x2d9fe0",
+      "end": "0x2da038",
+      "sha256": "65a07c4ccbe71143b4f607009b75f78b398fd6990f854116b09c8cff55482fcb",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_2da1e0",
+      "start": "0x2da1e0",
+      "end": "0x2da2b8",
+      "sha256": "e8441fab91b51486c5d1775b7039f379ec0010bddc3edb3321687bfcea58f467",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_2e6f90",
+      "start": "0x2e6f90",
+      "end": "0x2e6fc0",
+      "sha256": "cb9fee572170063318a6e60b23d0441b3b01c2f7fd2f4b773b2f30d89be94744",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_2e6fc0",
+      "start": "0x2e6fc0",
+      "end": "0x2e7024",
+      "sha256": "e5b9b89147b5fcce2db7964d6c6e0621b95574b88bca019670d9ab925a02ad27",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_2e7100",
+      "start": "0x2e7100",
+      "end": "0x2e7130",
+      "sha256": "cb9fee572170063318a6e60b23d0441b3b01c2f7fd2f4b773b2f30d89be94744",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_3054e0",
+      "start": "0x3054e0",
+      "end": "0x305510",
+      "sha256": "bb52e4593fe8663db13b3dd3f78c36bd6a1e2ec551ccf6e4e0dc839f153ca19f",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_305544",
+      "start": "0x305544",
+      "end": "0x30554c",
+      "sha256": "6d64edf91449c1b17746c1ef18afa2eb25c70bdf1322ab3df5a2630993b7e2f1",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_305564",
+      "start": "0x305564",
+      "end": "0x30559c",
+      "sha256": "1681e99652e1c8b5f72a099362a540026447c39bc06d6381c2024aeec02e76a6",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_3055a0",
+      "start": "0x3055a0",
+      "end": "0x3055ec",
+      "sha256": "52eb40416308067144ca9dc71722cd73bdc115609a959c3b4950243d1cff4355",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_305b40",
+      "start": "0x305b40",
+      "end": "0x305bec",
+      "sha256": "55ff31f2a210f15e55b277472c7415d8c7519078adf7ac9b3c4a44e6aea91fb7",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_305bf0",
+      "start": "0x305bf0",
+      "end": "0x305c9c",
+      "sha256": "655a632c9a462f76c406636f2ee59c89727948a28cd2d8b58a99d5908794cc52",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_305df8",
+      "start": "0x305df8",
+      "end": "0x305e04",
+      "sha256": "7df3fdf7ee71701b38970473930413a60bccc83840f8f4347f362678e38821a0",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_305e08",
+      "start": "0x305e08",
+      "end": "0x305e7c",
+      "sha256": "d62615ed8d5376c778958495e821c45ab4e5dac65bd9c6e6129eb0b2cff6d62b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_3062cc",
+      "start": "0x3062cc",
+      "end": "0x3062d4",
+      "sha256": "4e13dc63c008e40ee14d518ca3fab41f4f2755add3d7524f78711a838b7fa91b",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_3066e0",
+      "start": "0x3066e0",
+      "end": "0x306704",
+      "sha256": "0b6ed386942e6c1abbcdd6239c821ff7d313fd622845946165d7e88a23ffd215",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    },
+    {
+      "name": "orochi_traced_306900",
+      "start": "0x306900",
+      "end": "0x306968",
+      "sha256": "a4fd8e6d45feaea7aaed9b7a03f04a9c7877aa43a04aeeac73deba28b6ee959f",
+      "evidence": "Gap sweep 2026-10-26 (after missing-target crashes at 0x2943d0 and 0x24bb70, reached through function pointers): code between Ghidra functions; every word decodes as an R5900 instruction, the run ends in JR ra or a J tail jump plus its delay slot, its branches stay inside the run and J/JAL reach known function entries."
+    }
+  ],
+  "overlay_traced_functions": [
+    {
+      "name": "orochi_overlay_819080",
+      "start": "0x819080",
+      "end": "0x8193e4",
+      "sha256": "f35aead323532cd3c91e5455b01c9ef719084b7e3220c289a53cea4f44d83de7",
+      "evidence": "Manual run 2026-10-27: the game closed with guest-branch:missing-target JAL 0x81d1a0 -> 0x8193f0. ovl_00.bin code before Ghidra's first overlay function (0x8194e0) was never mapped: after the 0x80-byte header (magic MWo3, base 0x819000) come three functions, each opening with ADDIU sp,-N and closing with JR ra plus the stack restore in its delay slot; branches stay inside, every JAL reaches a known function (0x81e350, 0x81e650, 0x81e6d0, 0x81e6e0, 0x2405b0, 0x2baf30, 0x819510). Overlay code calls all three (0x81daf4 -> 0x819080, 0x81d1a0 -> 0x8193f0, 0x81dc88 -> 0x819440)."
+    },
+    {
+      "name": "orochi_overlay_8193f0",
+      "start": "0x8193f0",
+      "end": "0x819440",
+      "sha256": "537bd30c986ad43b1f86d29f032597185897912d9ec0898239076cf23d33cdc6",
+      "evidence": "Manual run 2026-10-27: the game closed with guest-branch:missing-target JAL 0x81d1a0 -> 0x8193f0. ovl_00.bin code before Ghidra's first overlay function (0x8194e0) was never mapped: after the 0x80-byte header (magic MWo3, base 0x819000) come three functions, each opening with ADDIU sp,-N and closing with JR ra plus the stack restore in its delay slot; branches stay inside, every JAL reaches a known function (0x81e350, 0x81e650, 0x81e6d0, 0x81e6e0, 0x2405b0, 0x2baf30, 0x819510). Overlay code calls all three (0x81daf4 -> 0x819080, 0x81d1a0 -> 0x8193f0, 0x81dc88 -> 0x819440)."
+    },
+    {
+      "name": "orochi_overlay_819440",
+      "start": "0x819440",
+      "end": "0x8194d8",
+      "sha256": "bd4c43ed584b9ec03aa56129e51a0bb16b75535b6b94c72f396c24d886c503ef",
+      "evidence": "Manual run 2026-10-27: the game closed with guest-branch:missing-target JAL 0x81d1a0 -> 0x8193f0. ovl_00.bin code before Ghidra's first overlay function (0x8194e0) was never mapped: after the 0x80-byte header (magic MWo3, base 0x819000) come three functions, each opening with ADDIU sp,-N and closing with JR ra plus the stack restore in its delay slot; branches stay inside, every JAL reaches a known function (0x81e350, 0x81e650, 0x81e6d0, 0x81e6e0, 0x2405b0, 0x2baf30, 0x819510). Overlay code calls all three (0x81daf4 -> 0x819080, 0x81d1a0 -> 0x8193f0, 0x81dc88 -> 0x819440)."
+    }
+  ]
+}

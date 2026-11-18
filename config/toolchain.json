@@ -1,0 +1,11 @@
+{
+  "project": "Warriors Orochi PS2 native prototype",
+  "serial": "SLUS-21662",
+  "disc_revision": "1.00",
+  "ps2recomp_repository": "https://github.com/ran-j/PS2Recomp.git",
+  "ps2recomp_commit": "eb8688b2fd191129f103a39543002c005b33409c",
+  "ps2recomp_license": "GPL-3.0",
+  "source_iso_sha256": "1c7a1ee34b56612593625ad327f38e3b955c850320b13cfaecada326f86df85e",
+  "source_elf_sha256": "40e68b87a4a000000a1b22b07f71f601073109c77fa3b8840d5286afe2eb75db",
+  "status": "native x64 prototype; thirteen regression suites and four IOP suites pass; native video input ownership/EOF corrected; opening logos, title, main menu, Story Select, Shu camp, weapon detail and initial empty ability screen verified; fragmented IOP music-buffer allocation still fails after movies; battles/audio output not verified; CPU GS/OpenGL, no Vulkan; local changes only"
+}

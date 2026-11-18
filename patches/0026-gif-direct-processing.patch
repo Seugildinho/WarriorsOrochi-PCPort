@@ -1,0 +1,101 @@
+diff --git a/ps2xRuntime/include/runtime/gs/ps2_gif_arbiter.h b/ps2xRuntime/include/runtime/gs/ps2_gif_arbiter.h
+index 2da03a5..b038528 100644
+--- a/ps2xRuntime/include/runtime/gs/ps2_gif_arbiter.h
++++ b/ps2xRuntime/include/runtime/gs/ps2_gif_arbiter.h
+@@ -35,6 +35,10 @@ public:
+     void submit(GifPathId pathId, const uint8_t *data, uint32_t sizeBytes, bool path2DirectHl = false);
+ 
+     void drain();
++    // submit() followed by drain() without the intermediate copies, when no
++    // packet is queued and the path has no partial packet. Returns false
++    // (and does nothing) otherwise; the caller then uses submit()/drain().
++    bool processDirect(GifPathId pathId, const uint8_t *data, uint32_t sizeBytes);
+     bool empty() const { return m_queue.empty() && std::all_of(m_partial.begin(),m_partial.end(),
+         [](const auto &data) { return data.empty(); }); }
+ 
+diff --git a/ps2xRuntime/src/lib/gs/ps2_gif_arbiter.cpp b/ps2xRuntime/src/lib/gs/ps2_gif_arbiter.cpp
+index 167e640..f654e6e 100644
+--- a/ps2xRuntime/src/lib/gs/ps2_gif_arbiter.cpp
++++ b/ps2xRuntime/src/lib/gs/ps2_gif_arbiter.cpp
+@@ -55,6 +55,33 @@ void GifArbiter::submit(GifPathId pathId, const uint8_t *data, uint32_t sizeByte
+     if(packetStart) pending.erase(pending.begin(),pending.begin()+packetStart);
+ }
+ 
++bool GifArbiter::processDirect(GifPathId pathId, const uint8_t *data, uint32_t sizeBytes)
++{
++    const auto path=static_cast<unsigned>(pathId);
++    if (!data || !sizeBytes || !m_processFn || path<1 || path>3 || !m_queue.empty() || !m_partial[path].empty())
++        return false;
++    // Same packet boundaries as submit(): each EOP-terminated run becomes one
++    // packet, processed in order (drain() never reorders one path's packets).
++    size_t cursor=0,packetStart=0;
++    while(sizeBytes-cursor>=16u) {
++        uint64_t tag{}; std::memcpy(&tag,data+cursor,8);
++        const size_t loops=tag&0x7fffu;
++        const unsigned format=(tag>>58)&3u;
++        size_t registers=(tag>>60)&15u;
++        if(!registers) registers=16;
++        const size_t payload=format==0 ? loops*registers*16u :
++            format==1 ? ((loops*registers+1u)/2u)*16u : loops*16u;
++        if(sizeBytes-cursor<16u+payload) break;
++        cursor+=16u+payload;
++        if(tag&(1ull<<15)) {
++            m_processFn(data+packetStart,static_cast<uint32_t>(cursor-packetStart));
++            packetStart=cursor;
++        }
++    }
++    if(packetStart<sizeBytes) m_partial[path].assign(data+packetStart,data+sizeBytes);
++    return true;
++}
++
+ void GifArbiter::drain()
+ {
+     if (!m_processFn)
+diff --git a/ps2xRuntime/src/lib/ps2_memory.cpp b/ps2xRuntime/src/lib/ps2_memory.cpp
+index 60c354f..9d488ac 100644
+--- a/ps2xRuntime/src/lib/ps2_memory.cpp
++++ b/ps2xRuntime/src/lib/ps2_memory.cpp
+@@ -1971,6 +1971,8 @@ void PS2Memory::submitGifPacket(GifPathId pathId, const uint8_t *data, uint32_t
+         flushMaskedPath3Packets(false);
+     }
+ 
++    if (m_gifArbiter && drainImmediately && m_gifArbiter->processDirect(pathId, data, sizeBytes))
++        return;
+     if (m_gifArbiter)
+         m_gifArbiter->submit(pathId, data, sizeBytes, path2DirectHl);
+     else if (m_gifPacketCallback)
+diff --git a/ps2xRuntime/src/lib/gs/gs_frontend.cpp b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+index 4a8e071..15ed9fa 100644
+--- a/ps2xRuntime/src/lib/gs/gs_frontend.cpp
++++ b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+@@ -666,6 +666,30 @@ void GS::processGIFPacket(const uint8_t *data, uint32_t sizeBytes)
+ {
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+     if (!data || !sizeBytes || !m_backend) return;
++    if (m_gifStreamPending.empty())
++    {
++        // Nothing buffered: process the complete prefix in place and keep only
++        // the incomplete tail (same result as appending, processing, erasing).
++        size_t complete=0;
++        while (sizeBytes-complete>=16u)
++        {
++            const uint64_t tag=loadLE64(data+complete);
++            const size_t loops=tag&0x7fffu;
++            const unsigned format=static_cast<unsigned>((tag>>58)&3u);
++            size_t registers=(tag>>60)&15u;
++            if (!registers) registers=16;
++            const size_t payload=format==0 ? loops*registers*16u :
++                format==1 ? ((loops*registers+1u)/2u)*16u : loops*16u;
++            const size_t bytes=16u+payload;
++            if (sizeBytes-complete<bytes) break;
++            complete+=bytes;
++        }
++        if (complete)
++            processCompleteGIFPacket(data,static_cast<uint32_t>(complete));
++        if (complete<sizeBytes)
++            m_gifStreamPending.assign(data+complete,data+sizeBytes);
++        return;
++    }
+     m_gifStreamPending.insert(m_gifStreamPending.end(),data,data+sizeBytes);
+     size_t complete=0;
+     while (m_gifStreamPending.size()-complete>=16u)

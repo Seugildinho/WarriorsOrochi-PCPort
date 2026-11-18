@@ -1,0 +1,82 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+index 69e3e4f..fbeb677 100644
+--- a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
++++ b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+@@ -1801,6 +1801,15 @@ void EeScheduler::applyPendingPreemption()
+ void EeScheduler::processPendingEvents()
+ {
+     assertExecutor();
++    // Runs around every guest call and nothing is due nearly every time; the
++    // clock read, locks and allocation below cost more than the call it follows.
++    const uint64_t nextDeadlineCycle = m_nextDeadlineCycle.load(std::memory_order_acquire);
++    if (!m_checkpointPending.load(std::memory_order_acquire) && m_pendingEeTimerInterrupts == 0u &&
++        (nextDeadlineCycle == 0u || m_eeCycle < nextDeadlineCycle))
++    {
++        applyPendingPreemption();
++        return;
++    }
+     processDueDeadlines();
+     const uint32_t timerInterrupts = m_pendingEeTimerInterrupts;
+     m_pendingEeTimerInterrupts = 0u;
+diff --git a/ps2xRuntime/src/lib/ps2_memory.cpp b/ps2xRuntime/src/lib/ps2_memory.cpp
+index 165a64c..d8f0302 100644
+--- a/ps2xRuntime/src/lib/ps2_memory.cpp
++++ b/ps2xRuntime/src/lib/ps2_memory.cpp
+@@ -13,6 +13,9 @@
+ 
+ namespace
+ {
++    // GIF_STAT in m_ioRegisters; see advanceEeTimers.
++    uint32_t *s_gifStatRegister = nullptr;
++
+     // DMAC MADR/TADR and tag ADDR use bit 31 as SPR, rather than a CPU KSEG.
+     // Convert only DMA addresses; CPU address decoding must retain KSEG rules.
+     inline uint32_t dmaMemoryAddress(uint32_t address)
+@@ -366,6 +369,7 @@ bool PS2Memory::initialize(size_t ramSize)
+ 
+         // Initialize I/O registers
+         m_ioRegisters.clear();
++        s_gifStatRegister = nullptr;
+ 
+         // Initialize GS registers
+         memset(&gs_regs, 0, sizeof(gs_regs));
+@@ -424,9 +428,16 @@ uint32_t PS2Memory::advanceEeTimers(uint64_t eeCycles) noexcept
+ 
+     constexpr uint32_t kGifStat = 0x10003020u;
+     constexpr uint32_t kGifFqcMask = 0x1F000000u;
+-    auto gifStatIt = m_ioRegisters.find(kGifStat);
+-    if (gifStatIt != m_ioRegisters.end())
+-        gifStatIt->second &= ~kGifFqcMask;
++    // Kept between calls: this runs every guest branch, and unordered_map
++    // elements stay put until the clear in reset drops the pointer.
++    if (s_gifStatRegister == nullptr)
++    {
++        auto gifStatIt = m_ioRegisters.find(kGifStat);
++        if (gifStatIt != m_ioRegisters.end())
++            s_gifStatRegister = &gifStatIt->second;
++    }
++    if (s_gifStatRegister != nullptr)
++        *s_gifStatRegister &= ~kGifFqcMask;
+ 
+     uint32_t interruptMask = 0u;
+     for (size_t index = 0; index < m_eeTimers.size(); ++index)
+diff --git a/ps2xIOP/src/emulator/iop_emulator.cpp b/ps2xIOP/src/emulator/iop_emulator.cpp
+index cd91f51..5c2f9cf 100644
+--- a/ps2xIOP/src/emulator/iop_emulator.cpp
++++ b/ps2xIOP/src/emulator/iop_emulator.cpp
+@@ -828,7 +828,15 @@ namespace ps2x::iop::detail
+ 
+     void IopEmulator::runEeCycles(uint64_t eeCycles) noexcept
+     {
++        // The EE charges this every guest branch: one IOP cycle per call would
++        // walk all of runCycles for it. 128 cycles are 3.5 us of IOP time.
++        constexpr uint64_t kMinimumEeBatch = 128u * 8u;
+         const uint64_t total = m_impl->eeCycleCarry + eeCycles;
++        if (total < kMinimumEeBatch)
++        {
++            m_impl->eeCycleCarry = total;
++            return;
++        }
+         const uint64_t iopCycles = total / 8u;
+         m_impl->eeCycleCarry = total % 8u;
+         if (iopCycles)

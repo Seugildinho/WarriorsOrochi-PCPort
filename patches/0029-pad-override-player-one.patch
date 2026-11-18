@@ -1,0 +1,27 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/Pad.cpp b/ps2xRuntime/src/lib/Kernel/Stubs/Pad.cpp
+index b50a4cf..a869f23 100644
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/Pad.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/Pad.cpp
+@@ -284,8 +284,13 @@ namespace ps2_stubs
+                 portState = *sharedPortState;
+             }
+ 
++            // The test override and the fallback keyboard/gamepad drive player 1
++            // only, like PSPadBackend. Feeding them to port 1 as well makes a
++            // second player join menus and stories on every Start press.
++            const bool hostInput = port == 0;
+             PadInputState state;
+             bool useOverride = false;
++            if (hostInput)
+             {
+                 std::lock_guard<std::mutex> lock(g_padOverrideMutex);
+                 if (g_padOverrideEnabled)
+@@ -308,7 +313,7 @@ namespace ps2_stubs
+                     state.ly = backendData[7];
+                     usedBackend = true;
+                 }
+-                else
++                else if (hostInput)
+                 {
+                     applyGamepadState(state);
+                     applyKeyboardState(state, portState.analogMode);

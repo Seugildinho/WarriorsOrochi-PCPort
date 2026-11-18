@@ -1,0 +1,19 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/VU.cpp b/ps2xRuntime/src/lib/Kernel/Stubs/VU.cpp
+index b7840d4..e1b57a8 100644
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/VU.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/VU.cpp
+@@ -699,10 +699,10 @@ namespace ps2_stubs
+         float m0[16]{}, m1[16]{}, out[16]{};
+         if (readVuMatrix4f(rdram, m0Addr, m0) && readVuMatrix4f(rdram, m1Addr, m1))
+         {
+-            // out = m0 * m1 (first source . second source), matching the
+-            // file's mulVuMatrix(lhs,rhs)=lhs.rhs convention and the RotMatrix
+-            // / ViewScreenMatrix siblings (first operand on the left).
+-            mulVuMatrix(m0, m1, out);
++            // The library walks the rows of the second source (a2) over the
++            // first (a1): each row is applied by a1, so a2 is the left factor
++            // of this file's row-vector product.
++            mulVuMatrix(m1, m0, out);
+             (void)writeVuMatrix4f(rdram, dstAddr, out);
+         }
+         setReturnS32(ctx, 0);

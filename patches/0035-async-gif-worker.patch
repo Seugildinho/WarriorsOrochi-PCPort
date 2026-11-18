@@ -1,0 +1,691 @@
+diff --git a/ps2xRuntime/include/runtime/ps2_memory.h b/ps2xRuntime/include/runtime/ps2_memory.h
+index d71ba2b..8dfd5ce 100644
+--- a/ps2xRuntime/include/runtime/ps2_memory.h
++++ b/ps2xRuntime/include/runtime/ps2_memory.h
+@@ -357,9 +357,15 @@ public:
+     // VIF1/GIF registers and FIFOs, GS privileged registers, VU1 memory,
+     // PATH3 and GS frontend calls. notify() is called when a VU1 program
+     // reported D/T stop bits (see takeVif1VpuStatResult).
++    // The worker's GIF output (PATH1/PATH2 packets and arbiter drains) goes
++    // in order to a second worker that runs the GS frontend, unless
++    // OROCHI_GIF_THREAD=0; syncVif1 waits for both.
+     void setVif1Async(bool enabled, std::function<void()> notify = {}, std::function<uint32_t()> fbrst = {});
+     bool vif1Async() const { return m_vif1Async; }
+     void syncVif1() const;
++    // Runs fn after all VIF1 work queued so far and its GIF output (on the
++    // GIF worker, or here when nothing is pending).
++    void queueVif1Callback(std::function<void()> fn);
+     bool onVif1Worker() const { return m_vif1Async && std::this_thread::get_id() == m_vif1WorkerId; }
+     uint32_t vif1JobFbrst() const { return m_vif1JobFbrst; }
+     void setVif1VpuStatResult(uint32_t bits) { m_vif1VpuStat.store(bits | 0x80000000u, std::memory_order_release); }
+@@ -450,7 +456,10 @@ public:
+         bool registerWrite = false;     // a VIF1 register write instead of data
+         uint32_t address = 0;
+         uint32_t value = 0;
++        std::function<void()> callback; // instead of data (queueVif1Callback)
++        bool path3 = false;             // data is a PATH3 transfer (empty: drain the arbiter)
+     };
++    void runPath3Job(const Vif1Job &job);
+     void vif1WorkerLoop();
+     void stopVif1Worker();
+     void syncVif1ForIo(uint32_t address, bool write);
+@@ -471,6 +480,34 @@ public:
+     std::function<void()> m_vif1Notify;
+     std::function<uint32_t()> m_vif1Fbrst;
+ 
++    struct GifJob
++    {
++        std::vector<uint8_t> data;      // empty: drain the arbiter
++        GifPathId pathId = GifPathId::Path1;
++        bool drainImmediately = true;
++        bool path2DirectHl = false;
++        std::function<void()> callback; // instead of a packet
++    };
++    void gifWorkerLoop();
++    void stopGifWorker();
++    void queueGifJob(GifPathId pathId, const uint8_t *data, uint32_t sizeBytes, bool drainImmediately, bool path2DirectHl,
++                     std::function<void()> callback = {});
++    void submitToGifArbiter(GifPathId pathId, const uint8_t *data, uint32_t sizeBytes, bool drainImmediately, bool path2DirectHl);
++    void drainGifArbiter();
++    void syncGif() const;
++    bool queuesGif() const { return m_gifAsync && m_gifArbiter && onVif1Worker(); }
++    bool m_gifAsync = false;
++    std::thread m_gifWorker;
++    std::thread::id m_gifWorkerId;
++    mutable std::mutex m_gifMutex;
++    mutable std::condition_variable m_gifWorkCv, m_gifIdleCv;
++    std::vector<GifJob> m_gifJobs;
++    std::vector<std::vector<uint8_t>> m_gifFreeBuffers;
++    uint32_t m_gifOutstanding = 0;               // queued or running (m_gifMutex)
++    std::atomic<uint32_t> m_gifBusy{0};          // m_gifOutstanding, readable without the lock
++    bool m_gifWorkerWaiting = false;
++    bool m_gifStopping = false;
++
+     struct CodeRegion
+     {
+         uint32_t start;
+diff --git a/ps2xRuntime/src/lib/ps2_memory.cpp b/ps2xRuntime/src/lib/ps2_memory.cpp
+index f9ac137..ec3ef3e 100644
+--- a/ps2xRuntime/src/lib/ps2_memory.cpp
++++ b/ps2xRuntime/src/lib/ps2_memory.cpp
+@@ -8,6 +8,7 @@
+ #include <stdexcept>
+ #include <algorithm>
+ #include <string>
++#include <chrono>
+ #include <vector>
+ 
+ namespace
+@@ -756,10 +757,13 @@ uint32_t PS2Memory::read32(uint32_t address)
+ 
+     if (isGsPrivReg(address))
+     {
+-        if (m_vif1Async)
+-            syncVif1();
+         uint32_t off = address & 7;
+         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
++        // CSR reads do not wait for queued GS work: the GS runs alongside the
++        // EE on hardware too, and SIGNAL/FINISH show up when it gets there.
++        // (The VBlank handler reads CSR for FIELD every frame.)
++        if (m_vif1Async && regOff != kGsCsrRegOffset)
++            syncVif1();
+         if (regOff == kGsCsrRegOffset)
+         {
+             uint64_t val = gs_regs.csr.load();
+@@ -806,9 +810,12 @@ uint64_t PS2Memory::read64(uint32_t address)
+ 
+     if (isGsPrivReg(address))
+     {
+-        if (m_vif1Async)
+-            syncVif1();
+         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
++        // CSR reads do not wait for queued GS work: the GS runs alongside the
++        // EE on hardware too, and SIGNAL/FINISH show up when it gets there.
++        // (The VBlank handler reads CSR for FIELD every frame.)
++        if (m_vif1Async && regOff != kGsCsrRegOffset)
++            syncVif1();
+         if (regOff == kGsCsrRegOffset)
+         {
+             return gs_regs.csr.load();
+@@ -969,10 +976,13 @@ void PS2Memory::write32(uint32_t address, uint32_t value)
+ 
+     if (isGsPrivReg(address))
+     {
+-        if (m_vif1Async)
+-            syncVif1();
+         uint32_t off = address & 7;
+         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
++        // Display registers (below CSR) are read only by the VBlank latch,
++        // which captures them on the EE; CSR, IMR and SIGLBLID interact with
++        // queued GS work and wait for it.
++        if (m_vif1Async && regOff >= kGsCsrRegOffset)
++            syncVif1();
+         if (regOff == kGsCsrRegOffset)
+         {
+             // CSR: bits 0..1 of the low dword are write-one-to-clear status bits.
+@@ -1031,9 +1041,12 @@ void PS2Memory::write64(uint32_t address, uint64_t value)
+ 
+     if (isGsPrivReg(address))
+     {
+-        if (m_vif1Async)
+-            syncVif1();
+         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
++        // Display registers (below CSR) are read only by the VBlank latch,
++        // which captures them on the EE; CSR, IMR and SIGLBLID interact with
++        // queued GS work and wait for it.
++        if (m_vif1Async && regOff >= kGsCsrRegOffset)
++            syncVif1();
+         if (regOff == kGsCsrRegOffset)
+         {
+             // CSR: bits 0..1 are write-one-to-clear status bits. Done as a single
+@@ -1642,9 +1655,18 @@ void PS2Memory::completeDmacChannel(uint32_t channelBase, uint32_t cause)
+ 
+ void PS2Memory::processPendingTransfers()
+ {
+-    if (m_vif1Async && !m_pendingGifTransfers.empty())
+-        syncVif1();
+     const bool hadGif = !m_pendingGifTransfers.empty();
++    // With asynchronous VIF1, PATH3 is queued behind the VIF1 work it must
++    // follow instead of waiting for it.
++    Vif1Job path3Job;
++    path3Job.path3 = true;
++    auto submitPath3 = [&](const uint8_t *data, uint32_t size)
++    {
++        if (m_vif1Async)
++            path3Job.data.insert(path3Job.data.end(), data, data + size);
++        else
++            submitGifPacket(GifPathId::Path3, data, size, false);
++    };
+     uint32_t observedGifQwc = 0u;
+     for (const auto &transfer : m_pendingGifTransfers)
+     {
+@@ -1668,7 +1690,7 @@ void PS2Memory::processPendingTransfers()
+         {
+             m_seenGifCopy = true;
+             m_gifCopyCount.fetch_add(1, std::memory_order_relaxed);
+-            submitGifPacket(GifPathId::Path3, p.chainData.data(), static_cast<uint32_t>(p.chainData.size()), false);
++            submitPath3(p.chainData.data(), static_cast<uint32_t>(p.chainData.size()));
+         }
+         else if (p.qwc > 0)
+         {
+@@ -1697,7 +1719,7 @@ void PS2Memory::processPendingTransfers()
+                         break;
+                     m_seenGifCopy = true;
+                     m_gifCopyCount.fetch_add(1, std::memory_order_relaxed);
+-                    submitGifPacket(GifPathId::Path3, m_scratchpad + srcPhys, chunk, false);
++                    submitPath3(m_scratchpad + srcPhys, chunk);
+                     bytesLeft -= chunk;
+                     srcPhys += chunk;
+                 }
+@@ -1716,7 +1738,7 @@ void PS2Memory::processPendingTransfers()
+                         break;
+                     m_seenGifCopy = true;
+                     m_gifCopyCount.fetch_add(1, std::memory_order_relaxed);
+-                    submitGifPacket(GifPathId::Path3, m_rdram + srcPhys, chunk, false);
++                    submitPath3(m_rdram + srcPhys, chunk);
+                     bytesLeft -= chunk;
+                     srcPhys += chunk;
+                 }
+@@ -1724,6 +1746,9 @@ void PS2Memory::processPendingTransfers()
+         }
+     }
+     m_pendingGifTransfers.clear();
++    const bool queuedPath3 = !path3Job.data.empty();
++    if (queuedPath3)
++        queueVif1Job(std::move(path3Job));
+ 
+     const bool hadVif0 = !m_pendingVif0Transfers.empty();
+     for (auto &p : m_pendingVif0Transfers)
+@@ -1890,8 +1915,17 @@ void PS2Memory::processPendingTransfers()
+     // With a queued VIF1 job the worker drains the arbiter (PATH3 packets
+     // queued above are then ordered against its PATH1/PATH2 output exactly as
+     // the synchronous path orders them).
+-    if (m_gifArbiter && !queueVif1)
+-        m_gifArbiter->drain();
++    if (!queueVif1)
++    {
++        if (!m_vif1Async)
++            drainGifArbiter();
++        else if (queuedPath3)
++        {
++            Vif1Job drain;
++            drain.path3 = true;
++            queueVif1Job(std::move(drain));
++        }
++    }
+ 
+     static constexpr uint32_t GIF_CHANNEL = 0x1000A000;
+     static constexpr uint32_t VIF0_CHANNEL = 0x10008000;
+@@ -2012,6 +2046,14 @@ void PS2Memory::setVif1Async(bool enabled, std::function<void()> notify, std::fu
+     m_vif1Notify = std::move(notify);
+     m_vif1Fbrst = std::move(fbrst);
+     m_vif1Stopping = false;
++    const char *gifThread = std::getenv("OROCHI_GIF_THREAD");
++    if (!gifThread || std::string(gifThread) != "0")
++    {
++        m_gifStopping = false;
++        m_gifWorker = std::thread([this] { gifWorkerLoop(); });
++        m_gifWorkerId = m_gifWorker.get_id();
++        m_gifAsync = true;
++    }
+     m_vif1Worker = std::thread([this] { vif1WorkerLoop(); });
+     m_vif1WorkerId = m_vif1Worker.get_id();
+     m_vif1Async = true;
+@@ -2031,6 +2073,116 @@ void PS2Memory::stopVif1Worker()
+     m_vif1WorkCv.notify_all();
+     m_vif1Worker.join();
+     m_vif1Async = false;
++    stopGifWorker();
++}
++
++void PS2Memory::stopGifWorker()
++{
++    if (!m_gifWorker.joinable())
++    {
++        m_gifAsync = false;
++        return;
++    }
++    {
++        std::lock_guard<std::mutex> lock(m_gifMutex);
++        m_gifStopping = true;
++    }
++    m_gifWorkCv.notify_all();
++    m_gifWorker.join();
++    m_gifAsync = false;
++}
++
++void PS2Memory::gifWorkerLoop()
++{
++    std::vector<GifJob> batch;
++    for (;;)
++    {
++        {
++            std::unique_lock<std::mutex> lock(m_gifMutex);
++            for (GifJob &job : batch)
++                if (job.data.capacity())
++                    m_gifFreeBuffers.push_back(std::move(job.data));
++            m_gifOutstanding -= static_cast<uint32_t>(batch.size());
++            m_gifBusy.fetch_sub(static_cast<uint32_t>(batch.size()), std::memory_order_acq_rel);
++            batch.clear();
++            m_gifIdleCv.notify_all();
++            if (m_gifJobs.empty() && !m_gifStopping)
++            {
++                // Packets come in bursts: poll briefly before sleeping, so the
++                // VIF1 worker rarely pays for a wake-up.
++                lock.unlock();
++                const auto until = std::chrono::steady_clock::now() + std::chrono::microseconds(50);
++                while (m_gifBusy.load(std::memory_order_acquire) == 0u && std::chrono::steady_clock::now() < until)
++                    _mm_pause();
++                lock.lock();
++            }
++            m_gifWorkerWaiting = true;
++            m_gifWorkCv.wait(lock, [this] { return m_gifStopping || !m_gifJobs.empty(); });
++            m_gifWorkerWaiting = false;
++            if (m_gifJobs.empty())
++                return;
++            batch.swap(m_gifJobs);
++        }
++        for (GifJob &job : batch)
++        {
++            if (job.callback)
++                job.callback();
++            else if (job.data.empty())
++                m_gifArbiter->drain();
++            else
++            {
++                const uint32_t size = static_cast<uint32_t>(job.data.size());
++                if (!job.drainImmediately || !m_gifArbiter->processDirect(job.pathId, job.data.data(), size))
++                {
++                    m_gifArbiter->submit(job.pathId, job.data.data(), size, job.path2DirectHl);
++                    if (job.drainImmediately)
++                        m_gifArbiter->drain();
++                }
++            }
++        }
++    }
++}
++
++void PS2Memory::queueGifJob(GifPathId pathId, const uint8_t *data, uint32_t sizeBytes, bool drainImmediately, bool path2DirectHl,
++                            std::function<void()> callback)
++{
++    bool wake;
++    {
++        std::unique_lock<std::mutex> lock(m_gifMutex);
++        // Bound how far the VIF1 worker may run ahead of the GS frontend.
++        m_gifIdleCv.wait(lock, [this] { return m_gifOutstanding < 4096u; });
++        GifJob job;
++        if (sizeBytes && !m_gifFreeBuffers.empty())
++        {
++            job.data = std::move(m_gifFreeBuffers.back());
++            m_gifFreeBuffers.pop_back();
++        }
++        job.data.assign(data, data + sizeBytes);
++        job.pathId = pathId;
++        job.drainImmediately = drainImmediately;
++        job.path2DirectHl = path2DirectHl;
++        job.callback = std::move(callback);
++        m_gifJobs.push_back(std::move(job));
++        ++m_gifOutstanding;
++        m_gifBusy.fetch_add(1u, std::memory_order_acq_rel);
++        // A sleeping worker is woken by a drain (end of a VIF1 transfer), a
++        // backlog, or syncGif; waking it for every packet costs the producer
++        // about as much as processing the packet.
++        wake = m_gifWorkerWaiting && (sizeBytes == 0u || m_gifJobs.size() >= 32u);
++    }
++    if (wake)
++        m_gifWorkCv.notify_one();
++}
++
++void PS2Memory::syncGif() const
++{
++    if (!m_gifAsync || m_gifBusy.load(std::memory_order_acquire) == 0u ||
++        std::this_thread::get_id() == m_gifWorkerId)
++        return;
++    std::unique_lock<std::mutex> lock(m_gifMutex);
++    if (m_gifWorkerWaiting && !m_gifJobs.empty())
++        m_gifWorkCv.notify_one();
++    m_gifIdleCv.wait(lock, [this] { return m_gifOutstanding == 0u; });
+ }
+ 
+ void PS2Memory::vif1WorkerLoop()
+@@ -2046,6 +2198,21 @@ void PS2Memory::vif1WorkerLoop()
+             job = std::move(m_vif1Jobs.front());
+             m_vif1Jobs.pop_front();
+         }
++        if (job.callback)
++        {
++            if (m_gifAsync && m_gifArbiter)
++                queueGifJob(GifPathId::Path1, nullptr, 0u, true, false, std::move(job.callback));
++            else
++                job.callback();
++            finishVif1Transfer();
++            continue;
++        }
++        if (job.path3)
++        {
++            runPath3Job(job);
++            finishVif1Transfer();
++            continue;
++        }
+         m_vif1JobFbrst = job.fbrst;
+         try
+         {
+@@ -2063,8 +2230,8 @@ void PS2Memory::vif1WorkerLoop()
+                 std::cerr << "[vif1-async] transfer failed: " << error.what() << std::endl;
+             }
+         }
+-        if (m_gifArbiter && !job.registerWrite)
+-            m_gifArbiter->drain();
++        if (!job.registerWrite)
++            drainGifArbiter();
+         finishVif1Transfer();
+     }
+ }
+@@ -2084,13 +2251,14 @@ void PS2Memory::queueVif1Job(Vif1Job job)
+         }
+         if (idle)
+         {
+-            if (job.registerWrite)
++            if (job.path3)
++                runPath3Job(job);
++            else if (job.registerWrite)
+                 applyVif1RegisterWrite(job.address, job.value);
+             else
+             {
+                 processVIF1Data(job.data.data(), static_cast<uint32_t>(job.data.size()));
+-                if (m_gifArbiter)
+-                    m_gifArbiter->drain();
++                drainGifArbiter();
+             }
+             return;
+         }
+@@ -2106,6 +2274,43 @@ void PS2Memory::queueVif1Job(Vif1Job job)
+     m_vif1WorkCv.notify_one();
+ }
+ 
++void PS2Memory::runPath3Job(const Vif1Job &job)
++{
++    if (job.data.empty())
++        drainGifArbiter();
++    else
++        submitGifPacket(GifPathId::Path3, job.data.data(), static_cast<uint32_t>(job.data.size()), false);
++}
++
++void PS2Memory::queueVif1Callback(std::function<void()> fn)
++{
++    if (m_vif1Async)
++    {
++        std::unique_lock<std::mutex> lock(m_vif1Mutex);
++        if (m_vif1Outstanding != 0u)
++        {
++            m_vif1IdleCv.wait(lock, [this] { return m_vif1Outstanding < 64u; });
++            Vif1Job job;
++            job.callback = std::move(fn);
++            m_vif1Jobs.push_back(std::move(job));
++            ++m_vif1Outstanding;
++            m_vif1Busy.fetch_add(1u, std::memory_order_acq_rel);
++            lock.unlock();
++            m_vif1WorkCv.notify_one();
++            return;
++        }
++        // Only this thread queues VIF1 work, so the worker stays idle and all
++        // of its output is already with the GIF worker.
++        if (m_gifAsync && m_gifArbiter && m_gifBusy.load(std::memory_order_acquire) != 0u)
++        {
++            lock.unlock();
++            queueGifJob(GifPathId::Path1, nullptr, 0u, true, false, std::move(fn));
++            return;
++        }
++    }
++    fn();
++}
++
+ void PS2Memory::finishVif1Transfer()
+ {
+     {
+@@ -2120,11 +2325,17 @@ void PS2Memory::finishVif1Transfer()
+ 
+ void PS2Memory::syncVif1() const
+ {
+-    if (!m_vif1Async || m_vif1Busy.load(std::memory_order_acquire) == 0u ||
+-        std::this_thread::get_id() == m_vif1WorkerId)
++    if (!m_vif1Async)
++        return;
++    const std::thread::id self = std::this_thread::get_id();
++    if (self == m_vif1WorkerId || (m_gifAsync && self == m_gifWorkerId))
+         return;
+-    std::unique_lock<std::mutex> lock(m_vif1Mutex);
+-    m_vif1IdleCv.wait(lock, [this] { return m_vif1Outstanding == 0u; });
++    if (m_vif1Busy.load(std::memory_order_acquire) != 0u)
++    {
++        std::unique_lock<std::mutex> lock(m_vif1Mutex);
++        m_vif1IdleCv.wait(lock, [this] { return m_vif1Outstanding == 0u; });
++    }
++    syncGif();
+ }
+ 
+ void PS2Memory::syncVif1ForIo(uint32_t address, bool write)
+@@ -2137,8 +2348,7 @@ void PS2Memory::syncVif1ForIo(uint32_t address, bool write)
+                          (!write && address >= 0x10003C00u && address < 0x10003E00u) ||
+                          (address >= 0x10005000u && address < 0x10007000u) ||
+                          (address >= 0x12000000u && address < 0x12002000u);
+-    if (!related || m_vif1Busy.load(std::memory_order_acquire) == 0u ||
+-        std::this_thread::get_id() == m_vif1WorkerId)
++    if (!related)
+         return;
+     syncVif1();
+ }
+@@ -2165,7 +2375,7 @@ void PS2Memory::flushMaskedPath3Packets(bool drainImmediately)
+     auto emit = [&](const uint8_t *packetData, uint32_t packetSize)
+     {
+         if (m_gifArbiter)
+-            m_gifArbiter->submit(GifPathId::Path3, packetData, packetSize, false);
++            submitToGifArbiter(GifPathId::Path3, packetData, packetSize, false, false);
+         else if (m_gifPacketCallback)
+             m_gifPacketCallback(packetData, packetSize);
+     };
+@@ -2177,8 +2387,8 @@ void PS2Memory::flushMaskedPath3Packets(bool drainImmediately)
+     }
+     m_path3MaskedFifo.clear();
+ 
+-    if (m_gifArbiter && drainImmediately)
+-        m_gifArbiter->drain();
++    if (drainImmediately)
++        drainGifArbiter();
+ }
+ 
+ void PS2Memory::submitGifPacket(GifPathId pathId, const uint8_t *data, uint32_t sizeBytes, bool drainImmediately, bool path2DirectHl)
+@@ -2196,17 +2406,42 @@ void PS2Memory::submitGifPacket(GifPathId pathId, const uint8_t *data, uint32_t
+         flushMaskedPath3Packets(false);
+     }
+ 
+-    if (m_gifArbiter && drainImmediately && m_gifArbiter->processDirect(pathId, data, sizeBytes))
+-        return;
+     if (m_gifArbiter)
+-        m_gifArbiter->submit(pathId, data, sizeBytes, path2DirectHl);
++        submitToGifArbiter(pathId, data, sizeBytes, drainImmediately, path2DirectHl);
+     else if (m_gifPacketCallback)
+         m_gifPacketCallback(data, sizeBytes);
++}
+ 
+-    if (m_gifArbiter && drainImmediately)
++void PS2Memory::submitToGifArbiter(GifPathId pathId, const uint8_t *data, uint32_t sizeBytes, bool drainImmediately, bool path2DirectHl)
++{
++    if (queuesGif())
++    {
++        queueGifJob(pathId, data, sizeBytes, drainImmediately, path2DirectHl);
++        return;
++    }
++    // The workers own the arbiter while they have work; other threads'
++    // packets follow the queued ones.
++    syncVif1();
++    if (drainImmediately && m_gifArbiter->processDirect(pathId, data, sizeBytes))
++        return;
++    m_gifArbiter->submit(pathId, data, sizeBytes, path2DirectHl);
++    if (drainImmediately)
+         m_gifArbiter->drain();
+ }
+ 
++void PS2Memory::drainGifArbiter()
++{
++    if (!m_gifArbiter)
++        return;
++    if (queuesGif())
++    {
++        queueGifJob(GifPathId::Path1, nullptr, 0u, true, false);
++        return;
++    }
++    syncVif1();
++    m_gifArbiter->drain();
++}
++
+ void PS2Memory::processGIFPacket(uint32_t srcPhysAddr, uint32_t qwCount)
+ {
+     if (!m_rdram || qwCount == 0)
+diff --git a/ps2xRuntime/include/runtime/gs/gs_frontend.h b/ps2xRuntime/include/runtime/gs/gs_frontend.h
+index ff79c4b..6dd1e0f 100644
+--- a/ps2xRuntime/include/runtime/gs/gs_frontend.h
++++ b/ps2xRuntime/include/runtime/gs/gs_frontend.h
+@@ -6,6 +6,7 @@
+ #include <cstdint>
+ #include <functional>
+ #include <memory>
++#include <condition_variable>
+ #include <mutex>
+ #include <vector>
+ 
+@@ -107,6 +108,10 @@ public:
+     // Called before EE-side accesses (not from GIF packet processing): lets the
+     // runtime finish asynchronous VIF1 work that feeds this GS first.
+     void setExternalSync(std::function<void()> sync) { m_externalSync = std::move(sync); }
++    // With a queue, latchHostPresentationFrame captures the scanout registers
++    // and presents when queued GS work reaches that point, instead of waiting
++    // for it; at most one latch is outstanding.
++    void setAsyncLatch(std::function<void(std::function<void()>)> queue) { m_asyncLatch = std::move(queue); }
+     void reset();
+     void setRasterBackend(std::unique_ptr<GSRasterBackend> backend);
+ 
+@@ -189,6 +194,11 @@ private:
+     struct GSRegisters *m_privRegs = nullptr;
+     mutable std::recursive_mutex m_stateMutex;
+     std::function<void()> m_externalSync;
++    std::function<void(std::function<void()>)> m_asyncLatch;
++    std::mutex m_latchMutex;
++    std::condition_variable m_latchCv;
++    uint32_t m_latchesInFlight = 0;
++    void latchHostPresentationFrameNow(const GSPresentationRequest *scanout);
+     mutable std::mutex m_backendLifetimeMutex;
+     mutable std::mutex m_presentationMutex;
+ 
+diff --git a/ps2xRuntime/src/lib/gs/gs_frontend.cpp b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+index 5cf3d9c..e74672f 100644
+--- a/ps2xRuntime/src/lib/gs/gs_frontend.cpp
++++ b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+@@ -544,8 +544,39 @@ GSPresentationRequest GS::buildPresentationRequestUnlocked() const
+ 
+ void GS::latchHostPresentationFrame()
+ {
++    if (m_asyncLatch && m_privRegs)
++    {
++        GSPresentationRequest scanout{};
++        scanout.pmode = m_privRegs->pmode;
++        scanout.smode2 = m_privRegs->smode2;
++        scanout.dispfb1 = m_privRegs->dispfb1;
++        scanout.display1 = m_privRegs->display1;
++        scanout.dispfb2 = m_privRegs->dispfb2;
++        scanout.display2 = m_privRegs->display2;
++        scanout.bgcolor = m_privRegs->bgcolor;
++        scanout.vsyncTick = m_privRegs->vsyncTick.load(std::memory_order_acquire);
++        {
++            std::unique_lock<std::mutex> lock(m_latchMutex);
++            m_latchCv.wait(lock, [this] { return m_latchesInFlight == 0u; });
++            ++m_latchesInFlight;
++        }
++        m_asyncLatch([this, scanout]
++                     {
++                         latchHostPresentationFrameNow(&scanout);
++                         {
++                             std::lock_guard<std::mutex> lock(m_latchMutex);
++                             --m_latchesInFlight;
++                         }
++                         m_latchCv.notify_all(); });
++        return;
++    }
+     if (m_externalSync)
+         m_externalSync();
++    latchHostPresentationFrameNow(nullptr);
++}
++
++void GS::latchHostPresentationFrameNow(const GSPresentationRequest *scanout)
++{
+     GSPresentationRequest request{};
+     {
+         std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+@@ -559,6 +590,18 @@ void GS::latchHostPresentationFrame()
+             return;
+         }
+         request = buildPresentationRequestUnlocked();
++        if (scanout)
++        {
++            // The registers as of the VBlank; the GS drawing state is current.
++            request.pmode = scanout->pmode;
++            request.smode2 = scanout->smode2;
++            request.dispfb1 = scanout->dispfb1;
++            request.display1 = scanout->display1;
++            request.dispfb2 = scanout->dispfb2;
++            request.display2 = scanout->display2;
++            request.bgcolor = scanout->bgcolor;
++            request.vsyncTick = scanout->vsyncTick;
++        }
+     }
+ 
+     PresentationFrame frame{};
+diff --git a/ps2xRuntime/src/lib/ps2_runtime.cpp b/ps2xRuntime/src/lib/ps2_runtime.cpp
+index deeee71..54551df 100644
+--- a/ps2xRuntime/src/lib/ps2_runtime.cpp
++++ b/ps2xRuntime/src/lib/ps2_runtime.cpp
+@@ -1496,6 +1496,7 @@ void PS2Runtime::enableAsyncVif1(bool enabled)
+ {
+     if (!enabled || !m_eeScheduler)
+     {
++        m_gs.setAsyncLatch({});
+         m_memory.setVif1Async(false);
+         return;
+     }
+@@ -1507,6 +1508,12 @@ void PS2Runtime::enableAsyncVif1(bool enabled)
+             R5900Context *cpuContext = m_eeScheduler->currentContext();
+             return (cpuContext ? cpuContext : &m_cpuContext)->vu0_fbrst;
+         });
++    // The VBlank latch is queued behind the VIF1/GIF work instead of waiting
++    // for it (OROCHI_ASYNC_LATCH=0 waits).
++    const char *asyncLatch = std::getenv("OROCHI_ASYNC_LATCH");
++    if (!asyncLatch || std::string(asyncLatch) != "0")
++        m_gs.setAsyncLatch([this](std::function<void()> latch)
++                           { m_memory.queueVif1Callback(std::move(latch)); });
+ }
+ 
+ void PS2Runtime::completeAsyncVif1(uint8_t *rdram)
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/GS.cpp b/ps2xRuntime/src/lib/Kernel/Stubs/GS.cpp
+index 95d516f..80d50dc 100644
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/GS.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/GS.cpp
+@@ -1216,6 +1216,19 @@ namespace ps2_stubs
+         int32_t mode = static_cast<int32_t>(getRegU32(ctx, 4));
+         auto &mem = runtime->memory();
+ 
++        // With asynchronous VIF1 the queued transfers already hold copies of
++        // their data and run in order before anything the EE observes next
++        // (VU memory, VIF1/GIF registers, PATH3 and GS accesses sync), so the
++        // paths are reported idle: waiting would only serialize the EE with
++        // the worker.
++        if (mem.vif1Async())
++        {
++            if (mode == 0)
++                mem.processPendingTransfers();
++            setReturnS32(ctx, 0);
++            return;
++        }
++
+         if (mode == 0)
+         {
+             mem.processPendingTransfers();

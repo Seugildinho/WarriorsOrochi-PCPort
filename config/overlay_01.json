@@ -1,0 +1,18 @@
+{
+  "name": "ovl_01.bin",
+  "iso_offset": 3799040,
+  "base": "0x819000",
+  "bytes": 48256,
+  "bss_bytes": 2304,
+  "code_offset": 128,
+  "code_end": "0x824770",
+  "sha256": "2ca0ba067f04a3f9cd7c964ce86cf96e577f2f5710156186f86b1e28c3a332f4",
+  "entries": [
+    "0x8194d0",
+    "0x823d70",
+    "0x824750",
+    "0x824760"
+  ],
+  "fnv1a64": "29be16fadd7352b9",
+  "enabled": true
+}

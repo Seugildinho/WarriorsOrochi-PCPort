@@ -1,0 +1,58 @@
+diff --git a/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp b/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp
+index f0ad507..f323440 100644
+--- a/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp
++++ b/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp
+@@ -410,6 +410,15 @@ namespace
+         }
+     }
+ 
++    void applyCompactFramePresentation(std::vector<uint8_t> &pixels,uint32_t width,uint32_t height)
++    {
++        // INT=1, FFMD=1 scans a half-height frame. Expand those consecutive
++        // source rows instead of reading into the following framebuffer.
++        for(uint32_t y=height;y>0;--y)
++            std::memcpy(pixels.data()+(y-1u)*kHostFrameWidth*4u,
++                        pixels.data()+((y-1u)/2u)*kHostFrameWidth*4u,width*4u);
++    }
++
+     void normalizePresentationAlpha(std::vector<uint8_t> &pixels, uint32_t width, uint32_t height)
+     {
+         for (uint32_t y = 0; y < height; ++y)
+@@ -1863,6 +1872,7 @@ PresentationFrame GSCpuBackend::PresentFromLocalMemory(const GSPresentationReque
+     const GSPmodeState pmode = decodePmode(request.pmode);
+     const GSSmode2State smode2 = decodeSMode2(request.smode2);
+     const bool fieldMode = smode2.interlaced && !smode2.frameMode;
++    const bool compactFrame=smode2.interlaced && smode2.frameMode;
+     const bool oddField = (request.vsyncTick & 1ull) != 0ull;
+     const GSFrameReg displayFrame1 = decodeDisplayFrame(request.dispfb1);
+     const GSFrameReg displayFrame2 = decodeDisplayFrame(request.dispfb2);
+@@ -1886,6 +1896,7 @@ PresentationFrame GSCpuBackend::PresentFromLocalMemory(const GSPresentationReque
+                           std::vector<uint8_t> &pixels,
+                           bool &usedPreferred) -> bool
+     {
++        if(compactFrame) height=(height+1u)/2u;
+         selected = displayFrame;
+         pixels.clear();
+         usedPreferred = false;
+@@ -1956,7 +1967,9 @@ PresentationFrame GSCpuBackend::PresentFromLocalMemory(const GSPresentationReque
+                     dst[3] = pmode.amod ? dst[3] : src[3];
+                 }
+             normalizePresentationAlpha(result.pixels, result.width, result.height);
+-            if (fieldMode)
++            if(compactFrame)
++                applyCompactFramePresentation(result.pixels,result.width,result.height);
++            else if (fieldMode)
+                 applyFieldPresentation(result.pixels, result.width, result.height, oddField);
+             result.displayFbp = displayFrame1.fbp;
+             result.sourceFbp = selected1.fbp;
+@@ -1971,7 +1984,9 @@ PresentationFrame GSCpuBackend::PresentFromLocalMemory(const GSPresentationReque
+     GSFrameReg selected = displayFrame;
+     if (!copySource(displayFrame, origin, result.width, result.height, true, false, selected, result.pixels, result.usedPreferred))
+         return {};
+-    if (fieldMode)
++    if(compactFrame)
++        applyCompactFramePresentation(result.pixels,result.width,result.height);
++    else if (fieldMode)
+         applyFieldPresentation(result.pixels, result.width, result.height, oddField);
+     normalizePresentationAlpha(result.pixels, result.width, result.height);
+     result.displayFbp = displayFrame.fbp;

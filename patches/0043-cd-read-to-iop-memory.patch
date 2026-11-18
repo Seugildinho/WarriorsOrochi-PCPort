@@ -1,0 +1,25 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/CD.cpp b/ps2xRuntime/src/lib/Kernel/Stubs/CD.cpp
+index 56a978e..fa6097a 100644
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/CD.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/CD.cpp
+@@ -539,7 +539,19 @@ namespace ps2_stubs
+ 
+     void sceCdReadIOPm(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+     {
+-        sceCdRead(rdram, ctx, runtime);
++        // Same arguments as sceCdRead, but the buffer is in IOP memory (the
++        // sound banks' headers, which the IOP driver reads directly).
++        const uint32_t lbn = getRegU32(ctx, 4);
++        const uint32_t sectors = getRegU32(ctx, 5);
++        const uint32_t buf = getRegU32(ctx, 6);
++        std::vector<uint8_t> data(static_cast<size_t>(sectors) * kCdSectorSize);
++        const bool ok = readCdSectors(lbn, sectors, data.data(), data.size()) &&
++                        runtime->writeIopMemory(buf, data.data(), data.size());
++        if (ok)
++        {
++            g_cdStreamingLbn = lbn + sectors;
++        }
++        setReturnS32(ctx, ok ? 1 : 0);
+     }
+ 
+     void sceCdSearchFile(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)

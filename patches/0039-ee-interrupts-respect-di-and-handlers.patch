@@ -1,0 +1,129 @@
+diff --git a/ps2xRuntime/include/runtime/ee_scheduler.h b/ps2xRuntime/include/runtime/ee_scheduler.h
+index f247ff9..956b09b 100644
+--- a/ps2xRuntime/include/runtime/ee_scheduler.h
++++ b/ps2xRuntime/include/runtime/ee_scheduler.h
+@@ -382,6 +382,10 @@ private:
+     void makeReady(GuestThread &thread, int result, bool interruptSafe);
+     void requestPreemptionIfHigher(const GuestThread &readyThread, bool interruptSafe);
+     void applyPendingPreemption();
++    // True while the EE could take no interrupt and switch no thread: inside
++    // an interrupt handler (the switch waits for its return), or with
++    // Status.EIE clear between DI and EI.
++    bool interruptsBlocked() noexcept;
+     void processPendingEvents();
+     void processDueDeadlines();
+     void processEvent(const EeEvent &event);
+@@ -424,6 +428,8 @@ private:
+     bool m_rescheduleRequested = false;
+     bool m_timeSliceExpired = false;
+     bool m_insideInterrupt = false;
++    // An interrupt or preemption waits for EI or the handler's return.
++    bool m_waitingForUnblock = false;
+     uint32_t m_pendingEeTimerInterrupts = 0;
+     uint64_t m_eeCycle = 0;
+     uint64_t m_sliceEndCycle = kDefaultTimeSliceCycles;
+diff --git a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+index e0cd7c2..69e3e4f 100644
+--- a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
++++ b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+@@ -152,6 +152,19 @@ void EeScheduler::reset(uint8_t *rdram, const R5900Context &mainContext)
+     publishSnapshot();
+ }
+ 
++namespace
++{
++    constexpr uint32_t kStatusEie = 0x10000u;  // Status.EIE: the generated EI/DI set and clear it
++
++    // Work the EE runs from an interrupt (INTC/DMAC handlers, kernel alarms,
++    // the GS VSync callback): masked by DI.
++    bool runsAsInterrupt(GuestInvocationKind kind)
++    {
++        return kind == GuestInvocationKind::Interrupt || kind == GuestInvocationKind::Alarm ||
++               kind == GuestInvocationKind::GsCallback;
++    }
++}
++
+ void EeScheduler::run()
+ {
+     assertExecutor();
+@@ -254,7 +267,17 @@ void EeScheduler::run()
+             continue;
+         }
+ 
+-        if (!m_pendingInvocations.empty() && running->invocations.empty())
++        if (!m_pendingInvocations.empty() && running->invocations.empty() &&
++            runsAsInterrupt(m_pendingInvocations.front().kind) &&
++            (context.cop0_status & kStatusEie) == 0u)
++        {
++            // Inside DI: the handler runs at the first checkpoint after EI.
++            // (Orochi's timer-counter calls DI, then edit the alarm list over
++            // several calls; TIM2 taken between them made 0x141bd0 call a
++            // freed alarm's null handler.)
++            m_waitingForUnblock = true;
++        }
++        else if (!m_pendingInvocations.empty() && running->invocations.empty())
+         {
+             GuestInvocation invocation = std::move(m_pendingInvocations.front());
+             m_pendingInvocations.pop_front();
+@@ -364,6 +387,12 @@ bool EeScheduler::checkpointDue(uint32_t cycles) noexcept
+         return true;
+     }
+ 
++    if (m_waitingForUnblock && !interruptsBlocked())
++    {
++        m_waitingForUnblock = false;
++        return true;
++    }
++
+     const uint64_t nextEventCycle = m_nextDeadlineCycle.load(std::memory_order_acquire);
+     if (nextEventCycle != 0u && m_eeCycle >= nextEventCycle)
+     {
+@@ -377,7 +406,7 @@ bool EeScheduler::checkpointDue(uint32_t cycles) noexcept
+     }
+ 
+     const GuestThread *running = currentThread();
+-    if (running != nullptr && hasReadyAtOrAbovePriority(running->currentPriority))
++    if (running != nullptr && hasReadyAtOrAbovePriority(running->currentPriority) && !interruptsBlocked())
+     {
+         m_rescheduleRequested = true;
+         m_timeSliceExpired = true;
+@@ -388,6 +417,23 @@ bool EeScheduler::checkpointDue(uint32_t cycles) noexcept
+     return false;
+ }
+ 
++bool EeScheduler::interruptsBlocked() noexcept
++{
++    GuestThread *running = currentThread();
++    if (running == nullptr)
++    {
++        return false;
++    }
++    for (const GuestInvocation &invocation : running->invocations)
++    {
++        if (runsAsInterrupt(invocation.kind))
++        {
++            return true;
++        }
++    }
++    return (running->activeContext().cop0_status & kStatusEie) == 0u;
++}
++
+ void EeScheduler::accountCycles(uint32_t cycles) noexcept
+ {
+     const uint64_t elapsed = std::max<uint64_t>(1u, cycles);
+@@ -1735,6 +1781,15 @@ void EeScheduler::applyPendingPreemption()
+         m_timeSliceExpired = false;
+         return;
+     }
++    if (interruptsBlocked())
++    {
++        // No thread switch inside an interrupt handler or DI: it happens at
++        // the first checkpoint after the handler returns or EI. (Mid-handler,
++        // a woken thread could free an alarm the TIM2 handler 0x141bd0 still
++        // holds as its next one.)
++        m_waitingForUnblock = true;
++        return;
++    }
+     GuestThread *self = currentThread();
+     assert(self != nullptr);
+     enqueueReady(*self, !m_timeSliceExpired);

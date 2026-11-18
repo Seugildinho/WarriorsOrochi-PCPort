@@ -1,0 +1,19 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/GS.cpp b/ps2xRuntime/src/lib/Kernel/Stubs/GS.cpp
+index 9c54919..95d516f 100644
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/GS.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/GS.cpp
+@@ -1280,10 +1280,13 @@ namespace ps2_stubs
+ 
+     void sceGsSyncV(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+     {
++        // Recompiled SDK routines can program SMODE2 without updating the HLE
++        // g_gparam mirror. Use the effective GS mode for field alternation.
++        const bool interlaced = (runtime->memory().gs().smode2 & 1u) != 0u;
+         ps2_syscalls::WaitVSyncTick(rdram,
+                                     ctx,
+                                     runtime,
+-                                    g_gparam.interlace != 0u ? -1 : 1);
++                                    interlaced ? -1 : 1);
+     }
+ 
+     void sceGsSyncVCallback(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)

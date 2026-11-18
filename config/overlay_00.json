@@ -1,0 +1,12 @@
+{
+  "name": "ovl_00.bin",
+  "iso_offset": 3653632,
+  "base": "0x819000",
+  "bytes": 142400,
+  "bss_bytes": 5632,
+  "sha256": "512f94f017e5ff4e73670c7303a9ff34d0788d2c608b60a0fc602e8135134503",
+  "runtime_matches": true,
+  "entry_reached": "0x83a810",
+  "fnv1a64": "2c2a87266123e930",
+  "enabled": true
+}

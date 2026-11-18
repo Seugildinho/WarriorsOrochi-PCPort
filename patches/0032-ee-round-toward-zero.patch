@@ -1,0 +1,27 @@
+diff --git a/ps2xRuntime/src/lib/ps2_runtime.cpp b/ps2xRuntime/src/lib/ps2_runtime.cpp
+index 3bf2962..deeee71 100644
+--- a/ps2xRuntime/src/lib/ps2_runtime.cpp
++++ b/ps2xRuntime/src/lib/ps2_runtime.cpp
+@@ -26,6 +26,9 @@
+ #include <thread>
+ #include <unordered_map>
+ #include <sstream>
++#include <cfenv>
++#include <cstdlib>
++#include <string>
+ 
+ namespace ps2_stubs
+ {
+@@ -2402,6 +2405,12 @@ void PS2Runtime::run()
+     std::thread gameThread([&]()
+                            {
+         ThreadNaming::SetCurrentThreadName("GameThread");
++        // The EE FPU (and VU0 macro mode) rounds toward zero; host float code
++        // for guest instructions inherits this thread's rounding mode.
++        // PS2X_EE_ROUNDING=nearest keeps the host default.
++        const char *eeRounding = std::getenv("PS2X_EE_ROUNDING");
++        if (!eeRounding || std::string(eeRounding) != "nearest")
++            std::fesetround(FE_TOWARDZERO);
+         try
+         {
+             m_eeScheduler->reset(m_memory.getRDRAM(), m_cpuContext);

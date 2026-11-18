@@ -1,0 +1,14 @@
+diff --git a/ps2xRuntime/src/lib/ps2_runtime.cpp b/ps2xRuntime/src/lib/ps2_runtime.cpp
+index 23d9e8e..c31e9a4 100644
+--- a/ps2xRuntime/src/lib/ps2_runtime.cpp
++++ b/ps2xRuntime/src/lib/ps2_runtime.cpp
+@@ -750,6 +750,9 @@ bool PS2Runtime::initialize(const char *title)
+         InitWindow(HOST_WINDOW_WIDTH, HOST_WINDOW_HEIGHT, title);
+         InitAudioDevice();
+         m_audioBackend.setAudioReady(IsAudioDeviceReady());
++        // OROCHI_VOLUME: the Setup volume, 0 to 100 percent (game sound and movies).
++        if (const char *volume = std::getenv("OROCHI_VOLUME"))
++            SetMasterVolume(std::clamp(std::atoi(volume), 0, 100) / 100.0f);
+ #endif
+         SetTargetFPS(60);
+         // Esc is one stray key press away from losing an unsaved battle.

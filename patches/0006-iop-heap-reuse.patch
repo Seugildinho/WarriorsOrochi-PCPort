@@ -1,0 +1,112 @@
+diff --git a/ps2xIOP/src/emulator/core/iop_memory.cpp b/ps2xIOP/src/emulator/core/iop_memory.cpp
+index 25e9b36..cecd36f 100644
+--- a/ps2xIOP/src/emulator/core/iop_memory.cpp
++++ b/ps2xIOP/src/emulator/core/iop_memory.cpp
+@@ -32,7 +32,6 @@ namespace ps2x::iop::detail
+         std::fill(m_scratch.begin(), m_scratch.end(), uint8_t{0});
+         m_hardware.clear();
+         m_allocations.clear();
+-        m_heapCursor = HeapBase;
+         m_interruptStatus = 0;
+         m_interruptMask = 0;
+         m_interruptControl = 1;
+@@ -284,12 +283,16 @@ namespace ps2x::iop::detail
+ 
+     uint32_t IopMemory::allocate(uint32_t size, uint32_t alignment, std::optional<uint32_t> fixed)
+     {
++        if (size > HeapLimit - HeapBase)
++            return 0u;
+         size = alignUp(std::max(size, 1u), 16u);
+         alignment = std::max<uint32_t>(alignment, 4u);
++        if ((alignment & (alignment - 1u)) != 0u || alignment > HeapLimit)
++            return 0u;
+         if (fixed)
+         {
+             const uint32_t address = *fixed;
+-            if (address < HeapBase || address + size > HeapLimit)
++            if (address < HeapBase || address > HeapLimit || size > HeapLimit - address)
+                 return 0u;
+             for (const auto &block : m_allocations)
+                 if (address < block.address + block.size && block.address < address + size)
+@@ -299,7 +302,10 @@ namespace ps2x::iop::detail
+             return address;
+         }
+ 
+-        uint32_t candidate = alignUp(m_heapCursor, alignment);
++        // Start at the heap base so buffers released between scenes can be
++        // reused. A monotonically advancing cursor exhausts the IOP heap even
++        // when every temporary audio buffer has already been freed.
++        uint32_t candidate = alignUp(HeapBase, alignment);
+         for (;;)
+         {
+             bool overlap = false;
+@@ -319,7 +325,6 @@ namespace ps2x::iop::detail
+             return 0u;
+         m_allocations.push_back({candidate, size});
+         markOwned(candidate, size);
+-        m_heapCursor = std::max(m_heapCursor, candidate + size);
+         return candidate;
+     }
+ 
+@@ -339,7 +344,23 @@ namespace ps2x::iop::detail
+ 
+     uint32_t IopMemory::maxFreeMemory() const
+     {
+-        return m_heapCursor < HeapLimit ? HeapLimit - m_heapCursor : 0u;
++        auto blocks = m_allocations;
++        std::sort(blocks.begin(), blocks.end(), [](const auto &a, const auto &b) { return a.address < b.address; });
++        uint32_t cursor = HeapBase, largest = 0;
++        for (const auto &block : blocks)
++        {
++            largest = std::max(largest, block.address - cursor);
++            cursor = block.address + block.size;
++        }
++        return std::max(largest, HeapLimit - cursor);
++    }
++
++    uint32_t IopMemory::totalFreeMemory() const
++    {
++        uint32_t available = HeapLimit - HeapBase;
++        for (const auto &block : m_allocations)
++            available -= block.size;
++        return available;
+     }
+ 
+     std::optional<IopMemory::Allocation> IopMemory::allocationContaining(uint32_t address) const
+diff --git a/ps2xIOP/src/emulator/core/iop_memory.h b/ps2xIOP/src/emulator/core/iop_memory.h
+index a932a5d..48d7c10 100644
+--- a/ps2xIOP/src/emulator/core/iop_memory.h
++++ b/ps2xIOP/src/emulator/core/iop_memory.h
+@@ -58,6 +58,7 @@ namespace ps2x::iop::detail
+         [[nodiscard]] uint32_t allocate(uint32_t size, uint32_t alignment = 16u, std::optional<uint32_t> fixed = std::nullopt);
+         [[nodiscard]] bool freeAllocation(uint32_t address);
+         [[nodiscard]] uint32_t maxFreeMemory() const;
++        [[nodiscard]] uint32_t totalFreeMemory() const;
+         [[nodiscard]] std::optional<Allocation> allocationContaining(uint32_t address) const;
+ 
+         [[nodiscard]] uint32_t interruptStatus() const noexcept { return m_interruptStatus; }
+@@ -82,7 +83,6 @@ namespace ps2x::iop::detail
+         std::vector<uint8_t> m_scratch;
+         std::unordered_map<uint32_t, uint32_t> m_hardware;
+         std::vector<Allocation> m_allocations;
+-        uint32_t m_heapCursor = HeapBase;
+         uint32_t m_interruptStatus = 0;
+         uint32_t m_interruptMask = 0;
+         uint32_t m_interruptControl = 1;
+diff --git a/ps2xIOP/src/emulator/imports/iop_sysmem.cpp b/ps2xIOP/src/emulator/imports/iop_sysmem.cpp
+index 2c8d8f7..67e24ab 100644
+--- a/ps2xIOP/src/emulator/imports/iop_sysmem.cpp
++++ b/ps2xIOP/src/emulator/imports/iop_sysmem.cpp
+@@ -40,9 +40,11 @@ namespace ps2x::iop::detail
+             setV0(IopMemory::RamSize);
+             return true;
+         case 7: // QueryMaxFreeMemSize
+-        case 8: // QueryTotalFreeMemSize
+             setV0(m_memory.maxFreeMemory());
+             return true;
++        case 8: // QueryTotalFreeMemSize
++            setV0(m_memory.totalFreeMemory());
++            return true;
+         case 9: // QueryBlockTopAddress
+             if (const auto block = m_memory.allocationContaining(a0))
+                 setV0(block->address);

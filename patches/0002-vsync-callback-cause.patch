@@ -1,0 +1,15 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+index c5e31c4..8369c17 100644
+--- a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
++++ b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+@@ -1894,7 +1894,9 @@ void EeScheduler::processEvent(const EeEvent &event)
+             GuestInvocation invocation{};
+             invocation.kind = GuestInvocationKind::GsCallback;
+             invocation.context.pc = m_gsVSyncCallback;
+-            SET_GPR_U32(&invocation.context, 4, static_cast<uint32_t>(m_vsyncTick));
++            // GS VSync callbacks receive the INTC cause (VBLANK_S = 2),
++            // not the monotonic frame counter. Games dispatch on this value.
++            SET_GPR_U32(&invocation.context, 4, 2u);
+             SET_GPR_U32(&invocation.context, 28, m_gsVSyncCallbackGp);
+             SET_GPR_U32(&invocation.context, 29, m_gsVSyncCallbackSp);
+             SET_GPR_U32(&invocation.context, 31, 0u);

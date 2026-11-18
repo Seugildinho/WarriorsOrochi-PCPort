@@ -1,0 +1,825 @@
+diff --git a/ps2xRuntime/include/runtime/ps2_memory.h b/ps2xRuntime/include/runtime/ps2_memory.h
+index b624eb7..d71ba2b 100644
+--- a/ps2xRuntime/include/runtime/ps2_memory.h
++++ b/ps2xRuntime/include/runtime/ps2_memory.h
+@@ -8,8 +8,11 @@
+ #include <vector>
+ #include <unordered_map>
+ #include <atomic>
++#include <condition_variable>
++#include <deque>
+ #include <iostream>
+ #include <mutex>
++#include <thread>
+ 
+ #include "gs/ps2_gif_arbiter.h"
+ #if defined(_MSC_VER)
+@@ -346,6 +349,22 @@ public:
+     void processPendingTransfers();
+     std::vector<uint32_t> consumeCompletedDmacCauses();
+ 
++    // Asynchronous VIF1 (opt-in). VIF1 DMA transfers and VIF1 register
++    // writes are queued to a worker thread (VIF codes, VU1 microprograms and
++    // their PATH1/PATH2 GIF output) while the EE continues. The EE sees each
++    // transfer complete immediately, exactly like the synchronous path, and
++    // waits for the worker (syncVif1) only before observing its results:
++    // VIF1/GIF registers and FIFOs, GS privileged registers, VU1 memory,
++    // PATH3 and GS frontend calls. notify() is called when a VU1 program
++    // reported D/T stop bits (see takeVif1VpuStatResult).
++    void setVif1Async(bool enabled, std::function<void()> notify = {}, std::function<uint32_t()> fbrst = {});
++    bool vif1Async() const { return m_vif1Async; }
++    void syncVif1() const;
++    bool onVif1Worker() const { return m_vif1Async && std::this_thread::get_id() == m_vif1WorkerId; }
++    uint32_t vif1JobFbrst() const { return m_vif1JobFbrst; }
++    void setVif1VpuStatResult(uint32_t bits) { m_vif1VpuStat.store(bits | 0x80000000u, std::memory_order_release); }
++    uint32_t takeVif1VpuStatResult() { return m_vif1VpuStat.exchange(0u, std::memory_order_acq_rel); }
++
+     int pollDmaRegisters();
+ 
+     // Track code modifications for self-modifying code
+@@ -424,6 +443,34 @@ public:
+     std::mutex m_completedDmacMutex;
+     std::vector<uint32_t> m_completedDmacCauses;
+ 
++    struct Vif1Job
++    {
++        std::vector<uint8_t> data;
++        uint32_t fbrst = 0;
++        bool registerWrite = false;     // a VIF1 register write instead of data
++        uint32_t address = 0;
++        uint32_t value = 0;
++    };
++    void vif1WorkerLoop();
++    void stopVif1Worker();
++    void syncVif1ForIo(uint32_t address, bool write);
++    void queueVif1Job(Vif1Job job);
++    void finishVif1Transfer();
++    void applyVif1RegisterWrite(uint32_t address, uint32_t value);
++    bool m_vif1Async = false;
++    std::thread m_vif1Worker;
++    std::thread::id m_vif1WorkerId;
++    mutable std::mutex m_vif1Mutex;
++    mutable std::condition_variable m_vif1WorkCv, m_vif1IdleCv;
++    std::deque<Vif1Job> m_vif1Jobs;
++    uint32_t m_vif1Outstanding = 0;              // queued or running (m_vif1Mutex)
++    std::atomic<uint32_t> m_vif1Busy{0};         // m_vif1Outstanding, readable without the lock
++    std::atomic<uint32_t> m_vif1VpuStat{0};
++    uint32_t m_vif1JobFbrst = 0;                 // worker only
++    bool m_vif1Stopping = false;
++    std::function<void()> m_vif1Notify;
++    std::function<uint32_t()> m_vif1Fbrst;
++
+     struct CodeRegion
+     {
+         uint32_t start;
+diff --git a/ps2xRuntime/src/lib/ps2_memory.cpp b/ps2xRuntime/src/lib/ps2_memory.cpp
+index 9d488ac..f9ac137 100644
+--- a/ps2xRuntime/src/lib/ps2_memory.cpp
++++ b/ps2xRuntime/src/lib/ps2_memory.cpp
+@@ -255,6 +255,7 @@ PS2Memory::PS2Memory()
+ 
+ PS2Memory::~PS2Memory()
+ {
++    stopVif1Worker();
+     if (m_rdram)
+     {
+         delete[] m_rdram;
+@@ -543,6 +544,8 @@ uint8_t *PS2Memory::mapVuMemory(uint32_t physAddr, uint32_t size, uint32_t &offs
+ 
+ const uint8_t *PS2Memory::mapVuMemory(uint32_t physAddr, uint32_t size, uint32_t &offset, uint32_t &limit) const
+ {
++    if (m_vif1Async && physAddr >= PS2_VU1_CODE_BASE)
++        syncVif1();
+     auto mapRange = [&](uint32_t base, uint32_t rangeSize, const uint8_t *ptr) -> const uint8_t *
+     {
+         if (!ptr || physAddr < base)
+@@ -753,6 +756,8 @@ uint32_t PS2Memory::read32(uint32_t address)
+ 
+     if (isGsPrivReg(address))
+     {
++        if (m_vif1Async)
++            syncVif1();
+         uint32_t off = address & 7;
+         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
+         if (regOff == kGsCsrRegOffset)
+@@ -801,6 +806,8 @@ uint64_t PS2Memory::read64(uint32_t address)
+ 
+     if (isGsPrivReg(address))
+     {
++        if (m_vif1Async)
++            syncVif1();
+         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
+         if (regOff == kGsCsrRegOffset)
+         {
+@@ -962,6 +969,8 @@ void PS2Memory::write32(uint32_t address, uint32_t value)
+ 
+     if (isGsPrivReg(address))
+     {
++        if (m_vif1Async)
++            syncVif1();
+         uint32_t off = address & 7;
+         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
+         if (regOff == kGsCsrRegOffset)
+@@ -1022,6 +1031,8 @@ void PS2Memory::write64(uint32_t address, uint64_t value)
+ 
+     if (isGsPrivReg(address))
+     {
++        if (m_vif1Async)
++            syncVif1();
+         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
+         if (regOff == kGsCsrRegOffset)
+         {
+@@ -1133,6 +1144,8 @@ void PS2Memory::write128(uint32_t address, __m128i value)
+ 
+ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
+ {
++    if (m_vif1Async)
++        syncVif1ForIo(address, true);
+     size_t timerIndex = 0u;
+     uint32_t timerOffset = 0u;
+     if (decodeEeTimerRegister(address, timerIndex, timerOffset))
+@@ -1169,6 +1182,8 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
+ 
+     if (isGsPrivReg(address))
+     {
++        if (m_vif1Async)
++            syncVif1();
+         // NB: unreachable from write8/16/32/64 today since those all funnel IO
+         // register writes through addresses in PS2_IO_BASE's range, which is
+         // disjoint from PS2_GS_PRIV_REG_BASE; kept correct for direct callers.
+@@ -1230,65 +1245,17 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
+     if (address >= 0x10003C00u && address < 0x10003E00u)
+     {
+         m_vifWriteCount.fetch_add(1, std::memory_order_relaxed);
+-
+-        switch (address)
++        if (m_vif1Async && !onVif1Worker())
+         {
+-        case 0x10003C10u:     // VIF1_FBRST
+-            if (value & 0x1u) // RST
+-            {
+-                const bool wasPath3Masked = m_path3Masked;
+-                std::memset(&vif1_regs, 0, sizeof(vif1_regs));
+-                m_vif1PendingDirectQwc = 0u;
+-                m_vif1PendingDirectHl = false;
+-                m_path3Masked = false;
+-                if (wasPath3Masked)
+-                    flushMaskedPath3Packets();
+-            }
+-            if (value & 0x8u) // STC
+-            {
+-                vif1_regs.stat &= ~((1u << 8) | (1u << 9) | (1u << 10) | (1u << 11) | (1u << 12) | (1u << 13));
+-            }
+-            break;
+-        case 0x10003C30u:
+-            vif1_regs.mark = value & 0xFFFFu;
+-            vif1_regs.stat &= ~(1u << 6); // clear MRK flag on CPU write
+-            break;
+-        case 0x10003C40u:
+-            vif1_regs.cycle = value & 0xFFFFu;
+-            break;
+-        case 0x10003C50u:
+-            vif1_regs.mode = value & 0x3u;
+-            break;
+-        case 0x10003C60u:
+-            vif1_regs.num = value & 0xFFu;
+-            break;
+-        case 0x10003C70u:
+-            vif1_regs.mask = value;
+-            break;
+-        case 0x10003C80u:
+-            vif1_regs.code = value;
+-            break;
+-        case 0x10003C90u:
+-            vif1_regs.itops = value & 0x3FFu;
+-            break;
+-        case 0x10003CA0u:
+-            vif1_regs.base = value & 0x3FFu;
+-            break;
+-        case 0x10003CB0u:
+-            vif1_regs.ofst = value & 0x3FFu;
+-            break;
+-        case 0x10003CC0u:
+-            vif1_regs.tops = value & 0x3FFu;
+-            break;
+-        case 0x10003CD0u:
+-            vif1_regs.itop = value & 0x3FFu;
+-            break;
+-        case 0x10003CE0u:
+-            vif1_regs.top = value & 0x3FFu;
+-            break;
+-        default:
+-            break;
++            // VIF1 state belongs to the worker; apply in order with its transfers.
++            Vif1Job job;
++            job.registerWrite = true;
++            job.address = address;
++            job.value = value;
++            queueVif1Job(std::move(job));
+         }
++        else
++            applyVif1RegisterWrite(address, value);
+ 
+         return true;
+     }
+@@ -1675,6 +1642,8 @@ void PS2Memory::completeDmacChannel(uint32_t channelBase, uint32_t cause)
+ 
+ void PS2Memory::processPendingTransfers()
+ {
++    if (m_vif1Async && !m_pendingGifTransfers.empty())
++        syncVif1();
+     const bool hadGif = !m_pendingGifTransfers.empty();
+     uint32_t observedGifQwc = 0u;
+     for (const auto &transfer : m_pendingGifTransfers)
+@@ -1815,6 +1784,52 @@ void PS2Memory::processPendingTransfers()
+     m_pendingVif0Transfers.clear();
+ 
+     const bool hadVif1 = !m_pendingVif1Transfers.empty();
++    const bool queueVif1 = hadVif1 && m_vif1Async;
++    if (queueVif1)
++    {
++        // Same bytes the synchronous loop below feeds processVIF1Data, copied
++        // now (the EE may reuse its buffers once it continues).
++        Vif1Job job;
++        job.fbrst = m_vif1Fbrst ? m_vif1Fbrst() : 0u;
++        for (auto &p : m_pendingVif1Transfers)
++        {
++            if (!p.chainData.empty())
++            {
++                job.data.insert(job.data.end(), p.chainData.begin(), p.chainData.end());
++                continue;
++            }
++            if (p.qwc == 0)
++                continue;
++            uint32_t srcPhys = 0;
++            const uint64_t bytes64 = static_cast<uint64_t>(p.qwc) * 16ull;
++            uint32_t bytesLeft = (bytes64 > 0xFFFFFFFFull) ? 0xFFFFFFFFu : static_cast<uint32_t>(bytes64);
++            try
++            {
++                srcPhys = translateAddress(p.srcAddr);
++            }
++            catch (const std::exception &)
++            {
++                continue;
++            }
++            const uint8_t *base = p.fromScratchpad ? m_scratchpad : m_rdram;
++            const uint32_t limit = p.fromScratchpad ? PS2_SCRATCHPAD_SIZE : PS2_RAM_SIZE;
++            while (bytesLeft > 0)
++            {
++                if (srcPhys >= limit)
++                    srcPhys = 0;
++                uint32_t chunk = bytesLeft;
++                if (srcPhys + chunk > limit)
++                    chunk = limit - srcPhys;
++                if (chunk == 0)
++                    break;
++                job.data.insert(job.data.end(), base + srcPhys, base + srcPhys + chunk);
++                bytesLeft -= chunk;
++                srcPhys += chunk;
++            }
++        }
++        m_pendingVif1Transfers.clear();
++        queueVif1Job(std::move(job));
++    }
+     for (auto &p : m_pendingVif1Transfers)
+     {
+         if (!p.chainData.empty())
+@@ -1872,7 +1887,10 @@ void PS2Memory::processPendingTransfers()
+     }
+     m_pendingVif1Transfers.clear();
+ 
+-    if (m_gifArbiter)
++    // With a queued VIF1 job the worker drains the arbiter (PATH3 packets
++    // queued above are then ordered against its PATH1/PATH2 output exactly as
++    // the synchronous path orders them).
++    if (m_gifArbiter && !queueVif1)
+         m_gifArbiter->drain();
+ 
+     static constexpr uint32_t GIF_CHANNEL = 0x1000A000;
+@@ -1911,6 +1929,8 @@ void PS2Memory::processPendingTransfers()
+     }
+     if (hadVif1)
+     {
++        // Also for queued transfers: the EE observes VIF1 DMA completion at
++        // once, as with synchronous processing.
+         raiseDStatChannel(1u); // VIF1 channel
+         queueCompletedDmacCause(1u);
+         m_ioRegisters[VIF1_CHANNEL + 0x00] &= ~0x100u;
+@@ -1918,6 +1938,211 @@ void PS2Memory::processPendingTransfers()
+     }
+ }
+ 
++void PS2Memory::applyVif1RegisterWrite(uint32_t address, uint32_t value)
++{
++    switch (address)
++    {
++    case 0x10003C10u:     // VIF1_FBRST
++        if (value & 0x1u) // RST
++        {
++            const bool wasPath3Masked = m_path3Masked;
++            std::memset(&vif1_regs, 0, sizeof(vif1_regs));
++            m_vif1PendingDirectQwc = 0u;
++            m_vif1PendingDirectHl = false;
++            m_path3Masked = false;
++            if (wasPath3Masked)
++                flushMaskedPath3Packets();
++        }
++        if (value & 0x8u) // STC
++        {
++            vif1_regs.stat &= ~((1u << 8) | (1u << 9) | (1u << 10) | (1u << 11) | (1u << 12) | (1u << 13));
++        }
++        break;
++    case 0x10003C30u:
++        vif1_regs.mark = value & 0xFFFFu;
++        vif1_regs.stat &= ~(1u << 6); // clear MRK flag on CPU write
++        break;
++    case 0x10003C40u:
++        vif1_regs.cycle = value & 0xFFFFu;
++        break;
++    case 0x10003C50u:
++        vif1_regs.mode = value & 0x3u;
++        break;
++    case 0x10003C60u:
++        vif1_regs.num = value & 0xFFu;
++        break;
++    case 0x10003C70u:
++        vif1_regs.mask = value;
++        break;
++    case 0x10003C80u:
++        vif1_regs.code = value;
++        break;
++    case 0x10003C90u:
++        vif1_regs.itops = value & 0x3FFu;
++        break;
++    case 0x10003CA0u:
++        vif1_regs.base = value & 0x3FFu;
++        break;
++    case 0x10003CB0u:
++        vif1_regs.ofst = value & 0x3FFu;
++        break;
++    case 0x10003CC0u:
++        vif1_regs.tops = value & 0x3FFu;
++        break;
++    case 0x10003CD0u:
++        vif1_regs.itop = value & 0x3FFu;
++        break;
++    case 0x10003CE0u:
++        vif1_regs.top = value & 0x3FFu;
++        break;
++    default:
++        break;
++    }
++}
++
++void PS2Memory::setVif1Async(bool enabled, std::function<void()> notify, std::function<uint32_t()> fbrst)
++{
++    if (!enabled)
++    {
++        stopVif1Worker();
++        return;
++    }
++    if (m_vif1Async)
++        return;
++    m_vif1Notify = std::move(notify);
++    m_vif1Fbrst = std::move(fbrst);
++    m_vif1Stopping = false;
++    m_vif1Worker = std::thread([this] { vif1WorkerLoop(); });
++    m_vif1WorkerId = m_vif1Worker.get_id();
++    m_vif1Async = true;
++}
++
++void PS2Memory::stopVif1Worker()
++{
++    if (!m_vif1Worker.joinable())
++    {
++        m_vif1Async = false;
++        return;
++    }
++    {
++        std::lock_guard<std::mutex> lock(m_vif1Mutex);
++        m_vif1Stopping = true;
++    }
++    m_vif1WorkCv.notify_all();
++    m_vif1Worker.join();
++    m_vif1Async = false;
++}
++
++void PS2Memory::vif1WorkerLoop()
++{
++    for (;;)
++    {
++        Vif1Job job;
++        {
++            std::unique_lock<std::mutex> lock(m_vif1Mutex);
++            m_vif1WorkCv.wait(lock, [this] { return m_vif1Stopping || !m_vif1Jobs.empty(); });
++            if (m_vif1Jobs.empty())
++                return;
++            job = std::move(m_vif1Jobs.front());
++            m_vif1Jobs.pop_front();
++        }
++        m_vif1JobFbrst = job.fbrst;
++        try
++        {
++            if (job.registerWrite)
++                applyVif1RegisterWrite(job.address, job.value);
++            else if (!job.data.empty())
++                processVIF1Data(job.data.data(), static_cast<uint32_t>(job.data.size()));
++        }
++        catch (const std::exception &error)
++        {
++            static bool reported = false;
++            if (!reported)
++            {
++                reported = true;
++                std::cerr << "[vif1-async] transfer failed: " << error.what() << std::endl;
++            }
++        }
++        if (m_gifArbiter && !job.registerWrite)
++            m_gifArbiter->drain();
++        finishVif1Transfer();
++    }
++}
++
++void PS2Memory::queueVif1Job(Vif1Job job)
++{
++    // Small work with an idle worker runs here: handing it over costs more
++    // than it saves (loading screens send many tiny transfers). Order is kept
++    // because only this thread queues work and the queue is empty.
++    constexpr size_t kInlineBytes = 8u * 1024u;
++    if (job.registerWrite || job.data.size() < kInlineBytes)
++    {
++        bool idle;
++        {
++            std::lock_guard<std::mutex> lock(m_vif1Mutex);
++            idle = m_vif1Outstanding == 0u;
++        }
++        if (idle)
++        {
++            if (job.registerWrite)
++                applyVif1RegisterWrite(job.address, job.value);
++            else
++            {
++                processVIF1Data(job.data.data(), static_cast<uint32_t>(job.data.size()));
++                if (m_gifArbiter)
++                    m_gifArbiter->drain();
++            }
++            return;
++        }
++    }
++    {
++        std::unique_lock<std::mutex> lock(m_vif1Mutex);
++        // Bound how far the EE may run ahead of the worker.
++        m_vif1IdleCv.wait(lock, [this] { return m_vif1Outstanding < 64u; });
++        m_vif1Jobs.push_back(std::move(job));
++        ++m_vif1Outstanding;
++        m_vif1Busy.fetch_add(1u, std::memory_order_acq_rel);
++    }
++    m_vif1WorkCv.notify_one();
++}
++
++void PS2Memory::finishVif1Transfer()
++{
++    {
++        std::lock_guard<std::mutex> lock(m_vif1Mutex);
++        --m_vif1Outstanding;
++        m_vif1Busy.fetch_sub(1u, std::memory_order_acq_rel);
++    }
++    m_vif1IdleCv.notify_all();
++    if (m_vif1Notify && (m_vif1VpuStat.load(std::memory_order_acquire) & 0x80000000u) != 0u)
++        m_vif1Notify();
++}
++
++void PS2Memory::syncVif1() const
++{
++    if (!m_vif1Async || m_vif1Busy.load(std::memory_order_acquire) == 0u ||
++        std::this_thread::get_id() == m_vif1WorkerId)
++        return;
++    std::unique_lock<std::mutex> lock(m_vif1Mutex);
++    m_vif1IdleCv.wait(lock, [this] { return m_vif1Outstanding == 0u; });
++}
++
++void PS2Memory::syncVif1ForIo(uint32_t address, bool write)
++{
++    // Registers that show (or change) what the worker produces: GIF
++    // registers, VIF1 registers (reads; writes are queued), the VIF1/GIF
++    // FIFOs and the GS privileged registers. DMAC channel registers and
++    // D_STAT already show the transfer complete.
++    const bool related = (address >= 0x10003000u && address < 0x10003100u) ||
++                         (!write && address >= 0x10003C00u && address < 0x10003E00u) ||
++                         (address >= 0x10005000u && address < 0x10007000u) ||
++                         (address >= 0x12000000u && address < 0x12002000u);
++    if (!related || m_vif1Busy.load(std::memory_order_acquire) == 0u ||
++        std::this_thread::get_id() == m_vif1WorkerId)
++        return;
++    syncVif1();
++}
++
+ void PS2Memory::queueCompletedDmacCause(uint32_t cause)
+ {
+     std::lock_guard<std::mutex> lock(m_completedDmacMutex);
+@@ -2018,6 +2243,7 @@ void PS2Memory::processGIFPacket(const uint8_t *data, uint32_t sizeBytes)
+ 
+ bool PS2Memory::tryProcessNativeGifImageUploadChain(GS &gs, uint32_t tadr, uint32_t chcr)
+ {
++    syncVif1(); // PATH3 must follow the queued VIF1 output
+     static constexpr uint32_t GIF_CHANNEL = 0x1000A000u;
+     static constexpr uint32_t D_STAT = 0x1000E010u;
+     static constexpr uint32_t D_CTRL = 0x1000E000u;
+@@ -2210,6 +2436,7 @@ bool PS2Memory::tryProcessNativeGifImageUploadChain(GS &gs, uint32_t tadr, uint3
+ 
+ bool PS2Memory::tryProcessNativeGifPackedChain(GS &gs, uint32_t tadr, uint32_t chcr)
+ {
++    syncVif1(); // PATH3 must follow the queued VIF1 output
+     static constexpr uint32_t GIF_CHANNEL = 0x1000A000u;
+     static constexpr uint32_t D_STAT = 0x1000E010u;
+     static constexpr uint32_t D_CTRL = 0x1000E000u;
+@@ -2295,6 +2522,8 @@ int PS2Memory::pollDmaRegisters()
+ 
+ uint32_t PS2Memory::readIORegister(uint32_t address)
+ {
++    if (m_vif1Async)
++        syncVif1ForIo(address, false);
+     size_t timerIndex = 0u;
+     uint32_t timerOffset = 0u;
+     if (decodeEeTimerRegister(address, timerIndex, timerOffset))
+@@ -2317,6 +2546,8 @@ uint32_t PS2Memory::readIORegister(uint32_t address)
+ 
+     if (isGsPrivReg(address))
+     {
++        if (m_vif1Async)
++            syncVif1();
+         // NB: unreachable from read8/16/32/64 today, same reasoning as the write
+         // path above; kept correct for direct callers.
+         const uint32_t off = address & 7u;
+diff --git a/ps2xRuntime/include/runtime/gs/gs_frontend.h b/ps2xRuntime/include/runtime/gs/gs_frontend.h
+index e6d67f4..ff79c4b 100644
+--- a/ps2xRuntime/include/runtime/gs/gs_frontend.h
++++ b/ps2xRuntime/include/runtime/gs/gs_frontend.h
+@@ -4,6 +4,7 @@
+ #include <array>
+ #include <cstddef>
+ #include <cstdint>
++#include <functional>
+ #include <memory>
+ #include <mutex>
+ #include <vector>
+@@ -103,6 +104,9 @@ public:
+     ~GS() = default;
+ 
+     void init(uint8_t *vram, uint32_t vramSize, struct GSRegisters *privRegs = nullptr);
++    // Called before EE-side accesses (not from GIF packet processing): lets the
++    // runtime finish asynchronous VIF1 work that feeds this GS first.
++    void setExternalSync(std::function<void()> sync) { m_externalSync = std::move(sync); }
+     void reset();
+     void setRasterBackend(std::unique_ptr<GSRasterBackend> backend);
+ 
+@@ -184,6 +188,7 @@ private:
+     uint32_t m_localMemorySize = 0u;
+     struct GSRegisters *m_privRegs = nullptr;
+     mutable std::recursive_mutex m_stateMutex;
++    std::function<void()> m_externalSync;
+     mutable std::mutex m_backendLifetimeMutex;
+     mutable std::mutex m_presentationMutex;
+ 
+diff --git a/ps2xRuntime/src/lib/gs/gs_frontend.cpp b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+index 15ed9fa..5cf3d9c 100644
+--- a/ps2xRuntime/src/lib/gs/gs_frontend.cpp
++++ b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+@@ -516,6 +516,8 @@ uint32_t GS::getLastDisplayBaseBytes() const
+ 
+ void GS::refreshDisplaySnapshot()
+ {
++    if (m_externalSync)
++        m_externalSync();
+     snapshotVRAM();
+ }
+ 
+@@ -542,6 +544,8 @@ GSPresentationRequest GS::buildPresentationRequestUnlocked() const
+ 
+ void GS::latchHostPresentationFrame()
+ {
++    if (m_externalSync)
++        m_externalSync();
+     GSPresentationRequest request{};
+     {
+         std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+@@ -813,6 +817,8 @@ void GS::processCompleteGIFPacket(const uint8_t *data, uint32_t sizeBytes)
+ 
+ bool GS::processNativePackedGIFPacket(const uint8_t *data, uint32_t sizeBytes)
+ {
++    if (m_externalSync)
++        m_externalSync();
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+     if (!data || sizeBytes < 16u || !m_backend)
+         return false;
+@@ -859,6 +865,8 @@ void GS::uploadImageNative(uint64_t bitbltbuf,
+                            const uint8_t *data,
+                            uint32_t sizeBytes)
+ {
++    if (m_externalSync)
++        m_externalSync();
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+     uploadImageNativeUnlocked(bitbltbuf, trxpos, trxreg, trxdir, data, sizeBytes);
+ }
+@@ -1146,6 +1154,8 @@ void GS::writeRegisterPacked(uint8_t regDesc, uint64_t lo, uint64_t hi)
+ 
+ void GS::writeRegister(uint8_t regAddr, uint64_t value)
+ {
++    if (m_externalSync)
++        m_externalSync();
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+     writeRegisterUnlocked(regAddr, value);
+ }
+@@ -1701,18 +1711,24 @@ void GS::processImageData(const uint8_t *data, uint32_t sizeBytes)
+ 
+ bool GS::clearFramebufferContext(uint32_t contextIndex, uint32_t rgba)
+ {
++    if (m_externalSync)
++        m_externalSync();
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+     return m_backend && m_backend->ClearFramebuffer(m_ctx[(contextIndex != 0u) ? 1 : 0], rgba);
+ }
+ 
+ bool GS::clearActiveFramebuffer(uint32_t rgba)
+ {
++    if (m_externalSync)
++        m_externalSync();
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+     return m_backend && m_backend->ClearFramebuffer(activeContext(), rgba);
+ }
+ 
+ uint32_t GS::consumeLocalToHostBytes(uint8_t *dst, uint32_t maxBytes)
+ {
++    if (m_externalSync)
++        m_externalSync();
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+     return m_backend ? m_backend->ConsumeLocalToHostBytes(dst, maxBytes) : 0u;
+ }
+@@ -1748,12 +1764,16 @@ void GS::setRasterBackend(std::unique_ptr<GSRasterBackend> backend)
+ 
+ uint32_t GS::ReadVram(uint32_t psm, uint32_t base, uint32_t bw, uint32_t x, uint32_t y) const
+ {
++    if (m_externalSync)
++        m_externalSync();
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+     return m_backend ? m_backend->ReadVram(psm, base, bw, x, y) : 0u;
+ }
+ 
+ void GS::WriteVram(uint32_t psm, uint32_t base, uint32_t bw, uint32_t x, uint32_t y, uint32_t value)
+ {
++    if (m_externalSync)
++        m_externalSync();
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+     if (m_backend)
+         m_backend->WriteVram(psm, base, bw, x, y, value);
+diff --git a/ps2xRuntime/include/ps2_runtime.h b/ps2xRuntime/include/ps2_runtime.h
+index 4b9242c..8b9ab83 100644
+--- a/ps2xRuntime/include/ps2_runtime.h
++++ b/ps2xRuntime/include/ps2_runtime.h
+@@ -386,6 +386,10 @@ public:
+     uint32_t reserveAsyncCallbackStack(uint32_t size, uint32_t alignment = 16u);
+ 
+     void drainCompletedDmacHandlers(uint8_t *rdram);
++    // Asynchronous VIF1 (see PS2Memory::setVif1Async). Call after the EE
++    // scheduler exists; completeAsyncVif1 runs on the EE thread (Dmac event).
++    void enableAsyncVif1(bool enabled);
++    void completeAsyncVif1(uint8_t *rdram);
+ 
+     void requestStop();
+     bool isStopRequested() const;
+diff --git a/ps2xRuntime/src/lib/ps2_runtime.cpp b/ps2xRuntime/src/lib/ps2_runtime.cpp
+index 7054676..3bf2962 100644
+--- a/ps2xRuntime/src/lib/ps2_runtime.cpp
++++ b/ps2xRuntime/src/lib/ps2_runtime.cpp
+@@ -524,6 +524,8 @@ PS2Runtime::~PS2Runtime()
+     try
+     {
+         requestStop();
++        // The VIF1 worker uses m_gs and m_vu1, which are destroyed before m_memory.
++        m_memory.setVif1Async(false);
+         m_iopSubsystem.reset();
+         m_iopHost.reset();
+ #if defined(PLATFORM_VITA)
+@@ -663,42 +665,51 @@ bool PS2Runtime::syncCoreSubsystems()
+     m_gifArbiter.setProcessPacketFn([this](const uint8_t *data, uint32_t size)
+                                     { m_gs.processGIFPacket(data, size); });
+     m_memory.setGifArbiter(&m_gifArbiter);
++    m_gs.setExternalSync([this] { m_memory.syncVif1(); });
+     m_memory.setVu1MscalCallback([this](uint32_t startPC, uint32_t top, uint32_t itop)
+                                  {
+-                                     R5900Context *cpuContext = m_eeScheduler ? m_eeScheduler->currentContext() : nullptr;
+-                                     if (!cpuContext)
++                                     const bool async = m_memory.onVif1Worker();
++                                     R5900Context *cpuContext = nullptr;
++                                     if (!async)
+                                      {
+-                                         cpuContext = &m_cpuContext;
++                                         cpuContext = m_eeScheduler ? m_eeScheduler->currentContext() : nullptr;
++                                         if (!cpuContext)
++                                             cpuContext = &m_cpuContext;
+                                      }
+-                                     m_vu1.state().dBitEnabled =
+-                                         (cpuContext->vu0_fbrst & (1u << 10)) != 0u;
+-                                     m_vu1.state().tBitEnabled =
+-                                         (cpuContext->vu0_fbrst & (1u << 11)) != 0u;
++                                     const uint32_t fbrst = async ? m_memory.vif1JobFbrst() : cpuContext->vu0_fbrst;
++                                     m_vu1.state().dBitEnabled = (fbrst & (1u << 10)) != 0u;
++                                     m_vu1.state().tBitEnabled = (fbrst & (1u << 11)) != 0u;
+                                      m_vu1.execute(m_memory.getVU1Code(), PS2_VU1_CODE_SIZE,
+                                                    m_memory.getVU1Data(), PS2_VU1_DATA_SIZE,
+                                                    m_gs, &m_memory, startPC, top, itop, 65536);
+-                                     cpuContext->vu0_vpu_stat =
+-                                         (cpuContext->vu0_vpu_stat & ~0x0600u) |
+-                                         (m_vu1.state().stoppedByD ? 0x0200u : 0u) |
+-                                         (m_vu1.state().stoppedByT ? 0x0400u : 0u); });
++                                     const uint32_t bits = (m_vu1.state().stoppedByD ? 0x0200u : 0u) |
++                                                           (m_vu1.state().stoppedByT ? 0x0400u : 0u);
++                                     if (async)
++                                         m_memory.setVif1VpuStatResult(bits);
++                                     else
++                                         cpuContext->vu0_vpu_stat = (cpuContext->vu0_vpu_stat & ~0x0600u) | bits; });
+     m_memory.setVu1MscntCallback([this](uint32_t top, uint32_t itop)
+                                  {
+-                                     R5900Context *cpuContext = m_eeScheduler ? m_eeScheduler->currentContext() : nullptr;
+-                                     if (!cpuContext)
++                                     const bool async = m_memory.onVif1Worker();
++                                     R5900Context *cpuContext = nullptr;
++                                     if (!async)
+                                      {
+-                                         cpuContext = &m_cpuContext;
++                                         cpuContext = m_eeScheduler ? m_eeScheduler->currentContext() : nullptr;
++                                         if (!cpuContext)
++                                             cpuContext = &m_cpuContext;
+                                      }
+-                                     m_vu1.state().dBitEnabled =
+-                                         (cpuContext->vu0_fbrst & (1u << 10)) != 0u;
+-                                     m_vu1.state().tBitEnabled =
+-                                         (cpuContext->vu0_fbrst & (1u << 11)) != 0u;
++                                     const uint32_t fbrst = async ? m_memory.vif1JobFbrst() : cpuContext->vu0_fbrst;
++                                     m_vu1.state().dBitEnabled = (fbrst & (1u << 10)) != 0u;
++                                     m_vu1.state().tBitEnabled = (fbrst & (1u << 11)) != 0u;
+                                      m_vu1.resume(m_memory.getVU1Code(), PS2_VU1_CODE_SIZE,
+                                                   m_memory.getVU1Data(), PS2_VU1_DATA_SIZE,
+                                                   m_gs, &m_memory, top, itop, 65536);
+-                                     cpuContext->vu0_vpu_stat =
+-                                         (cpuContext->vu0_vpu_stat & ~0x0600u) |
+-                                         (m_vu1.state().stoppedByD ? 0x0200u : 0u) |
+-                                         (m_vu1.state().stoppedByT ? 0x0400u : 0u); });
++                                     const uint32_t bits = (m_vu1.state().stoppedByD ? 0x0200u : 0u) |
++                                                           (m_vu1.state().stoppedByT ? 0x0400u : 0u);
++                                     if (async)
++                                         m_memory.setVif1VpuStatResult(bits);
++                                     else
++                                         cpuContext->vu0_vpu_stat = (cpuContext->vu0_vpu_stat & ~0x0600u) | bits; });
+     resetIop();
+     m_vu0.reset();
+     m_vu1.reset();
+@@ -1478,6 +1489,35 @@ void PS2Runtime::handleBreak(uint8_t *rdram, R5900Context *ctx)
+     raiseCop0Exception(ctx, EXCEPTION_BREAKPOINT);
+ }
+ 
++void PS2Runtime::enableAsyncVif1(bool enabled)
++{
++    if (!enabled || !m_eeScheduler)
++    {
++        m_memory.setVif1Async(false);
++        return;
++    }
++    m_memory.setVif1Async(
++        true,
++        [this] { m_eeScheduler->postEvent(EeEvent{EeEventType::Dmac, 1u, 0u}); },
++        [this]() -> uint32_t
++        {
++            R5900Context *cpuContext = m_eeScheduler->currentContext();
++            return (cpuContext ? cpuContext : &m_cpuContext)->vu0_fbrst;
++        });
++}
++
++void PS2Runtime::completeAsyncVif1(uint8_t *rdram)
++{
++    if (const uint32_t vpu = m_memory.takeVif1VpuStatResult())
++    {
++        R5900Context *cpuContext = m_eeScheduler ? m_eeScheduler->currentContext() : nullptr;
++        if (!cpuContext)
++            cpuContext = &m_cpuContext;
++        cpuContext->vu0_vpu_stat = (cpuContext->vu0_vpu_stat & ~0x0600u) | (vpu & 0x0600u);
++    }
++    drainCompletedDmacHandlers(rdram);
++}
++
+ void PS2Runtime::drainCompletedDmacHandlers(uint8_t *rdram)
+ {
+     for (uint32_t cause : m_memory.consumeCompletedDmacCauses())
+diff --git a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+index 830d83e..c010a96 100644
+--- a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
++++ b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+@@ -1917,6 +1917,8 @@ void EeScheduler::processEvent(const EeEvent &event)
+         dispatchIrq(false, 3u);
+         break;
+     case EeEventType::Dmac:
++        if (event.id == 1u)
++            m_runtime.completeAsyncVif1(m_runtime.memory().getRDRAM());
+         break;
+     case EeEventType::Alarm:
+     {

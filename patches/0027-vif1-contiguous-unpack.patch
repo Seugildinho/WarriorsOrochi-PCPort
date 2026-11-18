@@ -1,0 +1,103 @@
+diff --git a/ps2xRuntime/src/lib/ps2_vif1_interpreter.cpp b/ps2xRuntime/src/lib/ps2_vif1_interpreter.cpp
+index 508307b..ebb26fb 100644
+--- a/ps2xRuntime/src/lib/ps2_vif1_interpreter.cpp
++++ b/ps2xRuntime/src/lib/ps2_vif1_interpreter.cpp
+@@ -26,6 +26,80 @@ enum VIFCmd : uint8_t
+     VIF_DIRECTHL = 0x51,
+ };
+ 
++namespace
++{
++    // UNPACK without mask, without row addition (MODE 0/3) and with CL == WL:
++    // every write consumes the next source vector and the destination is
++    // contiguous. Same per-vector result as the generic loop below: lanes the
++    // format does not cover keep their old value, S-* broadcasts, 16/8-bit
++    // values are sign- or zero-extended. Returns false for formats the generic
++    // loop treats specially (V2-5/V3-5 style vl=3 with vn<3).
++    bool unpackContiguous(uint8_t *vuData, const uint8_t *source, uint32_t vuAddr, uint32_t count,
++                          uint32_t vn, uint32_t vl, bool zeroExtend)
++    {
++        if (vl == 3u && vn != 3u)
++            return false;
++        const uint32_t components = vn + 1u;
++        for (uint32_t index = 0; index < count; ++index)
++        {
++            uint8_t *dest = vuData + ((vuAddr + index) & 0x3FFu) * 16u;
++            uint32_t lanes[4];
++            std::memcpy(lanes, dest, 16);
++            if (vl == 0u)
++            {
++                const uint8_t *src = source + index * components * 4u;
++                if (components == 1u)
++                {
++                    uint32_t scalar;
++                    std::memcpy(&scalar, src, 4);
++                    lanes[0] = lanes[1] = lanes[2] = lanes[3] = scalar;
++                }
++                else
++                    std::memcpy(lanes, src, components * 4u);
++            }
++            else if (vl == 1u)
++            {
++                const uint8_t *src = source + index * components * 2u;
++                for (uint32_t c = 0; c < components; ++c)
++                {
++                    uint16_t raw;
++                    std::memcpy(&raw, src + c * 2u, 2);
++                    const uint32_t value = zeroExtend ? static_cast<uint32_t>(raw)
++                                                      : static_cast<uint32_t>(static_cast<int32_t>(static_cast<int16_t>(raw)));
++                    if (components == 1u)
++                        lanes[0] = lanes[1] = lanes[2] = lanes[3] = value;
++                    else
++                        lanes[c] = value;
++                }
++            }
++            else if (vl == 2u)
++            {
++                const uint8_t *src = source + index * components;
++                for (uint32_t c = 0; c < components; ++c)
++                {
++                    const uint32_t value = zeroExtend ? static_cast<uint32_t>(src[c])
++                                                      : static_cast<uint32_t>(static_cast<int32_t>(static_cast<int8_t>(src[c])));
++                    if (components == 1u)
++                        lanes[0] = lanes[1] = lanes[2] = lanes[3] = value;
++                    else
++                        lanes[c] = value;
++                }
++            }
++            else
++            {
++                uint16_t packed;
++                std::memcpy(&packed, source + index * 2u, 2);
++                lanes[0] = packed & 0x1Fu;
++                lanes[1] = (packed >> 5) & 0x1Fu;
++                lanes[2] = (packed >> 10) & 0x1Fu;
++                lanes[3] = (packed >> 15) & 0x01u;
++            }
++            std::memcpy(dest, lanes, 16);
++        }
++        return true;
++    }
++}
++
+ void PS2Memory::processVIF0Data(uint32_t srcPhys, uint32_t sizeBytes)
+ {
+     if (sizeBytes == 0u || srcPhys >= PS2_RAM_SIZE)
+@@ -510,6 +584,17 @@ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
+ 
+             const bool zeroExtend = (imm & 0x4000u) != 0u;
+ 
++            const uint32_t unpackMode = vif1_regs.mode & 3u;
++            if (m_vu1Data && totalBytes > 0 && pos + totalBytes <= sizeBytes && !maskEnable &&
++                (unpackMode == 0u || unpackMode == 3u) && cl == wl && PS2_VU1_DATA_SIZE == 0x4000u &&
++                unpackContiguous(m_vu1Data, data + pos, vuAddr, writeVectorCount, vn, vl, zeroExtend))
++            {
++                pos += totalBytes;
++                if (pos > sizeBytes)
++                    break;
++                continue;
++            }
++
+             if (m_vu1Data && totalBytes > 0 && pos + totalBytes <= sizeBytes)
+             {
+                 const uint8_t *srcBase = data + pos;

@@ -1,0 +1,41 @@
+diff --git a/ps2xRuntime/include/runtime/gs/gs_cpu_backend.h b/ps2xRuntime/include/runtime/gs/gs_cpu_backend.h
+index 6e85627..4ad09ac 100644
+--- a/ps2xRuntime/include/runtime/gs/gs_cpu_backend.h
++++ b/ps2xRuntime/include/runtime/gs/gs_cpu_backend.h
+@@ -39,6 +39,11 @@ public:
+     void SnapshotVram(std::vector<uint8_t> &out) const override;
+     GSTransferSnapshot GetTransferSnapshot() const override;
+ 
++    // The palette in effect for following primitives, for a backend that
++    // loads CLUTs elsewhere (GPU) and draws only some primitives here.
++    std::array<uint16_t, 512> GetClutTable() const;
++    void SetClutTable(const std::array<uint16_t, 512> &clut);
++
+ private:
+     void ResetUnlocked();
+     void LoadClutUnlocked(const GSTex0Reg &tex0, const GSTexClutReg &texclut);
+diff --git a/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp b/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp
+index 544c4f5..d8d54cb 100644
+--- a/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp
++++ b/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp
+@@ -969,6 +969,20 @@ void GSCpuBackend::LoadClutUnlocked(const GSTex0Reg &tex0, const GSTexClutReg &t
+     }
+ }
+ 
++std::array<uint16_t, 512> GSCpuBackend::GetClutTable() const
++{
++    std::lock_guard<std::mutex> lock(m_mutex);
++    return m_clut;
++}
++
++void GSCpuBackend::SetClutTable(const std::array<uint16_t, 512> &clut)
++{
++    std::lock_guard<std::mutex> lock(m_mutex);
++    // Queued primitives keep the palette they were submitted with.
++    m_clut = clut;
++    m_clutChangedSinceSnapshot = true;
++}
++
+ void GSCpuBackend::Flush()
+ {
+     std::lock_guard<std::mutex> lock(m_mutex);

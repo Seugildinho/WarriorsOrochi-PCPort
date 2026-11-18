@@ -1,0 +1,100 @@
+diff --git a/ps2xRuntime/include/runtime/ps2_memory.h b/ps2xRuntime/include/runtime/ps2_memory.h
+index 8dfd5ce..bdef418 100644
+--- a/ps2xRuntime/include/runtime/ps2_memory.h
++++ b/ps2xRuntime/include/runtime/ps2_memory.h
+@@ -464,6 +464,13 @@ public:
+     void stopVif1Worker();
+     void syncVif1ForIo(uint32_t address, bool write);
+     void queueVif1Job(Vif1Job job);
++    // Job buffers are recycled: battle frames send megabytes of VIF1 data
++    // in many transfers, and a fresh vector per transfer costs an allocation,
++    // page faults and a free on the game thread.
++    std::vector<uint8_t> takeVif1Buffer();
++    void recycleVif1Buffer(std::vector<uint8_t> &&buffer);
++    std::mutex m_vif1PoolMutex;
++    std::vector<std::vector<uint8_t>> m_vif1Pool;
+     void finishVif1Transfer();
+     void applyVif1RegisterWrite(uint32_t address, uint32_t value);
+     bool m_vif1Async = false;
+diff --git a/ps2xRuntime/src/lib/ps2_memory.cpp b/ps2xRuntime/src/lib/ps2_memory.cpp
+index ec3ef3e..165a64c 100644
+--- a/ps2xRuntime/src/lib/ps2_memory.cpp
++++ b/ps2xRuntime/src/lib/ps2_memory.cpp
+@@ -1335,7 +1335,7 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
+                     uint32_t asp = (chcr >> 4) & 0x3u;
+                     const bool tieEnabled = (chcr & (1u << 7)) != 0u;
+                     const int kMaxChainTags = 4096;
+-                    std::vector<uint8_t> chainBuf;
++                    std::vector<uint8_t> chainBuf = takeVif1Buffer();
+ 
+                     auto appendData = [&](uint32_t srcAddr, uint32_t qwCount)
+                     {
+@@ -1816,11 +1816,20 @@ void PS2Memory::processPendingTransfers()
+         // now (the EE may reuse its buffers once it continues).
+         Vif1Job job;
+         job.fbrst = m_vif1Fbrst ? m_vif1Fbrst() : 0u;
++        // A single chain transfer already holds its own copy of the bytes.
++        const bool singleChain = m_pendingVif1Transfers.size() == 1u && !m_pendingVif1Transfers.front().chainData.empty();
++        if (singleChain)
++            job.data = std::move(m_pendingVif1Transfers.front().chainData);
++        else
++            job.data = takeVif1Buffer();
+         for (auto &p : m_pendingVif1Transfers)
+         {
++            if (singleChain)
++                break;
+             if (!p.chainData.empty())
+             {
+                 job.data.insert(job.data.end(), p.chainData.begin(), p.chainData.end());
++                recycleVif1Buffer(std::move(p.chainData));
+                 continue;
+             }
+             if (p.qwc == 0)
+@@ -2210,6 +2219,7 @@ void PS2Memory::vif1WorkerLoop()
+         if (job.path3)
+         {
+             runPath3Job(job);
++            recycleVif1Buffer(std::move(job.data));
+             finishVif1Transfer();
+             continue;
+         }
+@@ -2232,10 +2242,31 @@ void PS2Memory::vif1WorkerLoop()
+         }
+         if (!job.registerWrite)
+             drainGifArbiter();
++        recycleVif1Buffer(std::move(job.data));
+         finishVif1Transfer();
+     }
+ }
+ 
++std::vector<uint8_t> PS2Memory::takeVif1Buffer()
++{
++    std::lock_guard<std::mutex> lock(m_vif1PoolMutex);
++    if (m_vif1Pool.empty())
++        return {};
++    std::vector<uint8_t> buffer = std::move(m_vif1Pool.back());
++    m_vif1Pool.pop_back();
++    return buffer;
++}
++
++void PS2Memory::recycleVif1Buffer(std::vector<uint8_t> &&buffer)
++{
++    if (buffer.capacity() == 0u)
++        return;
++    buffer.clear();
++    std::lock_guard<std::mutex> lock(m_vif1PoolMutex);
++    if (m_vif1Pool.size() < 16u)
++        m_vif1Pool.push_back(std::move(buffer));
++}
++
+ void PS2Memory::queueVif1Job(Vif1Job job)
+ {
+     // Small work with an idle worker runs here: handing it over costs more
+@@ -2260,6 +2291,7 @@ void PS2Memory::queueVif1Job(Vif1Job job)
+                 processVIF1Data(job.data.data(), static_cast<uint32_t>(job.data.size()));
+                 drainGifArbiter();
+             }
++            recycleVif1Buffer(std::move(job.data));
+             return;
+         }
+     }

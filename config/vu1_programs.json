@@ -1,0 +1,160 @@
+{
+ "programs": [
+  {
+   "code_hash": "64f24864a71741ba",
+   "entries": [
+    "0x0010",
+    "0x0050",
+    "0x0000",
+    "0x0060"
+   ],
+   "evidence": "Demo battle profile 2026-10-24: VU1Interpreter took ~75% of GameThread time; 340000 MSCALs measured, this code image (FNV-1a over the 16 KiB VU1 code memory) took 99.1% of VU1 time: entry 0x0010 86.7% (avg 922 cycles), 0x0050 10.8%, 0x0000 1.6%. Skinned vertex transform with lighting, clip, DIV Q and a single XGKICK three pairs before the E bit."
+  },
+  {
+   "code_hash": "13a44471eb62d3ac",
+   "entries": [
+    "0x0000",
+    "0x0070"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY demo battle 2026-10-24: entry still interpreted (mostly MSCNT resumes); counts per 650000 lookups: @0x70 69025"
+  },
+  {
+   "code_hash": "2f42644727f35853",
+   "entries": [
+    "0x0000"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY demo battle 2026-10-24: entry still interpreted (mostly MSCNT resumes); counts per 650000 lookups: small"
+  },
+  {
+   "code_hash": "3a3f5fdfe3fd4168",
+   "entries": [
+    "0x0060"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY demo battle 2026-10-24: entry still interpreted (mostly MSCNT resumes); counts per 650000 lookups: small"
+  },
+  {
+   "code_hash": "3f94ac252193108f",
+   "entries": [
+    "0x0000",
+    "0x0070",
+    "0x0930"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY demo battle 2026-10-24: entry still interpreted (mostly MSCNT resumes); counts per 650000 lookups: small"
+  },
+  {
+   "code_hash": "4a46f6979fc784b9",
+   "entries": [
+    "0x0000",
+    "0x0068"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY demo battle 2026-10-24: entry still interpreted (mostly MSCNT resumes); counts per 650000 lookups: @0x68 137575"
+  },
+  {
+   "code_hash": "69dce515cba46b01",
+   "entries": [
+    "0x0000",
+    "0x0070"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY demo battle 2026-10-24: entry still interpreted (mostly MSCNT resumes); counts per 650000 lookups: small"
+  },
+  {
+   "code_hash": "b36eba3837b9886c",
+   "entries": [
+    "0x0000",
+    "0x0018",
+    "0x0298"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY demo battle 2026-10-24: entry still interpreted (mostly MSCNT resumes); counts per 650000 lookups: small"
+  },
+  {
+   "code_hash": "ea3237ea77ab04fe",
+   "entries": [
+    "0x0000"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY demo battle 2026-10-24: entry still interpreted (mostly MSCNT resumes); counts per 650000 lookups: @0x0 4112"
+  },
+  {
+   "code_hash": "f54c9a26f516cc3b",
+   "entries": [
+    "0x0000",
+    "0x0078"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY demo battle 2026-10-24: entry still interpreted (mostly MSCNT resumes); counts per 650000 lookups: @0x78 75257"
+  },
+  {
+   "code_hash": "2668d7d5b2dd6f5d",
+   "unit": "vu0",
+   "entries": [
+    "0x0050",
+    "0x0030",
+    "0x0020",
+    "0x0070",
+    "0x0040",
+    "0x0080",
+    "0x0000",
+    "0x0010",
+    "0x0060"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY demo battle 2026-10-26 (VU0 image, 4 KiB): per 1550000 lookups @0x50 213969 calls avg 243 cycles, @0x30 33064 avg 79, @0x20 16122 avg 68, @0x70 8073 avg 84, @0x40 7361 avg 240, @0x80 1066, @0x0 548, @0x10 548; max 249 cycles against the 4096-cycle VCALLMS budget. VU0 took ~20% of GameThread after the SIMD FMAC change."
+  },
+  {
+   "code_hash": "e910d5a49400d5b9",
+   "entries": [
+    "0x0010",
+    "0x0050",
+    "0x0000",
+    "0x0060"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY 2026-10-27, Ueda Castle pre-battle cutscene and battle (cutscene ran at 13 vsync/2s in the interpreter): @0x10 204314 calls avg 973 cycles, @0x50 12617 avg 847, @0x0 1628, @0x60 407"
+  },
+  {
+   "code_hash": "84d38dfedd7ae67e",
+   "entries": [
+    "0x0010",
+    "0x0050",
+    "0x0000",
+    "0x0060"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY 2026-10-27, Ueda Castle pre-battle cutscene and battle (cutscene ran at 13 vsync/2s in the interpreter): @0x10 204314 calls avg 826 cycles, @0x50 12617 avg 610, @0x0 1628, @0x60 407"
+  },
+  {
+   "code_hash": "f281b09085369080",
+   "entries": [
+    "0x0068",
+    "0x0000"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY 2026-10-27, Ueda Castle pre-battle cutscene and battle (cutscene ran at 13 vsync/2s in the interpreter): @0x68 157248 calls avg 247 cycles, @0x0 546"
+  },
+  {
+   "code_hash": "9cea6c691d9d5574",
+   "entries": [
+    "0x0070",
+    "0x0000"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY 2026-10-27, Ueda Castle pre-battle cutscene and battle (cutscene ran at 13 vsync/2s in the interpreter): @0x70 101370 calls avg 437 cycles, @0x0 545"
+  },
+  {
+   "code_hash": "0959fa4c0a3b2452",
+   "entries": [
+    "0x0000"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY 2026-10-27, Ueda Castle pre-battle cutscene and battle (cutscene ran at 13 vsync/2s in the interpreter): @0x0 814 calls avg 3 cycles"
+  },
+  {
+   "code_hash": "46a42285dcf89f55",
+   "entries": [
+    "0x0070",
+    "0x0000"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY, user's save, Shu chapter 2 battle with 100 drawn characters 2026-11-18: still interpreted per 22.5M lookups: @0x70 551152 calls avg 486 cycles (the busiest), @0 1813"
+  },
+  {
+   "code_hash": "e6220de0f45d4d3f",
+   "entries": [
+    "0x0018",
+    "0x0000"
+   ],
+   "evidence": "OROCHI_VU1_INVENTORY, user's save, Shu chapter 2 battle with 100 drawn characters 2026-11-18: still interpreted per 22.5M lookups: @0x18 18 calls avg 2329 cycles"
+  }
+ ]
+}

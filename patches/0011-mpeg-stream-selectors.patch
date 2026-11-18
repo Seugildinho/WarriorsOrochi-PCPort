@@ -1,0 +1,113 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp b/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
+index 44eaef4..a3e9c50 100644
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
+@@ -552,8 +552,15 @@ namespace ps2_stubs
+         constexpr uint32_t kStubMovieWidth = 320u;
+         constexpr uint32_t kStubMovieHeight = 240u;
+         constexpr uint32_t kMpegStrM2V = 0u;
+-        constexpr uint32_t kMpegStrPCM = 1u;
+-        constexpr uint32_t kMpegStrADPCM = 2u;
++        // SDK selectors verified against the game's table at 0x306B80.
++        constexpr uint64_t kStreamPatterns[10] = {
++            0xE000000000ull, 0xBDFFC00000ull, 0xBDFFA00000ull, 0xBDFFA10000ull,
++            0xBDFF900000ull, 0xC000000000ull, 0xBD80000000ull, 0xBDA0000000ull,
++            0xBD88000000ull, 0xBD90000000ull};
++        constexpr uint64_t kStreamMasks[10] = {
++            0xFF00000000ull, 0xFFFFFFFFFFull, 0xFFFFFFFFFFull, 0xFFFFFFFFFFull,
++            0xFFFFFFFFFFull, 0xFF00000000ull, 0xFFFF000000ull, 0xFFFF000000ull,
++            0xFFFF000000ull, 0xFFFF000000ull};
+         constexpr uint8_t kMpegPackHeader = 0xBAu;
+         constexpr uint8_t kMpegSystemHeader = 0xBBu;
+         constexpr uint8_t kMpegProgramEnd = 0xB9u;
+@@ -1131,7 +1138,7 @@ namespace ps2_stubs
+             }
+         }
+ 
+-        std::vector<MpegRegisteredCallback> matchingStreamCallbacks(uint32_t mpegAddr, uint32_t streamType)
++        std::vector<MpegRegisteredCallback> matchingStreamCallbacks(uint32_t mpegAddr, uint64_t streamKey)
+         {
+             std::vector<MpegRegisteredCallback> out;
+             auto it = g_mpeg_stub_state.callbacksByMpeg.find(mpegAddr);
+@@ -1142,7 +1149,13 @@ namespace ps2_stubs
+ 
+             for (const MpegRegisteredCallback &callback : it->second)
+             {
+-                if (callback.stream && callback.type == streamType)
++                if (!callback.stream || callback.type >= 10u) continue;
++                const uint64_t mask = kStreamMasks[callback.type];
++                const unsigned shift = mask == 0xFF00000000ull ? 32u :
++                    mask == 0xFFFF000000ull ? 24u : 0u;
++                const uint64_t key = kStreamPatterns[callback.type] |
++                    (static_cast<uint64_t>(callback.streamId) << shift);
++                if ((streamKey & mask) == key)
+                 {
+                     out.push_back(callback);
+                 }
+@@ -1151,7 +1164,7 @@ namespace ps2_stubs
+         }
+ 
+         void queueStreamCallbackEvent(uint32_t mpegAddr,
+-                                      uint32_t streamType,
++                                      uint64_t streamKey,
+                                       uint32_t dataAddr,
+                                       uint32_t len,
+                                       std::vector<MpegStreamCallbackEvent> &callbackEvents,
+@@ -1160,12 +1173,11 @@ namespace ps2_stubs
+         {
+             MpegStreamCallbackEvent event{};
+             event.mpegAddr = mpegAddr;
+-            event.streamType = streamType;
+             event.dataAddr = dataAddr;
+             event.len = len;
+             event.pts = pts90k >= 0 ? static_cast<uint64_t>(pts90k) : 0xFFFFFFFFFFFFFFFFull;
+             event.dts = dts90k >= 0 ? static_cast<uint64_t>(dts90k) : 0xFFFFFFFFFFFFFFFFull;
+-            event.callbacks = matchingStreamCallbacks(mpegAddr, streamType);
++            event.callbacks = matchingStreamCallbacks(mpegAddr, streamKey);
+             if (!event.callbacks.empty())
+             {
+                 callbackEvents.push_back(std::move(event));
+@@ -1324,7 +1336,7 @@ namespace ps2_stubs
+                         {
+                             queueStreamCallbackEvent(
+                                 mpegAddr,
+-                                kMpegStrM2V,
++                                static_cast<uint64_t>(streamId) << 32u,
+                                 playback.pssGuestAddrs[payloadStart],
+                                 static_cast<uint32_t>(packetEnd - payloadStart),
+                                 callbackEvents,
+@@ -1345,17 +1357,14 @@ namespace ps2_stubs
+                     const size_t payloadStart = pes.payloadOffset;
+                     if (payloadStart < packetEnd && payloadStart < playback.pssGuestAddrs.size())
+                     {
++                        uint64_t streamKey = static_cast<uint64_t>(streamId) << 32u;
++                        for (size_t i = 0; i < 4u && payloadStart + i < packetEnd; ++i)
++                            streamKey |= static_cast<uint64_t>(buffer[payloadStart + i]) << (24u - 8u * i);
++                        // Preserve the private subheader: the original game
++                        // callback advances its pointer and subtracts four.
+                         queueStreamCallbackEvent(
+                             mpegAddr,
+-                            kMpegStrPCM,
+-                            playback.pssGuestAddrs[payloadStart],
+-                            static_cast<uint32_t>(packetEnd - payloadStart),
+-                            callbackEvents,
+-                            pes.pts90k,
+-                            pes.dts90k);
+-                        queueStreamCallbackEvent(
+-                            mpegAddr,
+-                            kMpegStrADPCM,
++                            streamKey,
+                             playback.pssGuestAddrs[payloadStart],
+                             static_cast<uint32_t>(packetEnd - payloadStart),
+                             callbackEvents,
+@@ -1595,7 +1604,9 @@ namespace ps2_stubs
+             {
+                 return;
+             }
+-            if (!writeMpegCallbackData(rdram, cbDataAddr, event))
++            auto callbackEvent = event;
++            callbackEvent.streamType = callback.type;
++            if (!writeMpegCallbackData(rdram, cbDataAddr, callbackEvent))
+             {
+                 runtime->guestFree(cbDataAddr);
+                 return;

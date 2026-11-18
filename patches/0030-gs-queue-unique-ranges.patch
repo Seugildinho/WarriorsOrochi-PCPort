@@ -1,0 +1,27 @@
+diff --git a/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp b/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp
+index cf1ad14..544c4f5 100644
+--- a/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp
++++ b/ps2xRuntime/src/lib/gs/gs_cpu_backend.cpp
+@@ -740,10 +740,19 @@ void GSCpuBackend::QueueOrDrawUnlocked(const GSPrimitiveBatch &batch)
+         m_queueArea += static_cast<uint64_t>(width * height);
+     }
+     m_queue.push_back(batch);
+-    m_queueWrites.push_back(frame);
+-    m_queueWrites.push_back(depth);
++    // Primitives mostly repeat the same frame, depth and texture ranges; keep
++    // each range once so the overlap checks stay short instead of scanning
++    // two entries per queued primitive (quadratic over a 2048-entry queue).
++    auto addRange = [](std::vector<ByteRange> &ranges, const ByteRange &range) {
++        for (const ByteRange &known : ranges)
++            if (known.begin == range.begin && known.end == range.end && known.layout == range.layout)
++                return;
++        ranges.push_back(range);
++    };
++    addRange(m_queueWrites, frame);
++    addRange(m_queueWrites, depth);
+     if (texture.end != texture.begin)
+-        m_queueReads.push_back(texture);
++        addRange(m_queueReads, texture);
+     if (m_queue.size() >= 2048u)
+         DrainQueueUnlocked();
+ }

@@ -1,0 +1,1066 @@
+diff --git a/ps2xIOP/CMakeLists.txt b/ps2xIOP/CMakeLists.txt
+index f8d3e44..cb06155 100644
+--- a/ps2xIOP/CMakeLists.txt
++++ b/ps2xIOP/CMakeLists.txt
+@@ -12,6 +12,7 @@ add_library(ps2_iop STATIC
+     src/emulator/core/iop_cpu.cpp
+     src/emulator/core/iop_kernel.cpp
+     src/emulator/core/iop_memory.cpp
++    src/emulator/core/iop_spu2.cpp
+     src/emulator/services/iop_module_loader.cpp
+     src/emulator/services/iop_rpc.cpp
+     src/emulator/imports/iop_cdvd.cpp
+diff --git b/ps2xIOP/src/emulator/core/iop_spu2.cpp b/ps2xIOP/src/emulator/core/iop_spu2.cpp
+new file mode 100644
+index 0000000..cd5e1f1
+--- /dev/null
++++ b/ps2xIOP/src/emulator/core/iop_spu2.cpp
+@@ -0,0 +1,596 @@
++#include "iop_spu2.h"
++
++#include <algorithm>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++
++namespace ps2x::iop::detail
++{
++    namespace
++    {
++        // Register offsets inside a core (core 1 adds 0x400).
++        constexpr uint32_t kVoiceAddressBase = 0x1C0u; // SSA, LSAX, NAX per voice, 0xC apart
++        constexpr uint32_t kVmixl = 0x188u, kVmixr = 0x190u, kMmix = 0x198u, kAttr = 0x19Au;
++        constexpr uint32_t kIrqa = 0x19Cu, kKon = 0x1A0u, kKoff = 0x1A4u, kTsa = 0x1A8u;
++        constexpr uint32_t kData = 0x1ACu, kAdmas = 0x1B0u, kEndx = 0x340u, kStatx = 0x344u;
++        // Per-core volumes in the shared area: core 0 at 0x760, core 1 at 0x788.
++        constexpr uint32_t kVolumes = 0x760u, kVolumeStride = 0x28u;
++        constexpr uint32_t kMvol = 0x00u, kAvol = 0x08u, kBvol = 0x0Cu;
++        constexpr uint32_t kIrqInfo = 0x7C2u;
++
++        constexpr int32_t kFilterPositive[5] = {0, 60, 115, 98, 122};
++        constexpr int32_t kFilterNegative[5] = {0, 0, -52, -55, -60};
++
++        int16_t clamp16(int32_t value)
++        {
++            return static_cast<int16_t>(std::clamp(value, -32768, 32767));
++        }
++    }
++
++    IopSpu2::IopSpu2()
++        : m_ram(RamWords)
++    {
++        reset();
++    }
++
++    void IopSpu2::reset()
++    {
++        std::fill(m_ram.begin(), m_ram.end(), uint16_t{0});
++        m_regs.fill(0u);
++        for (Core &core : m_cores)
++            core = Core{};
++        m_irqInfo = 0;
++        m_irqPending = false;
++        m_output.clear();
++        m_lastCycle = 0;
++        m_started = false;
++    }
++
++    int32_t IopSpu2::fixedVolume(uint16_t value)
++    {
++        // Bit 15 selects a sweep, which is not emulated: play it at full scale
++        // rather than silence the voice or bus.
++        if (value & 0x8000u)
++            return 0x7FFF;
++        return static_cast<int16_t>(static_cast<uint16_t>(value << 1u));
++    }
++
++    uint16_t IopSpu2::read16(uint32_t offset)
++    {
++        sync();
++        offset &= Size - 1u;
++        static const bool trace = std::getenv("OROCHI_SPU2_TRACE") != nullptr;
++        static std::array<uint32_t, Size / 2u> readCounts{};
++        if (trace && ++readCounts[offset >> 1u] <= 3u)
++            std::fprintf(stderr, "[spu2-trace] read offset=0x%03x\n", offset);
++        if (offset == kIrqInfo)
++            return m_irqInfo;
++        if (offset >= kVolumes)
++            return reg(offset);
++        const int coreIndex = offset >= 0x400u ? 1 : 0;
++        const uint32_t local = offset - static_cast<uint32_t>(coreIndex) * 0x400u;
++        Core &core = m_cores[coreIndex];
++        if (local < 0x180u)
++        {
++            const Voice &voice = core.voices[local >> 4u];
++            switch (local & 0xFu)
++            {
++            case 0xAu:
++                return static_cast<uint16_t>(voice.level);
++            case 0xCu:
++                return static_cast<uint16_t>(voice.outL);
++            case 0xEu:
++                return static_cast<uint16_t>(voice.outR);
++            default:
++                return reg(offset);
++            }
++        }
++        if (local >= kVoiceAddressBase && local < kVoiceAddressBase + 24u * 0xCu)
++        {
++            const Voice &voice = core.voices[(local - kVoiceAddressBase) / 0xCu];
++            const uint32_t field = (local - kVoiceAddressBase) % 0xCu;
++            const uint32_t address = field < 4u ? voice.ssa : field < 8u ? voice.lsa : voice.nax;
++            return static_cast<uint16_t>((field & 2u) ? address : (address >> 16u));
++        }
++        switch (local)
++        {
++        case kTsa:
++            return static_cast<uint16_t>(core.tsa >> 16u);
++        case kTsa + 2u:
++            return static_cast<uint16_t>(core.tsa);
++        case kEndx:
++            return static_cast<uint16_t>(core.endx);
++        case kEndx + 2u:
++            return static_cast<uint16_t>(core.endx >> 16u);
++        case kStatx:
++            return core.statx;
++        default:
++            return reg(offset);
++        }
++    }
++
++    void IopSpu2::write16(uint32_t offset, uint16_t value)
++    {
++        sync();
++        offset &= Size - 1u;
++        // OROCHI_SPU2_TRACE: the first writes to each register.
++        static const bool trace = std::getenv("OROCHI_SPU2_TRACE") != nullptr;
++        static std::array<uint8_t, Size / 2u> traced{};
++        if (trace && traced[offset >> 1u] < 4u)
++        {
++            ++traced[offset >> 1u];
++            std::fprintf(stderr, "[spu2-trace] write offset=0x%03x value=0x%04x\n", offset, value);
++        }
++        reg(offset) = value;
++        if (offset == kIrqInfo)
++        {
++            m_irqInfo = 0;
++            return;
++        }
++        if (offset >= kVolumes)
++            return;
++        const int coreIndex = offset >= 0x400u ? 1 : 0;
++        const uint32_t local = offset - static_cast<uint32_t>(coreIndex) * 0x400u;
++        Core &core = m_cores[coreIndex];
++        auto setHigh = [](uint32_t &address, uint16_t high) { address = (address & 0xFFFFu) | (static_cast<uint32_t>(high & 0xFu) << 16u); };
++        auto setLow = [](uint32_t &address, uint16_t low) { address = (address & 0xF0000u) | low; };
++        if (local < 0x180u)
++        {
++            Voice &voice = core.voices[local >> 4u];
++            switch (local & 0xFu)
++            {
++            case 0x0u: voice.volL = value; break;
++            case 0x2u: voice.volR = value; break;
++            case 0x4u: voice.pitch = value; break;
++            case 0x6u: voice.adsr1 = value; break;
++            case 0x8u: voice.adsr2 = value; break;
++            case 0xAu: voice.level = value & 0x7FFF; break;
++            default: break;
++            }
++            return;
++        }
++        if (local >= kVoiceAddressBase && local < kVoiceAddressBase + 24u * 0xCu)
++        {
++            Voice &voice = core.voices[(local - kVoiceAddressBase) / 0xCu];
++            const uint32_t field = (local - kVoiceAddressBase) % 0xCu;
++            uint32_t &address = field < 4u ? voice.ssa : field < 8u ? voice.lsa : voice.nax;
++            if (field & 2u)
++                setLow(address, value);
++            else
++                setHigh(address, value);
++            if (field >= 8u)
++                voice.blockReady = false;
++            return;
++        }
++        auto setBits = [](uint32_t &bits, uint32_t localOffset, uint32_t base, uint16_t half) {
++            if (localOffset == base)
++                bits = (bits & 0xFF0000u) | half;
++            else
++                bits = (bits & 0xFFFFu) | (static_cast<uint32_t>(half & 0xFFu) << 16u);
++        };
++        switch (local)
++        {
++        case kVmixl:
++        case kVmixl + 2u:
++            setBits(core.vmixl, local, kVmixl, value);
++            break;
++        case kVmixr:
++        case kVmixr + 2u:
++            setBits(core.vmixr, local, kVmixr, value);
++            break;
++        case kMmix:
++            core.mmix = value;
++            break;
++        case kAttr:
++            core.attr = value;
++            // Disabling a core's IRQ clears its pending flag: LIBSD's handler
++            // does only this and loops while IRQ info stays set.
++            if ((value & 0x40u) == 0u)
++                m_irqInfo &= static_cast<uint16_t>(~(4u << coreIndex));
++            break;
++        case kIrqa:
++            setHigh(core.irqa, value);
++            break;
++        case kIrqa + 2u:
++            setLow(core.irqa, value);
++            break;
++        case kKon:
++            keyOn(coreIndex, value);
++            break;
++        case kKon + 2u:
++            keyOn(coreIndex, static_cast<uint32_t>(value & 0xFFu) << 16u);
++            break;
++        case kKoff:
++            keyOff(coreIndex, value);
++            break;
++        case kKoff + 2u:
++            keyOff(coreIndex, static_cast<uint32_t>(value & 0xFFu) << 16u);
++            break;
++        case kTsa:
++            setHigh(core.tsa, value);
++            break;
++        case kTsa + 2u:
++            setLow(core.tsa, value);
++            break;
++        case kData:
++            // Manual transfer through the data port.
++            checkIrq(coreIndex, core.tsa, 1u);
++            m_ram[core.tsa] = value;
++            core.tsa = (core.tsa + 1u) & (RamWords - 1u);
++            break;
++        case kAdmas:
++            core.admas = value;
++            if ((value & static_cast<uint16_t>(coreIndex + 1)) == 0u)
++                core.input.clear();
++            break;
++        case kEndx:
++            core.endx &= 0xFF0000u;
++            break;
++        case kEndx + 2u:
++            core.endx &= 0xFFFFu;
++            break;
++        case kStatx:
++            core.statx = value;
++            break;
++        default:
++            break;
++        }
++    }
++
++    void IopSpu2::keyOn(int coreIndex, uint32_t mask)
++    {
++        Core &core = m_cores[coreIndex];
++        for (int i = 0; i < 24; ++i)
++        {
++            if ((mask & (1u << i)) == 0u)
++                continue;
++            Voice &voice = core.voices[i];
++            static const bool trace = std::getenv("OROCHI_SPU2_TRACE") != nullptr;
++            static unsigned traced = 0u;
++            if (trace && traced < 60u)
++            {
++                ++traced;
++                std::fprintf(stderr, "[spu2-trace] kon %d.%d ssa=0x%x pitch=%04x adsr=%04x/%04x vol=%04x/%04x\n",
++                             coreIndex, i, voice.ssa, voice.pitch, voice.adsr1, voice.adsr2, voice.volL, voice.volR);
++            }
++            voice.phase = Phase::Attack;
++            voice.level = 0;
++            voice.envCounter = 0;
++            voice.nax = voice.ssa;
++            voice.counter = 0;
++            voice.blockReady = false;
++            voice.prev1 = voice.prev2 = 0;
++            voice.samples.fill(0);
++            core.endx &= ~(1u << i);
++        }
++    }
++
++    void IopSpu2::keyOff(int coreIndex, uint32_t mask)
++    {
++        Core &core = m_cores[coreIndex];
++        static const bool trace = std::getenv("OROCHI_SPU2_TRACE") != nullptr;
++        static unsigned traced = 0u;
++        if (trace && coreIndex == 1 && (mask & 0xC00000u) != 0u && traced < 40u)
++        {
++            ++traced;
++            std::fprintf(stderr, "[spu2-trace] koff 1 mask=0x%06x at sample=%llu active22=%d\n", mask,
++                         static_cast<unsigned long long>(m_lastCycle / CyclesPerSample),
++                         core.voices[22].phase != Phase::Off ? 1 : 0);
++        }
++        for (int i = 0; i < 24; ++i)
++            if ((mask & (1u << i)) != 0u && core.voices[i].phase != Phase::Off)
++            {
++                core.voices[i].phase = Phase::Release;
++                core.voices[i].envCounter = 0;
++            }
++    }
++
++    void IopSpu2::checkIrq(int, uint32_t first, uint32_t count)
++    {
++        for (int i = 0; i < 2; ++i)
++        {
++            const Core &core = m_cores[i];
++            if ((core.attr & 0x40u) == 0u)
++                continue;
++            if (((core.irqa - first) & (RamWords - 1u)) < count)
++            {
++                m_irqInfo |= static_cast<uint16_t>(4u << i);
++                m_irqPending = true;
++            }
++        }
++    }
++
++    bool IopSpu2::takeIrq()
++    {
++        const bool pending = m_irqPending;
++        m_irqPending = false;
++        return pending;
++    }
++
++    void IopSpu2::decodeBlock(Core &, int coreIndex, Voice &voice)
++    {
++        // 16-byte ADPCM block: shift/filter, flags, then 28 four-bit samples.
++        checkIrq(coreIndex, voice.nax, 8u);
++        const uint16_t header = m_ram[voice.nax];
++        const uint32_t shift = (header & 0xFu) > 12u ? 9u : (header & 0xFu);
++        const uint32_t filter = std::min<uint32_t>((header >> 4u) & 7u, 4u);
++        voice.blockFlags = static_cast<uint8_t>(header >> 8u);
++        if (voice.blockFlags & 4u)
++            voice.lsa = voice.nax;
++        for (uint32_t i = 0; i < 28u; ++i)
++        {
++            const uint16_t word = m_ram[(voice.nax + 1u + i / 4u) & (RamWords - 1u)];
++            const int32_t nibble = static_cast<int16_t>(static_cast<uint16_t>(((word >> ((i & 3u) * 4u)) & 0xFu) << 12u));
++            int32_t sample = (nibble >> shift) +
++                ((voice.prev1 * kFilterPositive[filter] + voice.prev2 * kFilterNegative[filter] + 32) >> 6);
++            sample = clamp16(sample);
++            voice.prev2 = voice.prev1;
++            voice.prev1 = sample;
++            voice.samples[3u + i] = static_cast<int16_t>(sample);
++        }
++        voice.blockReady = true;
++    }
++
++    int16_t IopSpu2::voiceSample(Core &core, int coreIndex, Voice &voice)
++    {
++        if (!voice.blockReady)
++            decodeBlock(core, coreIndex, voice);
++        const uint32_t index = voice.counter >> 12u;
++        const float t = static_cast<float>(voice.counter & 0xFFFu) / 4096.0f;
++        // Catmull-Rom between the two samples before the current one.
++        const float y0 = voice.samples[index], y1 = voice.samples[index + 1u];
++        const float y2 = voice.samples[index + 2u], y3 = voice.samples[index + 3u];
++        const float value = y1 + 0.5f * t * (y2 - y0 + t * (2.0f * y0 - 5.0f * y1 + 4.0f * y2 - y3 + t * (3.0f * (y1 - y2) + y3 - y0)));
++        voice.counter += std::min<uint32_t>(voice.pitch, 0x3FFFu);
++        if ((voice.counter >> 12u) >= 28u)
++        {
++            voice.counter -= 28u << 12u;
++            const uint32_t bit = 1u << static_cast<uint32_t>(&voice - core.voices.data());
++            if (voice.blockFlags & 1u)
++            {
++                core.endx |= bit;
++                voice.nax = voice.lsa;
++                if ((voice.blockFlags & 2u) == 0u)
++                {
++                    static const bool trace = std::getenv("OROCHI_SPU2_TRACE") != nullptr;
++                    static unsigned traced = 0u;
++                    if (trace && traced < 60u)
++                    {
++                        ++traced;
++                        std::fprintf(stderr, "[spu2-trace] end %d.%u at nax=0x%x flags=%x lsa=0x%x\n", coreIndex,
++                                     static_cast<unsigned>(&voice - core.voices.data()), voice.nax, voice.blockFlags, voice.lsa);
++                    }
++                    voice.phase = Phase::Off;
++                    voice.level = 0;
++                }
++            }
++            else
++                voice.nax = (voice.nax + 8u) & (RamWords - 1u);
++            voice.samples[0] = voice.samples[28];
++            voice.samples[1] = voice.samples[29];
++            voice.samples[2] = voice.samples[30];
++            voice.blockReady = false;
++        }
++        return clamp16(static_cast<int32_t>(value));
++    }
++
++    void IopSpu2::stepEnvelope(Voice &voice)
++    {
++        auto step = [&](bool exponential, bool decrease, int32_t rate) {
++            if (voice.envCounter > 1)
++            {
++                --voice.envCounter;
++                return;
++            }
++            const int32_t shift = rate >> 2;
++            const int32_t stepValue = decrease ? (-8 + (rate & 3)) : (7 - (rate & 3));
++            int32_t cycles = 1 << std::max(0, shift - 11);
++            int32_t adjust = stepValue << std::max(0, 11 - shift);
++            if (exponential && !decrease && voice.level > 0x6000)
++                cycles *= 4;
++            if (exponential && decrease)
++                adjust = (adjust * voice.level) >> 15;
++            voice.envCounter = std::min(cycles, 1 << 20);
++            voice.level = std::clamp(voice.level + adjust, 0, 0x7FFF);
++        };
++        const uint16_t a1 = voice.adsr1, a2 = voice.adsr2;
++        switch (voice.phase)
++        {
++        case Phase::Attack:
++            step((a1 & 0x8000u) != 0u, false, (a1 >> 8u) & 0x7Fu);
++            if (voice.level >= 0x7FFF)
++            {
++                voice.phase = Phase::Decay;
++                voice.envCounter = 0;
++            }
++            break;
++        case Phase::Decay:
++            step(true, true, static_cast<int32_t>((a1 >> 4u) & 0xFu) * 4);
++            if (voice.level <= std::min<int32_t>(0x7FFF, static_cast<int32_t>((a1 & 0xFu) + 1u) * 0x800))
++            {
++                voice.phase = Phase::Sustain;
++                voice.envCounter = 0;
++            }
++            break;
++        case Phase::Sustain:
++            step((a2 & 0x8000u) != 0u, (a2 & 0x4000u) != 0u, (a2 >> 6u) & 0x7Fu);
++            break;
++        case Phase::Release:
++            step((a2 & 0x20u) != 0u, true, static_cast<int32_t>(a2 & 0x1Fu) * 4);
++            if (voice.level <= 0)
++            {
++                voice.level = 0;
++                voice.phase = Phase::Off;
++            }
++            break;
++        case Phase::Off:
++            break;
++        }
++    }
++
++    void IopSpu2::mixSample(int16_t &left, int16_t &right)
++    {
++        int32_t externalL = 0, externalR = 0;
++        for (int coreIndex = 0; coreIndex < 2; ++coreIndex)
++        {
++            Core &core = m_cores[coreIndex];
++            int32_t voicesL = 0, voicesR = 0;
++            for (int i = 0; i < 24; ++i)
++            {
++                Voice &voice = core.voices[i];
++                if (voice.phase == Phase::Off)
++                {
++                    voice.outL = voice.outR = 0;
++                    continue;
++                }
++                const int32_t sample = (voiceSample(core, coreIndex, voice) * voice.level) >> 15;
++                stepEnvelope(voice);
++                const int32_t l = (sample * fixedVolume(voice.volL)) >> 15;
++                const int32_t r = (sample * fixedVolume(voice.volR)) >> 15;
++                voice.outL = clamp16(l);
++                voice.outR = clamp16(r);
++                if (core.vmixl & (1u << i))
++                    voicesL += l;
++                if (core.vmixr & (1u << i))
++                    voicesR += r;
++            }
++            const uint32_t volumes = kVolumes + static_cast<uint32_t>(coreIndex) * kVolumeStride;
++            int32_t inputL = 0, inputR = 0;
++            if ((core.admas & static_cast<uint16_t>(coreIndex + 1)) != 0u && !core.input.empty())
++            {
++                const auto frame = core.input.front();
++                core.input.pop_front();
++                inputL = (frame.first * fixedVolume(reg(volumes + kAvol))) >> 15;
++                inputR = (frame.second * fixedVolume(reg(volumes + kAvol + 2u))) >> 15;
++            }
++            // MMIX dry gates: voices (bits 11/10), core input (7/6), the other
++            // core's output (3/2).
++            // The bus volumes MVOL and BVOL are not applied: Warriors Orochi's
++            // LIBSD and driver leave all of them at 0 (sceSdInit's reset) and
++            // never write them again, yet the game is not silent on hardware.
++            int32_t mixL = 0, mixR = 0;
++            if (core.mmix & 0x800u) mixL += voicesL;
++            if (core.mmix & 0x400u) mixR += voicesR;
++            if (core.mmix & 0x80u) mixL += inputL;
++            if (core.mmix & 0x40u) mixR += inputR;
++            if (core.mmix & 0x8u) mixL += externalL;
++            if (core.mmix & 0x4u) mixR += externalR;
++            externalL = clamp16(mixL);
++            externalR = clamp16(mixR);
++        }
++        left = clamp16(externalL);
++        right = clamp16(externalR);
++    }
++
++    uint64_t IopSpu2::dma(int coreIndex, uint8_t *iopRam, uint32_t iopRamSize, uint32_t madr, uint32_t bytes, bool toSpu)
++    {
++        sync();
++        Core &core = m_cores[coreIndex];
++        core.statx |= 0x80u;
++        static const bool trace = std::getenv("OROCHI_SPU2_TRACE") != nullptr;
++        static unsigned tracedDma = 0u;
++        if (trace && coreIndex == 1 && tracedDma < 60u)
++        {
++            ++tracedDma;
++            std::fprintf(stderr, "[spu2-trace] dma core=%d bytes=%u toSpu=%d admas=0x%x tsa=0x%x attr=0x%x\n",
++                         coreIndex, bytes, toSpu ? 1 : 0, core.admas, core.tsa, core.attr);
++        }
++        auto iopHalf = [&](uint32_t byte) -> uint16_t& {
++            return *reinterpret_cast<uint16_t *>(iopRam + ((madr + byte) % iopRamSize & ~1u));
++        };
++        if (toSpu && (core.admas & static_cast<uint16_t>(coreIndex + 1)) != 0u)
++        {
++            // AutoDMA: every 1 KiB holds 256 left samples, then 256 right ones.
++            for (uint32_t chunk = 0; chunk + 1024u <= bytes; chunk += 1024u)
++                for (uint32_t i = 0; i < 256u; ++i)
++                    core.input.emplace_back(static_cast<int16_t>(iopHalf(chunk + i * 2u)),
++                                            static_cast<int16_t>(iopHalf(chunk + 512u + i * 2u)));
++            // The channel completes once the input buffer has room for the
++            // next block: half of its 512 frames still to play.
++            const uint64_t queued = core.input.size();
++            return queued > 256u ? (queued - 256u) * CyclesPerSample : 64u;
++        }
++        const uint32_t words = bytes / 2u;
++        checkIrq(coreIndex, core.tsa, words);
++        for (uint32_t i = 0; i < words; ++i)
++        {
++            uint16_t &spu = m_ram[(core.tsa + i) & (RamWords - 1u)];
++            if (toSpu)
++                spu = iopHalf(i * 2u);
++            else
++                iopHalf(i * 2u) = spu;
++        }
++        core.tsa = (core.tsa + words) & (RamWords - 1u);
++        return std::max<uint64_t>(words, 64u);
++    }
++
++    void IopSpu2::advance(std::vector<int16_t> &out)
++    {
++        sync();
++        out.insert(out.end(), m_output.begin(), m_output.end());
++        m_output.clear();
++    }
++
++    void IopSpu2::sync()
++    {
++        if (!m_clock)
++            return;
++        const uint64_t cycle = *m_clock;
++        if (m_started && cycle >= m_lastCycle && cycle - m_lastCycle < CyclesPerSample)
++            return;
++        std::vector<int16_t> &out = m_output;
++        if (!m_started || cycle < m_lastCycle)
++        {
++            m_started = true;
++            m_lastCycle = cycle;
++            return;
++        }
++        uint64_t samples = (cycle - m_lastCycle) / CyclesPerSample;
++        m_lastCycle += samples * CyclesPerSample;
++        // A long stall (loading) is not played back in one burst.
++        samples = std::min<uint64_t>(samples, 4800u);
++        out.reserve(out.size() + samples * 2u);
++        static const bool trace = std::getenv("OROCHI_SPU2_TRACE") != nullptr;
++        static uint64_t traceSamples = 0u;
++        static int32_t voicePeak = 0;
++        for (uint64_t i = 0; i < samples; ++i)
++        {
++            int16_t left, right;
++            mixSample(left, right);
++            out.push_back(left);
++            out.push_back(right);
++            if (trace)
++                for (const Core &core : m_cores)
++                    for (const Voice &voice : core.voices)
++                        voicePeak = std::max<int32_t>(voicePeak, std::max(std::abs(voice.outL), std::abs(voice.outR)));
++        }
++        // OROCHI_SPU2_TRACE: every 10 s, what plays and the bus volumes.
++        if (trace && (traceSamples += samples) >= 480000u)
++        {
++            traceSamples = 0u;
++            for (int c = 0; c < 2; ++c)
++            {
++                const Core &core = m_cores[c];
++                uint32_t active = 0u;
++                for (int i = 0; i < 24; ++i)
++                    if (core.voices[i].phase != Phase::Off)
++                        active |= 1u << i;
++                const uint32_t volumes = kVolumes + static_cast<uint32_t>(c) * kVolumeStride;
++                std::fprintf(stderr, "[spu2-trace] core=%d active=0x%06x mmix=0x%04x attr=0x%04x admas=%u input=%zu mvol=%04x/%04x avol=%04x/%04x bvol=%04x/%04x\n",
++                             c, active, core.mmix, core.attr, core.admas, core.input.size(),
++                             reg(volumes + kMvol), reg(volumes + kMvol + 2u), reg(volumes + kAvol), reg(volumes + kAvol + 2u),
++                             reg(volumes + kBvol), reg(volumes + kBvol + 2u));
++                for (int i = 0; i < 24; ++i)
++                    if (active & (1u << i))
++                    {
++                        const Voice &v = core.voices[i];
++                        std::fprintf(stderr, "[spu2-trace]   voice %d.%d vol=%04x/%04x pitch=%04x adsr=%04x/%04x level=%d nax=0x%x lsa=0x%x\n",
++                                     c, i, v.volL, v.volR, v.pitch, v.adsr1, v.adsr2, v.level, v.nax, v.lsa);
++                    }
++            }
++            std::fprintf(stderr, "[spu2-trace] voice peak=%d\n", voicePeak);
++            voicePeak = 0;
++        }
++    }
++}
+diff --git b/ps2xIOP/src/emulator/core/iop_spu2.h b/ps2xIOP/src/emulator/core/iop_spu2.h
+new file mode 100644
+index 0000000..7dda38c
+--- /dev/null
++++ b/ps2xIOP/src/emulator/core/iop_spu2.h
+@@ -0,0 +1,105 @@
++#pragma once
++
++#include <array>
++#include <cstdint>
++#include <deque>
++#include <vector>
++
++namespace ps2x::iop::detail
++{
++    // SPU2: 2 MiB of sound RAM (addressed in 16-bit words) and two cores of
++    // 24 ADPCM voices each, fed by DMA channels 4 and 7 (manual transfers into
++    // sound RAM, or AutoDMA streams of PCM), mixed to 48 kHz stereo.
++    // Not emulated: reverb (the wet bus is dropped), noise, pitch modulation
++    // and the hardware's Gaussian interpolation (a 4-point cubic is used).
++    class IopSpu2
++    {
++    public:
++        static constexpr uint32_t Base = 0x1F900000u;
++        static constexpr uint32_t Size = 0x800u;
++        static constexpr uint32_t CyclesPerSample = 768u; // 36.864 MHz IOP / 48 kHz
++        static constexpr uint32_t RamWords = 1u << 20u;
++
++        IopSpu2();
++        void reset();
++
++        [[nodiscard]] uint16_t read16(uint32_t offset);
++        void write16(uint32_t offset, uint16_t value);
++
++        // DMA channel 4 (core 0) or 7 (core 1) moving `bytes` between IOP RAM
++        // and the core. Returns the IOP cycles until the channel completes.
++        uint64_t dma(int core, uint8_t *iopRam, uint32_t iopRamSize, uint32_t madr, uint32_t bytes, bool toSpu);
++
++        // The IOP cycle counter. Register accesses and DMA first run the
++        // cores up to it, so code polling the SPU2 (an envelope reaching 0
++        // inside a synchronous RPC) sees time pass.
++        void setClock(const uint64_t *cycles) { m_clock = cycles; }
++
++        // Runs both cores up to the clock and moves the samples produced
++        // since the last call (interleaved stereo) to `out`.
++        void advance(std::vector<int16_t> &out);
++
++        // Runs the cores up to the clock (cheap when no sample is due).
++        void sync();
++
++        // A voice, a transfer or the AutoDMA input reached a core's IRQ
++        // address with IRQs enabled (interrupt 9).
++        bool takeIrq();
++
++    private:
++        enum class Phase : uint8_t
++        {
++            Off,
++            Attack,
++            Decay,
++            Sustain,
++            Release,
++        };
++
++        struct Voice
++        {
++            uint16_t volL = 0, volR = 0, pitch = 0, adsr1 = 0, adsr2 = 0;
++            uint32_t ssa = 0, lsa = 0, nax = 0;
++            Phase phase = Phase::Off;
++            int32_t level = 0;
++            int32_t envCounter = 0;
++            uint32_t counter = 0;      // position in the block, 4.12 fixed point
++            bool blockReady = false;
++            uint8_t blockFlags = 0;
++            int32_t prev1 = 0, prev2 = 0; // ADPCM filter history
++            std::array<int16_t, 31> samples{}; // 3 previous + 28 of this block
++            int16_t outL = 0, outR = 0;
++        };
++
++        struct Core
++        {
++            std::array<Voice, 24> voices{};
++            uint32_t irqa = 0, tsa = 0;
++            uint32_t endx = 0;
++            uint16_t attr = 0, admas = 0, statx = 0, mmix = 0;
++            uint32_t vmixl = 0, vmixr = 0;
++            // AutoDMA input: stereo frames waiting to be played.
++            std::deque<std::pair<int16_t, int16_t>> input;
++        };
++
++        void keyOn(int core, uint32_t mask);
++        void keyOff(int core, uint32_t mask);
++        void decodeBlock(Core &core, int coreIndex, Voice &voice);
++        void stepEnvelope(Voice &voice);
++        int16_t voiceSample(Core &core, int coreIndex, Voice &voice);
++        void checkIrq(int core, uint32_t first, uint32_t count);
++        void mixSample(int16_t &left, int16_t &right);
++        static int32_t fixedVolume(uint16_t value);
++        uint16_t &reg(uint32_t offset) { return m_regs[(offset & (Size - 1u)) >> 1u]; }
++
++        std::vector<uint16_t> m_ram;
++        std::array<uint16_t, Size / 2u> m_regs{};
++        std::array<Core, 2> m_cores{};
++        uint16_t m_irqInfo = 0;
++        bool m_irqPending = false;
++        const uint64_t *m_clock = nullptr;
++        std::vector<int16_t> m_output;
++        uint64_t m_lastCycle = 0;
++        bool m_started = false;
++    };
++}
+diff --git a/ps2xIOP/src/emulator/core/iop_memory.cpp b/ps2xIOP/src/emulator/core/iop_memory.cpp
+index 810a72c..b3c4a14 100644
+--- a/ps2xIOP/src/emulator/core/iop_memory.cpp
++++ b/ps2xIOP/src/emulator/core/iop_memory.cpp
+@@ -1,6 +1,8 @@
+ #include "iop_memory.h"
+ 
+ #include <algorithm>
++#include <cstdlib>
++#include <string>
+ #include <cstring>
+ 
+ namespace ps2x::iop::detail
+@@ -27,6 +29,8 @@ namespace ps2x::iop::detail
+ 
+     void IopMemory::reset()
+     {
++        const char *spu2 = std::getenv("OROCHI_SPU2");
++        m_spu2Enabled = spu2 && std::string(spu2) != "0";
+         std::fill(m_ram.begin(), m_ram.end(), uint8_t{0});
+         std::fill(m_owned.begin(), m_owned.end(), uint8_t{0});
+         std::fill(m_scratch.begin(), m_scratch.end(), uint8_t{0});
+@@ -36,6 +40,7 @@ namespace ps2x::iop::detail
+         m_interruptMask = 0;
+         m_interruptControl = 1;
+         m_dmaStart.reset();
++        m_spu2.reset();
+     }
+ 
+     uint32_t IopMemory::physicalAddress(uint32_t address) noexcept
+@@ -50,6 +55,8 @@ namespace ps2x::iop::detail
+             return m_ram[phys];
+         if (phys >= ScratchBase && phys < ScratchBase + ScratchSize)
+             return m_scratch[phys - ScratchBase];
++        if (isSpu2(phys))
++            return static_cast<uint8_t>(m_spu2.read16((phys - IopSpu2::Base) & ~1u) >> ((phys & 1u) * 8u));
+         const uint32_t value = readHardware32(phys & ~3u);
+         return static_cast<uint8_t>(value >> ((phys & 3u) * 8u));
+     }
+@@ -63,6 +70,8 @@ namespace ps2x::iop::detail
+             std::memcpy(&value, m_ram.data() + phys, sizeof(value));
+             return value;
+         }
++        if ((phys & 1u) == 0u && isSpu2(phys))
++            return m_spu2.read16(phys - IopSpu2::Base);
+         return static_cast<uint16_t>(read8(address) | (static_cast<uint16_t>(read8(address + 1u)) << 8u));
+     }
+ 
+@@ -81,6 +90,9 @@ namespace ps2x::iop::detail
+             std::memcpy(&value, m_scratch.data() + (phys - ScratchBase), sizeof(value));
+             return value;
+         }
++        if ((phys & 3u) == 0u && isSpu2(phys))
++            return m_spu2.read16(phys - IopSpu2::Base) |
++                   (static_cast<uint32_t>(m_spu2.read16(phys - IopSpu2::Base + 2u)) << 16u);
+         if ((phys & 3u) == 0u && isHardwareAddress(phys))
+             return readHardware32(phys);
+ 
+@@ -104,6 +116,13 @@ namespace ps2x::iop::detail
+             m_scratch[phys - ScratchBase] = value;
+             return;
+         }
++        if (isSpu2(phys))
++        {
++            const uint32_t offset = (phys - IopSpu2::Base) & ~1u;
++            const uint32_t shift = (phys & 1u) * 8u;
++            m_spu2.write16(offset, static_cast<uint16_t>((m_spu2.read16(offset) & ~(0xFFu << shift)) | (static_cast<uint32_t>(value) << shift)));
++            return;
++        }
+         const uint32_t aligned = phys & ~3u;
+         uint32_t current = readHardware32(aligned);
+         const uint32_t shift = (phys & 3u) * 8u;
+@@ -120,6 +139,11 @@ namespace ps2x::iop::detail
+             markOwned(phys, sizeof(value));
+             return;
+         }
++        if ((phys & 1u) == 0u && isSpu2(phys))
++        {
++            m_spu2.write16(phys - IopSpu2::Base, value);
++            return;
++        }
+         write8(address, static_cast<uint8_t>(value));
+         write8(address + 1u, static_cast<uint8_t>(value >> 8u));
+     }
+@@ -138,6 +162,12 @@ namespace ps2x::iop::detail
+             std::memcpy(m_scratch.data() + (phys - ScratchBase), &value, sizeof(value));
+             return;
+         }
++        if ((phys & 3u) == 0u && isSpu2(phys))
++        {
++            m_spu2.write16(phys - IopSpu2::Base, static_cast<uint16_t>(value));
++            m_spu2.write16(phys - IopSpu2::Base + 2u, static_cast<uint16_t>(value >> 16u));
++            return;
++        }
+         if ((phys & 3u) == 0u)
+         {
+             writeHardware32(phys, value);
+@@ -252,25 +282,34 @@ namespace ps2x::iop::detail
+         const bool secondCore = address == kDmaSpu1Chcr;
+         m_hardware[address] = value & ~kDmaStart;
+ 
+-        const uint32_t statusAddress = 0x1F900344u + (secondCore ? 0x400u : 0u);
+-        const uint32_t alignedStatus = statusAddress & ~3u;
+-        const uint32_t shift = (statusAddress & 2u) * 8u;
+-        uint32_t status = 0u;
+-        if (const auto current = m_hardware.find(alignedStatus); current != m_hardware.end())
+-            status = current->second;
+-        status |= 0x80u << shift;
+-        m_hardware[alignedStatus] = status;
+-
+         const uint32_t blockControlAddress = address - sizeof(uint32_t);
+         uint32_t blockControl = 0u;
+         if (const auto current = m_hardware.find(blockControlAddress); current != m_hardware.end())
+             blockControl = current->second;
++        uint32_t madr = 0u;
++        if (const auto current = m_hardware.find(address - 2u * sizeof(uint32_t)); current != m_hardware.end())
++            madr = current->second;
+         const uint32_t wordsPerBlock = std::max<uint32_t>(blockControl & 0xFFFFu, 1u);
+         const uint32_t blockCount = std::max<uint32_t>(blockControl >> 16u, 1u);
+         const uint64_t transferWords = static_cast<uint64_t>(wordsPerBlock) * blockCount;
++        uint64_t delay = transferWords * 2u;
++        if (m_spu2Enabled)
++        {
++            // CHCR bit 0: from IOP memory to the SPU2.
++            delay = m_spu2.dma(secondCore ? 1 : 0, m_ram.data(), RamSize, physicalAddress(madr) % RamSize,
++                               static_cast<uint32_t>(std::min<uint64_t>(transferWords * 4u, RamSize)),
++                               (value & 1u) != 0u);
++        }
++        else
++        {
++            // No SPU2: the data is dropped and the core reports the transfer done.
++            const uint32_t statusAddress = 0x1F900344u + (secondCore ? 0x400u : 0u);
++            const uint32_t shift = (statusAddress & 2u) * 8u;
++            m_hardware[statusAddress & ~3u] |= 0x80u << shift;
++        }
+         m_dmaStart = DmaStart{
+             secondCore ? kDmaSpu1Irq : kDmaSpu0Irq,
+-            std::max<uint64_t>(transferWords * 2u, 64u),
++            std::max<uint64_t>(delay, 64u),
+         };
+     }
+ 
+diff --git a/ps2xIOP/src/emulator/core/iop_memory.h b/ps2xIOP/src/emulator/core/iop_memory.h
+index d684f61..0c5375a 100644
+--- a/ps2xIOP/src/emulator/core/iop_memory.h
++++ b/ps2xIOP/src/emulator/core/iop_memory.h
+@@ -1,5 +1,7 @@
+ #pragma once
+ 
++#include "iop_spu2.h"
++
+ #include <cstddef>
+ #include <cstdint>
+ #include <optional>
+@@ -76,6 +78,8 @@ namespace ps2x::iop::detail
+         [[nodiscard]] std::span<const uint8_t> ram() const noexcept { return m_ram; }
+ 
+         [[nodiscard]] static uint32_t physicalAddress(uint32_t address) noexcept;
++        [[nodiscard]] IopSpu2 &spu2() noexcept { return m_spu2; }
++        [[nodiscard]] bool spu2Enabled() const noexcept { return m_spu2Enabled; }
+ 
+     private:
+         [[nodiscard]] uint32_t readHardware32(uint32_t address) const;
+@@ -91,5 +95,14 @@ namespace ps2x::iop::detail
+         uint32_t m_interruptMask = 0;
+         uint32_t m_interruptControl = 1;
+         std::optional<DmaStart> m_dmaStart;
++        // Register reads are const for callers; the SPU2 state is not.
++        mutable IopSpu2 m_spu2;
++        // OROCHI_SPU2=1 while the emulation is incomplete; otherwise the
++        // registers are plain storage and sound DMA data is dropped.
++        bool m_spu2Enabled = false;
++        [[nodiscard]] bool isSpu2(uint32_t phys) const noexcept
++        {
++            return m_spu2Enabled && phys >= IopSpu2::Base && phys < IopSpu2::Base + IopSpu2::Size;
++        }
+     };
+ }
+diff --git a/ps2xIOP/src/emulator/iop_emulator.cpp b/ps2xIOP/src/emulator/iop_emulator.cpp
+index 0225388..cd91f51 100644
+--- a/ps2xIOP/src/emulator/iop_emulator.cpp
++++ b/ps2xIOP/src/emulator/iop_emulator.cpp
+@@ -18,6 +18,8 @@
+ #include "iop_emulator_const.h"
+ 
+ #include <algorithm>
++#include <cstdio>
++#include <cstdlib>
+ #include <cctype>
+ #include <map>
+ #include <optional>
+@@ -118,6 +120,7 @@ namespace ps2x::iop::detail
+         void reset()
+         {
+             memory.reset();
++            memory.spu2().setClock(&totalCycles);
+             kernel.reset();
+             modules.clear();
+             imports.reset();
+@@ -348,6 +351,20 @@ namespace ps2x::iop::detail
+                 return ImportDisposition::Handled;
+ 
+             const uint32_t target = imports.resolve(call.library, call.ordinal, call.version);
++            static const bool traceSd = std::getenv("OROCHI_SPU2_TRACE") != nullptr;
++            static unsigned tracedSd = 0u;
++            if (traceSd && iequals(call.library, "libsd") && (call.ordinal != 6u || (cpu.gpr[4] & 0xFF00u) >= 0x0800u) && tracedSd < 400u)
++            {
++                ++tracedSd;
++                std::fprintf(stderr, "[spu2-trace] libsd:%u a0=0x%x a1=0x%x a2=0x%x ra=0x%x\n", call.ordinal,
++                             cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[31]);
++                // sceSdProcBatch(batch, returns, count): {u16 function, u16 entry, u32 value} each.
++                if (call.ordinal == 15u)
++                    for (uint32_t i = 0; i < std::min<uint32_t>(cpu.gpr[6], 64u); ++i)
++                        std::fprintf(stderr, "[spu2-trace]   batch func=%u entry=0x%04x value=0x%x\n",
++                                     memory.read16(cpu.gpr[4] + i * 8u), memory.read16(cpu.gpr[4] + i * 8u + 2u),
++                                     memory.read32(cpu.gpr[4] + i * 8u + 4u));
++            }
+             if (target != 0u)
+             {
+                 cpu.pc = target;
+@@ -367,6 +384,11 @@ namespace ps2x::iop::detail
+         {
+             if (cpu.stopped)
+                 return false;
++            if (cpu.pc == kRpcReturnSentinel)
++            {
++                rpc.finishThreadedRequest(cpu);
++                return !cpu.stopped;
++            }
+             if (cpu.pc == kThreadReturnSentinel || cpu.pc == kCallReturnSentinel)
+             {
+                 cpu.stopped = true;
+@@ -415,6 +437,10 @@ namespace ps2x::iop::detail
+                     servicePendingDmaInterrupts();
+                 if (!servicingGuestCallbacks && !pendingGuestCallbacks.empty())
+                     servicePendingGuestCallbacks();
++                // Synchronous RPC handlers wait on event flags that the SPU2
++                // interrupt handler sets, without touching the SPU2 themselves.
++                if (((totalInstructions - start) & 255u) == 0u)
++                    serviceSpu2();
+             }
+             activeCpu = previous;
+             return static_cast<uint32_t>(totalInstructions - start);
+@@ -460,7 +486,18 @@ namespace ps2x::iop::detail
+                 cpu.gpr[29] = kCallStackBase - 32u;
+             }
+             cpu.gpr[31] = kCallReturnSentinel;
+-            runCpu(cpu, budget);
++            const uint32_t executed = runCpu(cpu, budget);
++            static const bool traceBudget = std::getenv("OROCHI_SPU2_TRACE") != nullptr;
++            static unsigned tracedBudget = 0u;
++            if (traceBudget && executed >= budget && !cpu.stopped && tracedBudget < 20u)
++            {
++                ++tracedBudget;
++                std::fprintf(stderr, "[spu2-trace] call 0x%x used its budget (%u) at pc=0x%x ra=0x%x v0=0x%x a0=0x%x\n",
++                             address, budget, cpu.pc, cpu.gpr[31], cpu.gpr[2], cpu.gpr[4]);
++                std::fprintf(stderr, "[spu2-trace]   v1=%x s0=%x s1=%x s2=%x s3=%x s4=%x s5=%x s6=%x s7=%x fp=%x sp=%x a1=%x a2=%x a3=%x depth=%u\n",
++                             cpu.gpr[3], cpu.gpr[16], cpu.gpr[17], cpu.gpr[18], cpu.gpr[19], cpu.gpr[20], cpu.gpr[21], cpu.gpr[22],
++                             cpu.gpr[23], cpu.gpr[30], cpu.gpr[29], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7], depth);
++            }
+             return cpu.gpr[2];
+         }
+ 
+@@ -474,6 +511,16 @@ namespace ps2x::iop::detail
+             return callFunction(address, a0, a1, a2, a3, gp);
+         }
+ 
++        void runIop(uint64_t cycles) override
++        {
++            runCycles(cycles);
++        }
++
++        bool threadedRpc() const override
++        {
++            return memory.spu2Enabled();
++        }
++
+         uint32_t executeGuestFunctionWithBudget(uint32_t address,
+                                                 uint32_t a0,
+                                                 uint32_t a1,
+@@ -517,6 +564,26 @@ namespace ps2x::iop::detail
+             servicingDmaInterrupts = false;
+         }
+ 
++        void serviceSpu2()
++        {
++            if (servicingSpu2 || !memory.spu2Enabled())
++                return;
++            memory.spu2().sync();
++            if (!memory.spu2().takeIrq())
++                return;
++            servicingSpu2 = true;
++            try
++            {
++                (void)intrman.dispatchInterrupt(kSpu2Irq, *this);
++            }
++            catch (...)
++            {
++                servicingSpu2 = false;
++                throw;
++            }
++            servicingSpu2 = false;
++        }
++
+         void servicePendingGuestCallbacks()
+         {
+             if (servicingGuestCallbacks || pendingGuestCallbacks.empty())
+@@ -586,6 +653,16 @@ namespace ps2x::iop::detail
+                     if (totalCycles == before)
+                         ++totalCycles;
+                 }
++                if (memory.spu2Enabled())
++                    memory.spu2().advance(spu2Samples);
++                // Handed to the host in ~5 ms blocks: runCycles runs thousands
++                // of times per second.
++                if (spu2Samples.size() >= 2u * 256u)
++                {
++                    host.spu2Output(spu2Samples.data(), spu2Samples.size() / 2u);
++                    spu2Samples.clear();
++                }
++                serviceSpu2();
+             }
+             catch (...)
+             {
+@@ -687,6 +764,8 @@ namespace ps2x::iop::detail
+ 
+         IopHost &host;
+         IopMemory memory;
++        static constexpr int kSpu2Irq = 9;
++        std::vector<int16_t> spu2Samples;
+         IopSysmem sysmem;
+         IopKernel kernel;
+         IopCdvd cdvd;
+@@ -713,6 +792,7 @@ namespace ps2x::iop::detail
+         std::string lastError;
+         bool servicingDmaInterrupts = false;
+         bool servicingGuestCallbacks = false;
++        bool servicingSpu2 = false;
+         uint32_t callDepth = 0u;
+         GuestCallback secrMcCommandHandler;
+         GuestCallback secrMcDevIdHandler;

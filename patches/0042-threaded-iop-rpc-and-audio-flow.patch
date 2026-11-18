@@ -1,0 +1,896 @@
+diff --git a/ps2xIOP/include/ps2x/iop/iop_types.h b/ps2xIOP/include/ps2x/iop/iop_types.h
+index 3491440..994ec35 100644
+--- a/ps2xIOP/include/ps2x/iop/iop_types.h
++++ b/ps2xIOP/include/ps2x/iop/iop_types.h
+@@ -99,6 +99,9 @@ namespace ps2x::iop
+         uint32_t resultAddress = 0;
+         bool signalNowaitCompletion = false;
+         bool signalCompletion = false;
++        // A NOWAIT request queued for an IOP thread: the client stays busy for
++        // sceSifCheckStatRpc until IopHost::rpcFinished reports it done.
++        bool deferCompletion = false;
+         CallbackPolicy callbackPolicy = CallbackPolicy::RuntimeDefault;
+         ServerDispatchPolicy serverDispatchPolicy = ServerDispatchPolicy::RuntimeDefault;
+         uint32_t guestFunction = 0;
+diff --git a/ps2xIOP/include/ps2x/iop/iop_host.h b/ps2xIOP/include/ps2x/iop/iop_host.h
+index 1eceb08..a55f634 100644
+--- a/ps2xIOP/include/ps2x/iop/iop_host.h
++++ b/ps2xIOP/include/ps2x/iop/iop_host.h
+@@ -90,6 +90,18 @@ namespace ps2x::iop
+             normalized = 0u;
+             return false;
+         }
++        // A deferred (RpcResult::deferCompletion) request's handler returned.
++        virtual void rpcFinished(uint32_t clientAddress)
++        {
++            (void)clientAddress;
++        }
++        // SPU2 output: interleaved 16-bit stereo frames at 48 kHz, produced as
++        // the IOP's emulated time advances.
++        virtual void spu2Output(const int16_t *stereo, size_t frames)
++        {
++            (void)stereo;
++            (void)frames;
++        }
+         virtual uint32_t allocateIopHandle(IopHandleKind kind) = 0;
+         virtual uint32_t allocateGuest(uint32_t size, uint32_t alignment) = 0;
+         virtual void freeGuest(uint32_t address) = 0;
+diff --git a/ps2xIOP/src/emulator/iop_emulator_const.h b/ps2xIOP/src/emulator/iop_emulator_const.h
+index 7004597..d75b59b 100644
+--- a/ps2xIOP/src/emulator/iop_emulator_const.h
++++ b/ps2xIOP/src/emulator/iop_emulator_const.h
+@@ -3,6 +3,8 @@
+ 
+ constexpr uint32_t kThreadReturnSentinel = 0x1FFFFF00u;
+ constexpr uint32_t kCallReturnSentinel = 0x1FFFFF04u;
++// Return address of an RPC handler run in its server thread (sceSifRpcLoop).
++constexpr uint32_t kRpcReturnSentinel = 0x1FFFFF08u;
+ constexpr uint64_t kIopClockHz = 36'864'000ull;
+ // NTSC field cadence (approximately 59.94 Hz).  VBlank imports are
+ // scheduler waits, not no-op timing hints: returning immediately lets
+diff --git a/ps2xIOP/src/emulator/services/iop_rpc.h b/ps2xIOP/src/emulator/services/iop_rpc.h
+index c64ea71..15d9e7d 100644
+--- a/ps2xIOP/src/emulator/services/iop_rpc.h
++++ b/ps2xIOP/src/emulator/services/iop_rpc.h
+@@ -4,7 +4,9 @@
+ 
+ #include <cstddef>
+ #include <cstdint>
++#include <deque>
+ #include <unordered_map>
++#include <vector>
+ 
+ namespace ps2x::iop
+ {
+@@ -38,6 +40,10 @@ namespace ps2x::iop::detail
+         {
+             return executeGuestFunction(address, a0, a1, a2, a3, gp);
+         }
++        // Lets IOP threads run for about `cycles` (a caller waiting on one).
++        virtual void runIop(uint64_t cycles) { (void)cycles; }
++        // Whether NOWAIT requests go to the server's sceSifRpcLoop thread.
++        [[nodiscard]] virtual bool threadedRpc() const { return false; }
+     };
+ 
+     class IopRpcBridge
+@@ -49,6 +55,9 @@ namespace ps2x::iop::detail
+         [[nodiscard]] bool dispatchSifManImport(uint16_t ordinal, IopCpuState &cpu);
+         [[nodiscard]] bool dispatchSifCmdImport(uint16_t ordinal, IopCpuState &cpu);
+         [[nodiscard]] RpcResult handleRpc(const RpcRequest &request, IopGuestExecutor &executor);
++        // The handler started by a queued request returned (pc reached
++        // kRpcReturnSentinel in its server thread).
++        void finishThreadedRequest(IopCpuState &cpu);
+         void onSifTransfer(const SifTransfer &transfer);
+         void removeServersInRange(uint32_t base, uint32_t size);
+ 
+@@ -73,6 +82,26 @@ namespace ps2x::iop::detail
+         IopKernel &m_kernel;
+         std::unordered_map<uint32_t, RpcServer> m_servers;
+         std::unordered_map<uint32_t, unsigned> m_traceCounts;
++        // NOWAIT requests run in the server's own thread, as sceSifRpcLoop
++        // does: the handler may block (wait for an interrupt) while the EE
++        // continues. The send data is kept from the call.
++        struct QueuedRequest
++        {
++            uint32_t function = 0;
++            uint32_t client = 0; // reported to the host when done; 0 when not deferred
++            std::vector<uint8_t> send;
++            GuestBuffer receive;
++        };
++        struct ServerQueue
++        {
++            std::deque<QueuedRequest> requests;
++            bool running = false;
++        };
++        void startQueued(uint32_t sid);
++        [[nodiscard]] bool queueBusy(uint32_t sid) const;
++        std::unordered_map<uint32_t, int> m_loopThreads;     // queue address -> thread in sceSifRpcLoop
++        std::unordered_map<uint32_t, ServerQueue> m_queues;  // sid -> requests
++        std::unordered_map<int, uint32_t> m_runningSid;     // thread -> sid of the running request
+         uint32_t m_nextDmaId = 1u;
+         bool m_sifInitialized = false;
+     };
+diff --git a/ps2xIOP/src/emulator/services/iop_rpc.cpp b/ps2xIOP/src/emulator/services/iop_rpc.cpp
+index cae527f..5f4e0f3 100644
+--- a/ps2xIOP/src/emulator/services/iop_rpc.cpp
++++ b/ps2xIOP/src/emulator/services/iop_rpc.cpp
+@@ -4,6 +4,7 @@
+ #include "../core/iop_kernel.h"
+ #include "../core/iop_memory.h"
+ #include "ps2x/iop/iop_host.h"
++#include "../iop_emulator_const.h"
+ 
+ #include <algorithm>
+ #include <array>
+@@ -24,6 +25,9 @@ namespace ps2x::iop::detail
+     {
+         m_servers.clear();
+         m_traceCounts.clear();
++        m_loopThreads.clear();
++        m_queues.clear();
++        m_runningSid.clear();
+         m_nextDmaId = 1u;
+         m_sifInitialized = false;
+     }
+@@ -244,6 +248,7 @@ namespace ps2x::iop::detail
+             setV0(0);
+             return true;
+         case 22: // RpcLoop
++            m_loopThreads[cpu.gpr[4]] = m_kernel.currentThreadId();
+             m_kernel.sleepCurrent(cpu);
+             setV0(0);
+             return true;
+@@ -284,6 +289,48 @@ namespace ps2x::iop::detail
+             return result;
+ 
+         RpcServer &server = serverIt->second;
++        const auto loop = m_loopThreads.find(server.queue);
++        if (executor.threadedRpc() && loop != m_loopThreads.end())
++        {
++            // Handlers block on their own driver's threads (the sound driver's
++            // pause waits for its feeder), so they need a thread of their own.
++            const bool nowait = (request.mode & 1u) != 0u;
++            QueuedRequest queued;
++            queued.function = request.function;
++            queued.receive = request.receive;
++            // Games poll sceSifCheckStatRpc for the end of a NOWAIT call; that
++            // is their flow control. End functions keep completing at once.
++            queued.client = nowait && request.endFunction == 0u ? request.clientAddress : 0u;
++            queued.send.resize(std::min<uint32_t>(request.send.size, IopMemory::RamSize));
++            if (!queued.send.empty() && !m_host.readGuest(request.send.address, queued.send.data(), queued.send.size()))
++                queued.send.clear();
++            m_queues[request.sid].requests.push_back(std::move(queued));
++            startQueued(request.sid);
++            RpcResult result;
++            result.handled = true;
++            result.resultAddress = request.receive.address;
++            result.serverDispatchPolicy = ServerDispatchPolicy::Suppress;
++            if (nowait)
++            {
++                result.deferCompletion = request.endFunction == 0u;
++                return result;
++            }
++            // A waiting caller lets the queue finish, its own request last
++            // (bounded, so a handler that never returns cannot hang it).
++            for (uint64_t waited = 0u; queueBusy(request.sid) && waited < 36'864'000u; waited += 1024u)
++            {
++                startQueued(request.sid);
++                executor.runIop(1024u);
++            }
++            result.signalNowaitCompletion = true;
++            result.signalCompletion = true;
++            return result;
++        }
++        // Requests run in order: a waiting caller lets queued ones finish
++        // first (bounded, so a handler that never returns cannot hang it).
++        uint64_t waited = 0u;
++        for (; queueBusy(request.sid) && waited < 36'864'000u; waited += 4096u)
++            executor.runIop(4096u);
+         if (request.send.size != 0u && server.buffer != 0u)
+         {
+             const uint32_t copySize = std::min<uint32_t>(request.send.size, IopMemory::RamSize - std::min(server.buffer, IopMemory::RamSize));
+@@ -317,7 +364,7 @@ namespace ps2x::iop::detail
+         {
+             std::ostringstream out;
+             out << "[IOP:rpc-result] sid=0x" << std::hex << request.sid
+-                << " function=0x" << request.function << " sendBytes=0x" << request.send.size
++                << " function=0x" << request.function << " mode=0x" << request.mode << " sendBytes=0x" << request.send.size
+                 << " a0=0x" << preview[0] << " a1=0x" << preview[1] << " a2=0x" << preview[2]
+                 << " resultPtr=0x" << returnPointer << " result=0x" << m_memory.read32(returnPointer)
+                 << " largestFree=0x" << m_memory.maxFreeMemory() << " totalFree=0x" << m_memory.totalFreeMemory();
+@@ -343,6 +390,72 @@ namespace ps2x::iop::detail
+         return result;
+     }
+ 
++    bool IopRpcBridge::queueBusy(uint32_t sid) const
++    {
++        const auto queue = m_queues.find(sid);
++        return queue != m_queues.end() && (queue->second.running || !queue->second.requests.empty());
++    }
++
++    void IopRpcBridge::startQueued(uint32_t sid)
++    {
++        ServerQueue &queue = m_queues[sid];
++        const auto serverIt = m_servers.find(sid);
++        if (queue.running || queue.requests.empty() || serverIt == m_servers.end())
++            return;
++        const RpcServer &server = serverIt->second;
++        const auto loop = m_loopThreads.find(server.queue);
++        if (loop == m_loopThreads.end())
++            return;
++        const QueuedRequest &request = queue.requests.front();
++        if (!request.send.empty() && server.buffer != 0u)
++        {
++            const uint32_t room = IopMemory::RamSize - std::min(IopMemory::physicalAddress(server.buffer), IopMemory::RamSize);
++            (void)m_memory.writeRam(server.buffer, request.send.data(), std::min<size_t>(request.send.size(), room));
++        }
++        if (m_kernel.callInSleepingThread(loop->second, server.function, server.gp, request.function, server.buffer,
++                                          static_cast<uint32_t>(request.send.size()), kRpcReturnSentinel))
++        {
++            queue.running = true;
++            m_runningSid[loop->second] = sid;
++        }
++    }
++
++    void IopRpcBridge::finishThreadedRequest(IopCpuState &cpu)
++    {
++        m_kernel.endSleepingCall(cpu);
++        const int thread = m_kernel.currentThreadId();
++        const auto running = m_runningSid.find(thread);
++        if (running != m_runningSid.end())
++        {
++            const uint32_t sid = running->second;
++            m_runningSid.erase(running);
++            ServerQueue &queue = m_queues[sid];
++            if (!queue.requests.empty())
++            {
++                const QueuedRequest &request = queue.requests.front();
++                uint32_t result = cpu.gpr[2];
++                if (result == 0u)
++                {
++                    const auto serverIt = m_servers.find(sid);
++                    result = serverIt != m_servers.end() ? serverIt->second.buffer : 0u;
++                }
++                const uint32_t physical = IopMemory::physicalAddress(result);
++                if (request.receive.address != 0u && request.receive.size != 0u && physical < IopMemory::RamSize)
++                    (void)m_host.writeGuest(request.receive.address, m_memory.ram().data() + physical,
++                                            std::min<uint32_t>(request.receive.size, IopMemory::RamSize - physical));
++                if (request.client != 0u)
++                    m_host.rpcFinished(request.client);
++                queue.requests.pop_front();
++            }
++            queue.running = false;
++            // Back to sceSifRpcLoop's wait; the next request (if any) wakes it.
++            m_kernel.sleepCurrent(cpu);
++            startQueued(sid);
++            return;
++        }
++        m_kernel.sleepCurrent(cpu);
++    }
++
+     void IopRpcBridge::onSifTransfer(const SifTransfer &transfer)
+     {
+         // The EE SIF transport owns the actual directional memory movement.
+diff --git a/ps2xIOP/src/emulator/core/iop_kernel.h b/ps2xIOP/src/emulator/core/iop_kernel.h
+index 6c0093e..8b711c5 100644
+--- a/ps2xIOP/src/emulator/core/iop_kernel.h
++++ b/ps2xIOP/src/emulator/core/iop_kernel.h
+@@ -41,6 +41,7 @@ namespace ps2x::iop::detail
+         uint32_t waitMode = 0;
+         uint32_t waitResultAddress = 0;
+         int wakeupCount = 0;
++        uint32_t sleepingCallSp = 0; // stack pointer callInSleepingThread returns to
+     };
+ 
+     class IopKernel
+@@ -58,6 +59,13 @@ namespace ps2x::iop::detail
+         [[nodiscard]] bool setInternalEventFlag(int id, uint32_t bits);
+ 
+         void sleepCurrent(IopCpuState &cpu);
++        [[nodiscard]] int currentThreadId() const noexcept { return m_currentThread ? m_currentThread->id : 0; }
++        // Makes a sleeping thread call `pc(a0, a1, a2)` below its current
++        // stack frame, returning to `returnAddress`.
++        [[nodiscard]] bool callInSleepingThread(int id, uint32_t pc, uint32_t gp, uint32_t a0, uint32_t a1, uint32_t a2,
++                                                uint32_t returnAddress);
++        // The end of a callInSleepingThread call: gives back its stack.
++        void endSleepingCall(IopCpuState &cpu);
+         void delayCurrentUntil(uint64_t wakeCycle, IopCpuState &cpu);
+ 
+         [[nodiscard]] IopThread *beginNextReady(uint64_t currentCycle);
+diff --git a/ps2xIOP/src/emulator/core/iop_kernel.cpp b/ps2xIOP/src/emulator/core/iop_kernel.cpp
+index 634c4cf..46b8fbb 100644
+--- a/ps2xIOP/src/emulator/core/iop_kernel.cpp
++++ b/ps2xIOP/src/emulator/core/iop_kernel.cpp
+@@ -4,6 +4,8 @@
+ #include "../iop_emulator_const.h"
+ 
+ #include <algorithm>
++#include <cstdio>
++#include <cstdlib>
+ 
+ namespace ps2x::iop::detail
+ {
+@@ -572,6 +574,14 @@ namespace ps2x::iop::detail
+         case 6:
+         case 7:
+         {
++            static const bool trace = std::getenv("OROCHI_SPU2_TRACE") != nullptr;
++            static unsigned traced = 0u;
++            if (trace && cpu.gpr[4] == 4u && traced < 30u)
++            {
++                ++traced;
++                std::fprintf(stderr, "[spu2-trace] SetEventFlag(4, 0x%x) ra=0x%x thread=%d\n", cpu.gpr[5], cpu.gpr[31],
++                             m_currentThread ? m_currentThread->id : -1);
++            }
+             if (!setInternalEventFlag(static_cast<int>(cpu.gpr[4]), cpu.gpr[5]))
+             {
+                 setV0(-1);
+@@ -626,7 +636,17 @@ namespace ps2x::iop::detail
+                 cpu.yielded = true;
+             }
+             else
++            {
++                static const bool trace = std::getenv("OROCHI_SPU2_TRACE") != nullptr;
++                static unsigned traced = 0u;
++                if (trace && cpu.gpr[4] != 6u && traced < 10u)
++                {
++                    ++traced;
++                    std::fprintf(stderr, "[spu2-trace] WaitEventFlag(%u, bits=0x%x, mode=%u) outside a thread: flag=0x%x ra=0x%x\n",
++                                 cpu.gpr[4], bits, mode, event->second.bits, cpu.gpr[31]);
++                }
+                 setV0(-418);
++            }
+             return true;
+         }
+         case 13:
+@@ -660,6 +680,35 @@ namespace ps2x::iop::detail
+         }
+     }
+ 
++    bool IopKernel::callInSleepingThread(int id, uint32_t pc, uint32_t gp, uint32_t a0, uint32_t a1, uint32_t a2,
++                                         uint32_t returnAddress)
++    {
++        const auto it = m_threads.find(id);
++        if (it == m_threads.end() || it->second.state != IopThreadState::Sleep)
++            return false;
++        m_idleKnown = false;
++        IopCpuState &cpu = it->second.cpu;
++        cpu.pc = pc;
++        cpu.branchPending = false;
++        cpu.stopped = false;
++        cpu.yielded = false;
++        cpu.gpr[4] = a0;
++        cpu.gpr[5] = a1;
++        cpu.gpr[6] = a2;
++        cpu.gpr[28] = gp;
++        it->second.sleepingCallSp = cpu.gpr[29];
++        cpu.gpr[29] = (cpu.gpr[29] - 64u) & ~15u;
++        cpu.gpr[31] = returnAddress;
++        it->second.state = IopThreadState::Ready;
++        return true;
++    }
++
++    void IopKernel::endSleepingCall(IopCpuState &cpu)
++    {
++        if (m_currentThread != nullptr)
++            cpu.gpr[29] = m_currentThread->sleepingCallSp;
++    }
++
+     void IopKernel::sleepCurrent(IopCpuState &cpu)
+     {
+         m_idleKnown = false;
+diff --git a/ps2xRuntime/src/lib/ps2_iop_host.h b/ps2xRuntime/src/lib/ps2_iop_host.h
+index 89d8576..422e3b3 100644
+--- a/ps2xRuntime/src/lib/ps2_iop_host.h
++++ b/ps2xRuntime/src/lib/ps2_iop_host.h
+@@ -61,6 +61,9 @@ public:
+                       ps2x::iop::GuestBuffer send,
+                       ps2x::iop::GuestBuffer receive) override;
+ 
++    void spu2Output(const int16_t *stereo, size_t frames) override;
++    void rpcFinished(uint32_t clientAddress) override;
++
+     std::string hostPath(ps2x::iop::HostPathKind kind) const override;
+     std::string translateGuestPath(std::string_view path) const override;
+     uint64_t openHostFile(std::string_view path) override;
+diff --git a/ps2xRuntime/src/lib/ps2_iop_host.cpp b/ps2xRuntime/src/lib/ps2_iop_host.cpp
+index 8d46e03..83927c1 100644
+--- a/ps2xRuntime/src/lib/ps2_iop_host.cpp
++++ b/ps2xRuntime/src/lib/ps2_iop_host.cpp
+@@ -6,13 +6,20 @@
+ #include "runtime/ps2_memory.h"
+ #include "Kernel/Stubs/MemoryCard.h"
+ #include "Kernel/Syscalls/Common.h"
++#include "Kernel/Syscalls/RPC.h"
++
++#include "raylib.h"
+ 
+ #include <algorithm>
++#include <cstdio>
++#include <cstdlib>
+ #include <cstring>
+ #include <filesystem>
+ #include <iostream>
+ #include <limits>
++#include <mutex>
+ #include <utility>
++#include <vector>
+ 
+ #if !defined(_WIN32)
+ #include <sys/types.h>
+@@ -244,6 +251,125 @@ void PS2IopHostAdapter::freeGuest(uint32_t address)
+     m_runtime.guestFree(address);
+ }
+ 
++namespace
++{
++    // SPU2 samples from the IOP (game thread) to raylib's audio thread. At
++    // most 200 ms wait: when the game produces faster than real time the
++    // oldest frames go, so latency stays bounded; an empty buffer plays
++    // silence.
++    struct Spu2Stream
++    {
++        static constexpr size_t kCapacity = 9600u;
++        std::mutex mutex;
++        std::vector<int16_t> ring = std::vector<int16_t>(kCapacity * 2u);
++        size_t read = 0u, count = 0u;
++        AudioStream stream{};
++        bool started = false;
++    };
++
++    Spu2Stream &spu2Stream()
++    {
++        static Spu2Stream stream;
++        return stream;
++    }
++
++    void pullSpu2(void *buffer, unsigned int frames)
++    {
++        Spu2Stream &s = spu2Stream();
++        auto *out = static_cast<int16_t *>(buffer);
++        std::lock_guard<std::mutex> lock(s.mutex);
++        for (unsigned int i = 0; i < frames; ++i)
++        {
++            if (s.count == 0u)
++            {
++                out[i * 2u] = out[i * 2u + 1u] = 0;
++                continue;
++            }
++            out[i * 2u] = s.ring[s.read * 2u];
++            out[i * 2u + 1u] = s.ring[s.read * 2u + 1u];
++            s.read = (s.read + 1u) % Spu2Stream::kCapacity;
++            --s.count;
++        }
++    }
++}
++
++void PS2IopHostAdapter::rpcFinished(uint32_t clientAddress)
++{
++    ps2_syscalls::sifRpcFinished(clientAddress);
++}
++
++void PS2IopHostAdapter::spu2Output(const int16_t *stereo, size_t frames)
++{
++    Spu2Stream &s = spu2Stream();
++    // OROCHI_SPU2_MUTE=1: no playback (the WAV recording below still runs).
++    static const bool muted = std::getenv("OROCHI_SPU2_MUTE") != nullptr;
++    if (!s.started && !muted)
++    {
++        if (!IsAudioDeviceReady())
++            return;
++        s.stream = LoadAudioStream(48000u, 16u, 2u);
++        SetAudioStreamCallback(s.stream, pullSpu2);
++        PlayAudioStream(s.stream);
++        s.started = true;
++    }
++    // OROCHI_SPU2_WAV=<path>: also record the first 10 minutes to a WAV file
++    // and log the peak level every 5 s (to check sound without listening).
++    static std::FILE *wav = [] {
++        const char *path = std::getenv("OROCHI_SPU2_WAV");
++        std::FILE *file = path ? std::fopen(path, "wb") : nullptr;
++        if (file)
++        {
++            const uint8_t header[44] = {'R','I','F','F',0,0,0,0,'W','A','V','E','f','m','t',' ',16,0,0,0,1,0,2,0,
++                                        0x80,0xBB,0,0,0x00,0xEE,0x02,0,4,0,16,0,'d','a','t','a',0,0,0,0};
++            std::fwrite(header, 1, sizeof(header), file);
++        }
++        return file;
++    }();
++    static uint64_t recorded = 0u, intervalFrames = 0u;
++    static int32_t intervalPeak = 0;
++    if (wav)
++    {
++        for (size_t i = 0; i < frames * 2u; ++i)
++            intervalPeak = std::max<int32_t>(intervalPeak, std::abs(static_cast<int32_t>(stereo[i])));
++        intervalFrames += frames;
++        if (intervalFrames >= 240000u)
++        {
++            std::cout << "[Orochi:spu2] frames=" << intervalFrames << " peak=" << intervalPeak << std::endl;
++            intervalFrames = 0u;
++            intervalPeak = 0;
++        }
++        if (recorded < 48000u * 600u)
++        {
++            std::fwrite(stereo, sizeof(int16_t) * 2u, frames, wav);
++            const uint64_t before = recorded;
++            recorded += frames;
++            // Header sizes once per recorded second (the file stays playable).
++            if (before / 48000u != recorded / 48000u)
++            {
++                const uint32_t dataBytes = static_cast<uint32_t>(recorded * 4u), riffBytes = dataBytes + 36u;
++                std::fseek(wav, 4, SEEK_SET);
++                std::fwrite(&riffBytes, 4, 1, wav);
++                std::fseek(wav, 40, SEEK_SET);
++                std::fwrite(&dataBytes, 4, 1, wav);
++                std::fseek(wav, 0, SEEK_END);
++            }
++        }
++    }
++    std::lock_guard<std::mutex> lock(s.mutex);
++    for (size_t i = 0; i < frames; ++i)
++    {
++        if (s.count == Spu2Stream::kCapacity)
++        {
++            s.read = (s.read + 1u) % Spu2Stream::kCapacity;
++            --s.count;
++        }
++        const size_t slot = (s.read + s.count) % Spu2Stream::kCapacity;
++        s.ring[slot * 2u] = stereo[i * 2u];
++        s.ring[slot * 2u + 1u] = stereo[i * 2u + 1u];
++        ++s.count;
++    }
++}
++
+ void PS2IopHostAdapter::audioCommand(uint32_t sid,
+                                      uint32_t function,
+                                      ps2x::iop::GuestBuffer send,
+diff --git a/ps2xRuntime/src/lib/Kernel/Syscalls/RPC.h b/ps2xRuntime/src/lib/Kernel/Syscalls/RPC.h
+index 5e9a446..d2f0063 100644
+--- a/ps2xRuntime/src/lib/Kernel/Syscalls/RPC.h
++++ b/ps2xRuntime/src/lib/Kernel/Syscalls/RPC.h
+@@ -11,6 +11,8 @@ namespace ps2_syscalls
+     void SifCallRpc(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime);
+     void SifRegisterRpc(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime);
+     void SifCheckStatRpc(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime);
++    // A deferred NOWAIT call's IOP handler returned: the client is free again.
++    void sifRpcFinished(uint32_t clientPtr);
+     void SifSetRpcQueue(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime);
+     void SifRemoveRpcQueue(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime);
+     void SifRemoveRpc(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime);
+diff --git a/ps2xRuntime/src/lib/Kernel/Syscalls/RPC.cpp b/ps2xRuntime/src/lib/Kernel/Syscalls/RPC.cpp
+index 07fcd29..5f79125 100644
+--- a/ps2xRuntime/src/lib/Kernel/Syscalls/RPC.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Syscalls/RPC.cpp
+@@ -609,6 +609,7 @@ namespace ps2_syscalls
+ 
+             auto completeClient = [=](R5900Context &base, bool callbackCompleted)
+             {
++                if (!iopResult.deferCompletion)
+                 {
+                     std::lock_guard<std::mutex> lock(g_rpc_mutex);
+                     g_rpc_clients[clientPtr].busy = false;
+@@ -817,14 +818,25 @@ namespace ps2_syscalls
+     void SifCheckStatRpc(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+     {
+         uint32_t clientPtr = getRegU32(ctx, 4);
+-        std::lock_guard<std::mutex> lock(g_rpc_mutex);
+-        auto it = g_rpc_clients.find(clientPtr);
+-        if (it == g_rpc_clients.end())
++        bool busy = false;
+         {
+-            setReturnS32(ctx, 0);
+-            return;
+-        }
+-        setReturnS32(ctx, it->second.busy ? 1 : 0);
++            std::lock_guard<std::mutex> lock(g_rpc_mutex);
++            auto it = g_rpc_clients.find(clientPtr);
++            busy = it != g_rpc_clients.end() && it->second.busy;
++        }
++        setReturnS32(ctx, busy ? 1 : 0);
++        // Games spin on this call: the time has to pass for the IOP to finish.
++        constexpr uint32_t kBusyPollCycles = 2048u;
++        if (busy)
++            (void)runtime->eeCheckpointDue(kBusyPollCycles);
++    }
++
++    void sifRpcFinished(uint32_t clientPtr)
++    {
++        std::lock_guard<std::mutex> lock(g_rpc_mutex);
++        const auto it = g_rpc_clients.find(clientPtr);
++        if (it != g_rpc_clients.end())
++            it->second.busy = false;
+     }
+ 
+     void SifSetRpcQueue(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp b/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
+index 939116e..c0124c9 100644
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
+@@ -16,6 +16,7 @@ extern "C"
+ }
+ #endif
+ 
++#include <chrono>
+ #include <deque>
+ #include <memory>
+ 
+@@ -529,10 +530,28 @@ namespace ps2_stubs
+             std::vector<MpegRegisteredCallback> callbacks;
+         };
+ 
++        // Audio packets in demux order, offered to the game's callback one at a
++        // time. libmpeg stops the demux when a callback returns 0 (its ring is
++        // full) and offers the packet again; dropping it instead left holes in
++        // the ADPCM stream, so the SPU2 read sample data as block headers.
++        struct MpegAudioPacket
++        {
++            MpegStreamCallbackEvent event;
++            std::vector<uint8_t> payload;
++        };
++        struct MpegAudioQueue
++        {
++            std::deque<MpegAudioPacket> packets;
++            bool callbackRunning = false;
++            bool refused = false;
++            std::chrono::steady_clock::time_point firstRefusal{};
++        };
++
+         struct MpegStubState
+         {
+             bool initialized = false;
+             uint32_t nextCallbackHandle = 1u;
++            std::unordered_map<uint32_t, MpegAudioQueue> audioQueues;
+             uint64_t cdStreamGeneration = 0u;
+             uint64_t cdStreamBytesProduced = 0u;
+             uint64_t cdStreamBytesDemuxed = 0u;
+@@ -1170,6 +1189,17 @@ namespace ps2_stubs
+             return out;
+         }
+ 
++        // The queue serves the SPU2 emulation; without it nothing plays the audio.
++        bool audioPacketQueueEnabled()
++        {
++            static const bool enabled = []
++            {
++                const char *spu2 = std::getenv("OROCHI_SPU2");
++                return spu2 && std::string(spu2) != "0";
++            }();
++            return enabled;
++        }
++
+         void queueStreamCallbackEvent(uint32_t mpegAddr,
+                                       uint64_t streamKey,
+                                       uint32_t dataAddr,
+@@ -1373,14 +1403,30 @@ namespace ps2_stubs
+                             streamKey |= static_cast<uint64_t>(buffer[payloadStart + i]) << (24u - 8u * i);
+                         // Preserve the private subheader: the original game
+                         // callback advances its pointer and subtracts four.
++                        std::vector<MpegStreamCallbackEvent> packetEvents;
+                         queueStreamCallbackEvent(
+                             mpegAddr,
+                             streamKey,
+                             playback.pssGuestAddrs[payloadStart],
+                             static_cast<uint32_t>(packetEnd - payloadStart),
+-                            callbackEvents,
++                            packetEvents,
+                             pes.pts90k,
+                             pes.dts90k);
++                        for (MpegStreamCallbackEvent &event : packetEvents)
++                        {
++                            if (audioPacketQueueEnabled())
++                            {
++                                MpegAudioPacket packet;
++                                packet.event = std::move(event);
++                                packet.payload.assign(buffer.begin() + static_cast<std::ptrdiff_t>(payloadStart),
++                                                      buffer.begin() + static_cast<std::ptrdiff_t>(packetEnd));
++                                g_mpeg_stub_state.audioQueues[mpegAddr].packets.push_back(std::move(packet));
++                            }
++                            else
++                            {
++                                callbackEvents.push_back(std::move(event));
++                            }
++                        }
+                     }
+                 }
+ 
+@@ -1433,6 +1479,15 @@ namespace ps2_stubs
+                    playback.decodedFrames.size() >= kMaxDecodedPicturesAhead;
+         }
+ 
++        // Audio waiting for room in the game's ring holds the demux back too.
++        bool mpegAudioBackpressured(uint32_t mpegAddr)
++        {
++            constexpr size_t kMaxPendingAudioPackets = 8u;
++            const auto queue = g_mpeg_stub_state.audioQueues.find(mpegAddr);
++            return !g_mpeg_stub_state.currentCdStreamEofSeen && queue != g_mpeg_stub_state.audioQueues.end() &&
++                   queue->second.packets.size() >= kMaxPendingAudioPackets;
++        }
++
+         void recordCdStreamBytesDemuxedUnlocked(
+             size_t consumed,
+             std::vector<uint32_t> &completedMpegIds,
+@@ -1674,6 +1729,110 @@ namespace ps2_stubs
+             dispatchStreamCallbacks(rdram, ctx, runtime, events);
+         }
+ 
++        // Offers the next queued audio packet to the game's callback. The demux
++        // already consumed these bytes and the game may refill that part of its
++        // CD ring, so each offer copies the packet to a buffer in the EE kernel
++        // area: below the ring's end, the callback reads it as one piece.
++        void pumpAudioPackets(uint8_t *rdram, const R5900Context &callerCtx, PS2Runtime *runtime, uint32_t mpegAddr)
++        {
++            constexpr uint32_t kAudioPacketAddress = 0x00013000u;
++            constexpr uint32_t kAudioPacketCapacity = 0x0000D000u;
++            MpegAudioPacket offered;
++            {
++                std::lock_guard<std::mutex> lock(g_mpeg_stub_mutex);
++                const auto found = g_mpeg_stub_state.audioQueues.find(mpegAddr);
++                if (found == g_mpeg_stub_state.audioQueues.end())
++                {
++                    return;
++                }
++                MpegAudioQueue &queue = found->second;
++                if (queue.callbackRunning)
++                {
++                    return;
++                }
++                // A movie must not freeze for its audio: give up on a packet
++                // the game has been refusing for too long.
++                constexpr auto kMaxRefusal = std::chrono::milliseconds(1500);
++                if (!queue.packets.empty() && queue.refused &&
++                    std::chrono::steady_clock::now() - queue.firstRefusal > kMaxRefusal)
++                {
++                    queue.packets.pop_front();
++                    queue.refused = false;
++                }
++                while (!queue.packets.empty() && queue.packets.front().payload.size() > kAudioPacketCapacity)
++                {
++                    queue.packets.pop_front();
++                }
++                if (queue.packets.empty())
++                {
++                    return;
++                }
++                offered.event = queue.packets.front().event;
++                offered.payload = queue.packets.front().payload;
++                queue.callbackRunning = true;
++            }
++
++            const MpegRegisteredCallback callback = offered.event.callbacks.front();
++            const uint32_t cbDataAddr = runtime->guestMalloc(kMpegCallbackDataSize, 16u);
++            auto callbackEvent = offered.event;
++            callbackEvent.streamType = callback.type;
++            callbackEvent.dataAddr = kAudioPacketAddress;
++            std::memcpy(rdram + kAudioPacketAddress, offered.payload.data(), offered.payload.size());
++            if (cbDataAddr == 0u || !writeMpegCallbackData(rdram, cbDataAddr, callbackEvent))
++            {
++                std::lock_guard<std::mutex> lock(g_mpeg_stub_mutex);
++                g_mpeg_stub_state.audioQueues[mpegAddr].callbackRunning = false;
++                return;
++            }
++
++            R5900Context callbackCtx = callerCtx;
++            SET_GPR_U32(&callbackCtx, 4, mpegAddr);
++            SET_GPR_U32(&callbackCtx, 5, cbDataAddr);
++            SET_GPR_U32(&callbackCtx, 6, callback.data);
++            SET_GPR_U32(&callbackCtx, 7, 0u);
++            SET_GPR_U32(&callbackCtx, 29, 0u);
++            SET_GPR_U32(&callbackCtx, 31, 0u);
++            callbackCtx.pc = callback.func;
++
++            GuestInvocation invocation{};
++            invocation.kind = GuestInvocationKind::RpcCallback;
++            invocation.context = callbackCtx;
++            auto savedCtx = std::make_shared<R5900Context>(callerCtx);
++            invocation.onComplete = [rdram, runtime, cbDataAddr, mpegAddr, savedCtx](const R5900Context &done, R5900Context &)
++            {
++                runtime->guestFree(cbDataAddr);
++                const bool accepted = getRegU32(&done, 2) != 0u;
++                {
++                    std::lock_guard<std::mutex> lock(g_mpeg_stub_mutex);
++                    const auto found = g_mpeg_stub_state.audioQueues.find(mpegAddr);
++                    if (found == g_mpeg_stub_state.audioQueues.end())
++                    {
++                        return;
++                    }
++                    MpegAudioQueue &queue = found->second;
++                    queue.callbackRunning = false;
++                    if (accepted)
++                    {
++                        queue.refused = false;
++                        if (!queue.packets.empty())
++                        {
++                            queue.packets.pop_front();
++                        }
++                    }
++                    else if (!queue.refused)
++                    {
++                        queue.refused = true;
++                        queue.firstRefusal = std::chrono::steady_clock::now();
++                    }
++                }
++                if (accepted)
++                {
++                    pumpAudioPackets(rdram, *savedCtx, runtime, mpegAddr);
++                }
++            };
++            runtime->eeScheduler().queueInvocation(std::move(invocation));
++        }
++
+         void writeBlankMpegFrame(uint8_t *rdram, uint32_t destAddr, uint32_t width, uint32_t height)
+         {
+             if (!rdram || destAddr == 0u)
+@@ -1781,6 +1940,7 @@ namespace ps2_stubs
+             g_mpeg_stub_state.isEndTraceCount = 0u;
+             g_mpeg_stub_state.callbacksByMpeg.clear();
+             g_mpeg_stub_state.playbackByMpeg.clear();
++            g_mpeg_stub_state.audioQueues.clear();
+         }
+     }
+ 
+@@ -2123,6 +2283,7 @@ namespace ps2_stubs
+             std::lock_guard<std::mutex> lock(g_mpeg_stub_mutex);
+             g_mpeg_stub_state.callbacksByMpeg.erase(mpegAddr);
+             g_mpeg_stub_state.playbackByMpeg.erase(mpegAddr);
++            g_mpeg_stub_state.audioQueues.erase(mpegAddr);
+         }
+         runtime->eeScheduler().completeExternalWait(kMpegPictureWaitType, mpegAddr, KE_WAIT_DELETE);
+         setReturnU32(ctx, 0u);
+@@ -2146,7 +2307,7 @@ namespace ps2_stubs
+             std::lock_guard<std::mutex> lock(g_mpeg_stub_mutex);
+             MpegPlaybackState &playback = getPlaybackState(mpegAddr);
+             decodedBefore = playback.decodedFrames.size();
+-            backpressured = mpegDemuxBackpressured(playback);
++            backpressured = mpegDemuxBackpressured(playback) || mpegAudioBackpressured(mpegAddr);
+             if (!backpressured)
+             {
+                 consumed = appendGuestBytes(mpegAddr, playback, rdram, dataAddr, byteCount, callbackEvents);
+@@ -2155,6 +2316,7 @@ namespace ps2_stubs
+             decodedCount = playback.decodedFrames.size();
+             traceIdx = g_mpeg_stub_state.demuxPssTraceCount++;
+         }
++        pumpAudioPackets(rdram, *ctx, runtime, mpegAddr);
+ 
+         if (backpressured)
+         {
+@@ -2229,7 +2391,7 @@ namespace ps2_stubs
+             std::lock_guard<std::mutex> lock(g_mpeg_stub_mutex);
+             MpegPlaybackState &playback = getPlaybackState(mpegAddr);
+             decodedBefore = playback.decodedFrames.size();
+-            backpressured = mpegDemuxBackpressured(playback);
++            backpressured = mpegDemuxBackpressured(playback) || mpegAudioBackpressured(mpegAddr);
+             if (!backpressured)
+             {
+                 consumed = appendGuestRingBytes(
+@@ -2246,6 +2408,7 @@ namespace ps2_stubs
+             decodedCount = playback.decodedFrames.size();
+             traceIdx = g_mpeg_stub_state.demuxRingTraceCount++;
+         }
++        pumpAudioPackets(rdram, *ctx, runtime, mpegAddr);
+ 
+         if (backpressured)
+         {
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/SIF.cpp b/ps2xRuntime/src/lib/Kernel/Stubs/SIF.cpp
+index dc975ed..d0e57d1 100644
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/SIF.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/SIF.cpp
+@@ -303,8 +303,7 @@ namespace ps2_stubs
+     {
+         (void)rdram;
+         const uint32_t reqSize = getRegU32(ctx, 4);
+-        setReturnU32(ctx, runtime ? runtime->allocateIopMemory(reqSize, 64u) : 0u);
+-    }
++        setReturnU32(ctx, runtime ? runtime->allocateIopMemory(reqSize, 64u) : 0u);    }
+ 
+     void sceSifAllocSysMemory(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+     {
+@@ -354,8 +353,7 @@ namespace ps2_stubs
+     {
+         (void)rdram;
+         const uint32_t addr = getRegU32(ctx, 4);
+-        setReturnS32(ctx, runtime && runtime->freeIopMemory(addr) ? 0 : -1);
+-    }
++        setReturnS32(ctx, runtime && runtime->freeIopMemory(addr) ? 0 : -1);    }
+ 
+     void sceSifFreeSysMemory(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+     {

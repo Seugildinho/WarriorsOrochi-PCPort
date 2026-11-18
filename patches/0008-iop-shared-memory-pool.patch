@@ -1,0 +1,131 @@
+diff --git a/ps2xIOP/src/emulator/core/iop_memory.h b/ps2xIOP/src/emulator/core/iop_memory.h
+--- a/ps2xIOP/src/emulator/core/iop_memory.h
++++ b/ps2xIOP/src/emulator/core/iop_memory.h
+@@ -22,7 +22,9 @@
+         static constexpr uint32_t Spu2End = 0x1FA00000u;
+         static constexpr uint32_t SifBase = 0x1D000000u;
+         static constexpr uint32_t SifEnd = 0x1D001000u;
+-        static constexpr uint32_t HeapBase = 0x00120000u;
++        // Module images and runtime buffers share the real 2 MiB IOP RAM.
++        // The bottom 64 KiB and the native invocation-stack area remain reserved.
++        static constexpr uint32_t HeapBase = 0x00010000u;
+         static constexpr uint32_t HeapLimit = 0x001F0000u;
+ 
+         struct Allocation
+diff --git a/ps2xIOP/src/emulator/services/iop_module_loader.cpp b/ps2xIOP/src/emulator/services/iop_module_loader.cpp
+--- a/ps2xIOP/src/emulator/services/iop_module_loader.cpp
++++ b/ps2xIOP/src/emulator/services/iop_module_loader.cpp
+@@ -117,6 +117,13 @@
+             uint32_t symbolIndex = 0;
+         };
+ 
++        struct ImageReservation
++        {
++            IopMemory &memory;
++            uint32_t address;
++            ~ImageReservation() { if (address) (void)memory.freeAllocation(address); }
++        };
++
+         uint32_t alignUp(uint32_t value, uint32_t alignment)
+         {
+             if (alignment <= 1u)
+@@ -396,6 +403,8 @@
+                 programHeaders.push_back(program);
+                 if (program.type == PT_LOAD && program.memsz != 0u)
+                 {
++                    if (program.vaddr > std::numeric_limits<uint32_t>::max() - program.memsz)
++                        return result;
+                     hasLoad = true;
+                     minVaddr = std::min(minVaddr, program.vaddr);
+                     maxVaddr = std::max(maxVaddr, program.vaddr + program.memsz);
+@@ -414,6 +423,8 @@
+                 sectionHeaders.push_back(section);
+                 if (!hasLoad && (section.flags & SHF_ALLOC) != 0u && section.size != 0u)
+                 {
++                    if (section.addr > std::numeric_limits<uint32_t>::max() - section.size)
++                        return result;
+                     minVaddr = std::min(minVaddr, section.addr);
+                     maxVaddr = std::max(maxVaddr, section.addr + section.size);
+                 }
+@@ -423,6 +434,11 @@
+         if (minVaddr == std::numeric_limits<uint32_t>::max())
+             minVaddr = 0u;
+         uint32_t span = maxVaddr > minVaddr ? maxVaddr - minVaddr : 0x1000u;
++        if (span > IopMemory::HeapLimit - IopMemory::HeapBase)
++        {
++            result.error = IopImageLoadError::ArenaExhausted;
++            return result;
++        }
+         span = alignUp(span, 0x100u);
+         const bool relocate = header.type != ET_EXEC ||
+                               maxVaddr > IopMemory::RamSize ||
+@@ -431,19 +447,20 @@
+         int64_t delta = 0;
+         if (relocate)
+         {
+-            base = alignUp(moduleCursor, 0x100u);
+-            if (base + span >= IopMemory::HeapBase)
+-            {
+-                result.error = IopImageLoadError::ArenaExhausted;
+-                return result;
+-            }
++            base = memory.allocate(span, 0x100u);
+             delta = static_cast<int64_t>(base) - minVaddr;
+-            result.nextModuleCursor = base + span;
+         }
+         else
+         {
+-            base = minVaddr;
+-        }
++            base = memory.allocate(span, 0x100u, minVaddr);
++        }
++        if (base == 0u)
++        {
++            result.error = IopImageLoadError::ArenaExhausted;
++            return result;
++        }
++        ImageReservation reservation{memory, base};
++        result.nextModuleCursor = std::max(moduleCursor, base + span);
+ 
+         if (hasLoad)
+         {
+@@ -455,6 +472,8 @@
+                     program.memsz < program.filesz)
+                     return result;
+                 const uint32_t destination = static_cast<uint32_t>(static_cast<int64_t>(program.vaddr) + delta);
++                if (destination < base || destination - base >= span || program.memsz > span - (destination - base))
++                    return result;
+                 if (destination >= IopMemory::RamSize || program.memsz > IopMemory::RamSize - destination)
+                     return result;
+                 if (!memory.writeRam(destination, image.data() + program.offset, program.filesz))
+@@ -482,6 +501,8 @@
+                     section.addr = static_cast<uint32_t>(static_cast<int64_t>(destination) - delta);
+                     sectionCursor += section.size;
+                 }
++                if (destination < base || destination - base >= span || section.size > span - (destination - base))
++                    return result;
+                 if (destination >= IopMemory::RamSize || section.size > IopMemory::RamSize - destination)
+                     return result;
+                 if (section.type == SHT_NOBITS)
+@@ -555,6 +576,7 @@
+             }
+         }
+ 
++        reservation.address = 0u;
+         result.error = IopImageLoadError::None;
+         return result;
+     }
+diff --git a/ps2xIOP/src/emulator/iop_emulator.cpp b/ps2xIOP/src/emulator/iop_emulator.cpp
+--- a/ps2xIOP/src/emulator/iop_emulator.cpp
++++ b/ps2xIOP/src/emulator/iop_emulator.cpp
+@@ -671,8 +671,10 @@
+             kernel.terminateThreadsInRange(it->second.base, it->second.size);
+             rpc.removeServersInRange(it->second.base, it->second.size);
+             imports.eraseRange(it->second.base, it->second.size);
++            const uint32_t imageAddress = it->second.base;
+             modules.erase(it);
+             kernel.cleanupDeadThreads();
++            (void)memory.freeAllocation(imageAddress);
+             if (result)
+                 *result = 0;
+             return true;

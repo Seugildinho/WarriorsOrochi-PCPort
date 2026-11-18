@@ -1,0 +1,44 @@
+diff --git a/ps2xRuntime/src/lib/ps2_memory.cpp b/ps2xRuntime/src/lib/ps2_memory.cpp
+index d8f0302..3ee05be 100644
+--- a/ps2xRuntime/src/lib/ps2_memory.cpp
++++ b/ps2xRuntime/src/lib/ps2_memory.cpp
+@@ -1345,7 +1345,11 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
+                     uint32_t asr1 = m_ioRegisters[channelBase + 0x50];
+                     uint32_t asp = (chcr >> 4) & 0x3u;
+                     const bool tieEnabled = (chcr & (1u << 7)) != 0u;
+-                    const int kMaxChainTags = 4096;
++                    // Only a guard against a looping chain. A crowded frame's VIF1
++                    // list has thousands of tags, and cutting it between a GIF
++                    // IMAGE tag and its pixels misframes every later GIF packet.
++                    const int kMaxChainTags = 1 << 20;
++                    constexpr size_t kMaxChainBytes = 256u * 1024u * 1024u;
+                     std::vector<uint8_t> chainBuf = takeVif1Buffer();
+ 
+                     auto appendData = [&](uint32_t srcAddr, uint32_t qwCount)
+@@ -1408,7 +1412,7 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
+                     int tagsProcessed = 0;
+                     uint32_t lastTagUpper = (chcr >> 16) & 0xFFFFu;
+ 
+-                    while (tagsProcessed < kMaxChainTags)
++                    while (tagsProcessed < kMaxChainTags && chainBuf.size() < kMaxChainBytes)
+                     {
+                         const uint32_t currentTagAddr = tagAddr;
+                         const uint32_t tagMemoryAddress = dmaMemoryAddress(tagAddr);
+@@ -1525,6 +1529,17 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
+                             break;
+                     }
+ 
++                    {
++                        // Shows how close real lists come to any limit here.
++                        static std::atomic<int> s_mostTags{512};
++                        int most = s_mostTags.load(std::memory_order_relaxed);
++                        if (tagsProcessed > most + most / 4 &&
++                            s_mostTags.compare_exchange_strong(most, tagsProcessed, std::memory_order_relaxed))
++                            RUNTIME_LOG("[dma:chain] channel=0x" << std::hex << channelBase << std::dec
++                                << " tags=" << tagsProcessed << " bytes=" << chainBuf.size()
++                                << (tagsProcessed >= kMaxChainTags || chainBuf.size() >= kMaxChainBytes ? " CUT" : "") << std::endl);
++                    }
++
+                     m_ioRegisters[channelBase + 0x30] = tagAddr;
+                     m_ioRegisters[channelBase + 0x40] = asr0;
+                     m_ioRegisters[channelBase + 0x50] = asr1;

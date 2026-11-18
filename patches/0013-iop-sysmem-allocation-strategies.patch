@@ -1,0 +1,97 @@
+diff --git a/ps2xIOP/src/emulator/core/iop_memory.h b/ps2xIOP/src/emulator/core/iop_memory.h
+--- a/ps2xIOP/src/emulator/core/iop_memory.h
++++ b/ps2xIOP/src/emulator/core/iop_memory.h
+@@ -58,6 +58,7 @@
+         [[nodiscard]] std::string readString(uint32_t address, size_t limit = 1024u) const;
+ 
+         [[nodiscard]] uint32_t allocate(uint32_t size, uint32_t alignment = 16u, std::optional<uint32_t> fixed = std::nullopt);
++        [[nodiscard]] uint32_t allocateLast(uint32_t size, uint32_t alignment = 16u);
+         [[nodiscard]] bool freeAllocation(uint32_t address);
+         [[nodiscard]] uint32_t maxFreeMemory() const;
+         [[nodiscard]] uint32_t totalFreeMemory() const;
+diff --git a/ps2xIOP/src/emulator/core/iop_memory.cpp b/ps2xIOP/src/emulator/core/iop_memory.cpp
+--- a/ps2xIOP/src/emulator/core/iop_memory.cpp
++++ b/ps2xIOP/src/emulator/core/iop_memory.cpp
+@@ -328,6 +328,40 @@
+         return candidate;
+     }
+ 
++    uint32_t IopMemory::allocateLast(uint32_t size, uint32_t alignment)
++    {
++        if (size > HeapLimit - HeapBase)
++            return 0u;
++        size = alignUp(std::max(size, 1u), 16u);
++        alignment = std::max<uint32_t>(alignment, 4u);
++        if ((alignment & (alignment - 1u)) != 0u || alignment > HeapLimit)
++            return 0u;
++        uint32_t upper = HeapLimit;
++        for (;;)
++        {
++            if (size > upper - HeapBase)
++                return 0u;
++            const uint32_t candidate = (upper - size) & ~(alignment - 1u);
++            if (candidate < HeapBase)
++                return 0u;
++            bool overlap = false;
++            for (const auto &block : m_allocations)
++            {
++                if (candidate < block.address + block.size && block.address < candidate + size)
++                {
++                    upper = block.address;
++                    overlap = true;
++                    break;
++                }
++            }
++            if (overlap)
++                continue;
++            m_allocations.push_back({candidate, size});
++            markOwned(candidate, size);
++            return candidate;
++        }
++    }
++
+     bool IopMemory::freeAllocation(uint32_t address)
+     {
+         const auto block = std::find_if(m_allocations.begin(), m_allocations.end(),
+diff --git a/ps2xIOP/src/emulator/imports/iop_sysmem.cpp b/ps2xIOP/src/emulator/imports/iop_sysmem.cpp
+--- a/ps2xIOP/src/emulator/imports/iop_sysmem.cpp
++++ b/ps2xIOP/src/emulator/imports/iop_sysmem.cpp
+@@ -29,9 +29,23 @@
+         {
+         case 4: // AllocSysMemory
+         {
+-            const uint32_t address = a0 == 2u
+-                                         ? m_memory.allocate(a1, 16u, a2)
+-                                         : m_memory.allocate(a1, 16u);
++            // sysmem modes are FIRST, LAST, ADDRESS; blocks use 256-byte units.
++            // Module-image allocations use a separate, finer-grained contract.
++            uint32_t address = 0u;
++            if (a0 <= 2u && a1 != 0u && a1 <= IopMemory::HeapLimit-IopMemory::HeapBase)
++            {
++                const uint32_t size = (a1 + 255u) & ~255u;
++                if (a0 == 0u) address = m_memory.allocate(size, 256u);
++                else if (a0 == 1u) address = m_memory.allocateLast(size, 256u);
++                else if ((a2 & 255u) == 0u) address = m_memory.allocate(size, 256u, a2);
++            }
++            if (std::getenv("PS2X_IOP_ALLOC_TRACE"))
++            {
++                std::ostringstream out;
++                out << "[IOP:allocation] mode=" << a0 << " bytes=0x" << std::hex << a1
++                    << " address=0x" << address << " caller=0x" << cpu.gpr[31];
++                m_host.log(LogLevel::Info, out.str());
++            }
+             if (address == 0u && std::getenv("PS2X_IOP_RPC_TRACE_SID"))
+             {
+                 std::ostringstream out;
+@@ -44,6 +58,11 @@
+             return true;
+         }
+         case 5: // FreeSysMemory
++            if (std::getenv("PS2X_IOP_ALLOC_TRACE"))
++            {
++                std::ostringstream out;out << "[IOP:free] address=0x" << std::hex << a0 << " caller=0x" << cpu.gpr[31];
++                m_host.log(LogLevel::Info, out.str());
++            }
+             setV0(m_memory.freeAllocation(a0) ? 0u : 0xFFFFFFFFu);
+             return true;
+         case 6: // QueryMemSize

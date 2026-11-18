@@ -1,0 +1,87 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp b/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.cpp
+@@ -486,6 +486,10 @@
+ 
+         struct MpegPlaybackState
+         {
++            // A stream callback may acknowledge input only after the native
++            // decoder has taken ownership of those exact elementary bytes.
++            std::deque<std::pair<uint32_t, uint32_t>> nativeVideoReceipts;
++            bool nativeInputFinished = false;
+             uint32_t picturesServed = 0u;
+             uint32_t width = 320u;
+             uint32_t height = 240u;
+@@ -1349,6 +1353,10 @@
+                             packetEnd - payloadStart,
+                             pes.pts90k,
+                             pes.dts90k);
++                        if (payloadStart < playback.pssGuestAddrs.size() &&
++                            !matchingStreamCallbacks(mpegAddr, static_cast<uint64_t>(streamId) << 32u).empty())
++                            playback.nativeVideoReceipts.emplace_back(
++                                playback.pssGuestAddrs[payloadStart], static_cast<uint32_t>(packetEnd - payloadStart));
+                     }
+                 }
+                 else if (isAudioStreamId(streamId))
+@@ -1821,6 +1829,36 @@
+         });
+     }
+ 
++    bool acknowledgeMpegNativeVideo(uint32_t mpegAddr, uint32_t dataAddr, uint32_t byteCount)
++    {
++        std::lock_guard<std::mutex> lock(g_mpeg_stub_mutex);
++        const auto found = g_mpeg_stub_state.playbackByMpeg.find(mpegAddr);
++        if (found == g_mpeg_stub_state.playbackByMpeg.end()) return false;
++        auto &playback = found->second;
++        if (playback.decoderFailed || playback.nativeVideoReceipts.empty() ||
++            playback.nativeVideoReceipts.front() != std::make_pair(dataAddr, byteCount)) return false;
++        playback.nativeVideoReceipts.pop_front();
++        return true;
++    }
++
++    bool finishMpegNativeInput(uint32_t mpegAddr, PS2Runtime *runtime)
++    {
++        {
++            std::lock_guard<std::mutex> lock(g_mpeg_stub_mutex);
++            const auto found = g_mpeg_stub_state.playbackByMpeg.find(mpegAddr);
++            if (found == g_mpeg_stub_state.playbackByMpeg.end() ||
++                !found->second.nativeVideoReceipts.empty()) return false;
++            auto &playback = found->second;
++            if (!playback.nativeInputFinished)
++            {
++                finishPlaybackStream(mpegAddr, playback);
++                playback.nativeInputFinished = true;
++            }
++        }
++        if (runtime) runtime->eeScheduler().completeExternalWait(kMpegPictureWaitType, mpegAddr, KE_OK);
++        return true;
++    }
++
+     void notifyMpegCdStreamDataProduced(uint32_t byteCount, bool endOfStream)
+     {
+         std::lock_guard<std::mutex> lock(g_mpeg_stub_mutex);
+@@ -2469,9 +2507,9 @@
+         // Only the producer/demux EOF is authoritative. A sequence_end_code can
+         // be observed while more PSS data is still buffered, and a decoder
+         // failure before producer EOF may still recover on a later sequence.
+-        const bool producerEnded =
+-            g_mpeg_stub_state.currentCdStreamEofSeen &&
+-            playback.cdStreamGeneration == g_mpeg_stub_state.cdStreamGeneration;
++        const bool producerEnded = playback.nativeInputFinished ||
++            (g_mpeg_stub_state.currentCdStreamEofSeen &&
++             playback.cdStreamGeneration == g_mpeg_stub_state.cdStreamGeneration);
+         const bool ended = producerEnded &&
+                            (playback.streamEnded || (playback.decoderFailed && playback.sawInput));
+         const uint64_t presentationEnd = playback.presentationEndTickQ32;
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.h b/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.h
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.h
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/MPEG.h
+@@ -6,6 +6,8 @@
+ {
+     void resetMpegStubState();
+     void enqueueMpegDecodedFrameForTesting(uint32_t mpegAddr);
++    bool acknowledgeMpegNativeVideo(uint32_t mpegAddr, uint32_t dataAddr, uint32_t byteCount);
++    bool finishMpegNativeInput(uint32_t mpegAddr, PS2Runtime *runtime);
+     void notifyMpegCdStreamStart(PS2Runtime *runtime = nullptr);
+     void notifyMpegCdStreamDataProduced(uint32_t byteCount, bool endOfStream);
+     void notifyMpegCdStreamEof(PS2Runtime *runtime = nullptr);

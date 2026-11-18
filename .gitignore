@@ -1,0 +1,16 @@
+local/
+generated/
+build*/
+vendor/
+logs/
+relatorios/
+*.iso
+*.ISO
+*.chd
+*.bin
+*.elf
+*.exe
+*.dll
+*.pdb
+*.ilk
+__pycache__/

@@ -1,0 +1,40 @@
+WARRIORS OROCHI - PORT PARA PC
+
+REQUISITOS
+Windows 10 ou 11 de 64 bits, processador com AVX2 e placa de video com Direct3D 11.
+E preciso ter a sua propria ISO do jogo.
+
+COMO JOGAR
+1. Abra WarriorsOrochi-Setup.exe.
+2. Na aba Jogo, em "Selecionar outra ISO", escolha a sua ISO do Warriors Orochi (USA, SLUS-21662).
+   A traducao PT-BR tambem funciona. A ISO nao vem junto e pode ficar em qualquer pasta.
+3. Ajuste as opcoes nas abas (Jogo, Graficos, Audio, Controles, Trapacas)
+   e clique em "Salvar e jogar". Q/E ou Tab trocam de aba.
+
+Depois disso, basta abrir WarriorsOrochi.exe. Para mudar a ISO ou as opcoes,
+abra o Setup de novo.
+
+CONTROLES NO TECLADO
+Enter = Start, setas = direcional, X = confirmar, C = voltar, WASD = mover.
+A lista completa esta na aba Controles do Setup.
+Controles de jogo conectados ao Windows tambem funcionam.
+F10 alterna entre tela cheia e janela. Para fechar o jogo, use Alt+F4.
+F12 salva um screenshot (screenshot-data-hora.png) na pasta data.
+
+SOLDADOS NA TELA
+No original, so os soldados mais proximos aparecem de corpo inteiro; os mais
+distantes mostram so a barra de vida. Em Graficos > "Soldados desenhados" da
+para desenhar mais (padrao: ate 100; o jogo original vai ate 51).
+
+TRAPACAS
+Na aba Trapacas do Setup ha quatro trapacas, todas desligadas de inicio: invencivel, vida
+infinita, musou infinito e pontos de crescimento infinitos (99999 no
+acampamento). Com os pontos infinitos ligados, o save guarda 99999 pontos.
+
+ONDE FICAM OS SAVES
+Na pasta data\mc0. Antes de cada save automatico, o save anterior e copiado para
+data\mc0-backup. Mantenha esta pasta em um local com permissao de escrita
+(nao use "Arquivos de Programas").
+
+PROBLEMAS
+O registro da ultima execucao fica em data\port.log.

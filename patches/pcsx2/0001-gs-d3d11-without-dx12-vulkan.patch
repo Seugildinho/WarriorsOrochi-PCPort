@@ -1,0 +1,52 @@
+diff --git a/pcsx2/GS/GS.cpp b/pcsx2/GS/GS.cpp
+index 8291c3b..9756db9 100644
+--- a/pcsx2/GS/GS.cpp
++++ b/pcsx2/GS/GS.cpp
+@@ -37,7 +37,9 @@
+ #ifdef _WIN32
+ 
+ #include "GS/Renderers/DX11/GSDevice11.h"
++#ifndef PCSX2_GS_NO_DX12
+ #include "GS/Renderers/DX12/GSDevice12.h"
++#endif
+ #include "GS/Renderers/DX11/D3D.h"
+ 
+ #endif
+@@ -114,10 +116,12 @@ static bool OpenGSDevice(GSRendererType renderer, bool clear_state_on_fail, bool
+ 		case RenderAPI::D3D11:
+ 			g_gs_device = std::make_unique<GSDevice11>();
+ 			break;
++#ifndef PCSX2_GS_NO_DX12
+ 		case RenderAPI::D3D12:
+ 			g_gs_device = std::make_unique<GSDevice12>();
+ 			break;
+ #endif
++#endif
+ #ifdef __APPLE__
+ 		case RenderAPI::Metal:
+ 			g_gs_device = std::unique_ptr<GSDevice>(MakeGSDeviceMTL());
+diff --git a/pcsx2/GS/Renderers/DX11/D3D.cpp b/pcsx2/GS/Renderers/DX11/D3D.cpp
+index 87c3087..bf96fb1 100644
+--- a/pcsx2/GS/Renderers/DX11/D3D.cpp
++++ b/pcsx2/GS/Renderers/DX11/D3D.cpp
+@@ -8,7 +8,7 @@
+ #include "GS/GSExtra.h"
+ #include "Host.h"
+ 
+-#ifdef ARCH_X86
++#if defined(ARCH_X86) && defined(ENABLE_VULKAN)
+ #include "GS/Renderers/Vulkan/GSDeviceVK.h"
+ #endif
+ 
+@@ -20,7 +20,11 @@
+ 
+ #include <array>
+ #include <d3d11.h>
++#ifdef PCSX2_GS_NO_DX12
++#include <d3d12.h> // Windows SDK: only renderer auto-detection uses it
++#else
+ #include <directx/d3d12.h>
++#endif
+ #include <d3dcompiler.h>
+ #include <fstream>
+ 

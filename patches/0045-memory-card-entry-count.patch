@@ -1,0 +1,17 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/Stubs/MemoryCard.cpp b/ps2xRuntime/src/lib/Kernel/Stubs/MemoryCard.cpp
+index 564d873..293c960 100644
+--- a/ps2xRuntime/src/lib/Kernel/Stubs/MemoryCard.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Stubs/MemoryCard.cpp
+@@ -821,9 +821,10 @@ namespace ps2_stubs
+                             entries.push_back(tableEntry);
+                         }
+ 
++                        // A negative maxent asks only how many entries there are.
+                         const size_t entryCount =
+-                            std::min(entries.size(), maxEntries > 0 ? static_cast<size_t>(maxEntries) : 0u);
+-                        if (entryCount == 0u || tableAddr == 0u)
++                            maxEntries < 0 ? entries.size() : std::min(entries.size(), static_cast<size_t>(maxEntries));
++                        if (entryCount == 0u || tableAddr == 0u || maxEntries < 0)
+                         {
+                             result = static_cast<int32_t>(entryCount);
+                         }

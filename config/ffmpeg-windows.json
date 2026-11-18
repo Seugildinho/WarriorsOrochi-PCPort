@@ -1,0 +1,7 @@
+{
+  "tag": "n7.1-241205",
+  "url": "https://github.com/System233/ffmpeg-msvc-prebuilt/releases/download/n7.1-241205/ffmpeg-n7.1-241205-lgpl-amd64-shared.zip",
+  "bytes": 35240955,
+  "sha256": "b985887dbca8c0a9a4c47f9d2bac7ec3ab994335b1b7fe7000bdb1dcd772ac68",
+  "usage": "FFmpeg 7.1 shared libraries for in-process MPEG-2 and IPU2 decoding; FFmpeg 8.1 CLI is an optional reference for IPU2 equivalence tests"
+}

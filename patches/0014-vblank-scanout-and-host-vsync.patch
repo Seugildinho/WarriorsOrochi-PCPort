@@ -1,0 +1,118 @@
+diff --git a/ps2xRuntime/include/runtime/gs/gs_frontend.h b/ps2xRuntime/include/runtime/gs/gs_frontend.h
+--- a/ps2xRuntime/include/runtime/gs/gs_frontend.h
++++ b/ps2xRuntime/include/runtime/gs/gs_frontend.h
+@@ -130,6 +130,7 @@
+     void setDebugHistoryPaused(bool paused);
+     bool getPreferredDisplaySource(GSFrameReg &outSource, uint32_t &outDestFbp) const;
+     void latchHostPresentationFrame();
++    uint64_t hostPresentationSequence() const;
+     bool copyLatchedHostPresentationFrame(std::vector<uint8_t> &outPixels,
+                                           uint32_t &outWidth,
+                                           uint32_t &outHeight,
+@@ -231,6 +232,7 @@
+     uint32_t m_hostPresentationSourceFbp = 0;
+     bool m_hostPresentationUsedPreferred = false;
+     bool m_hasHostPresentationFrame = false;
++    uint64_t m_hostPresentationSequence = 0;
+     uint64_t m_nativeImageUploadCount = 0;
+     uint64_t m_nativePackedGIFPacketCount = 0;
+ 
+diff --git a/ps2xRuntime/src/lib/gs/gs_frontend.cpp b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+--- a/ps2xRuntime/src/lib/gs/gs_frontend.cpp
++++ b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+@@ -189,6 +189,7 @@
+         m_hostPresentationSourceFbp = 0u;
+         m_hostPresentationUsedPreferred = false;
+         m_hasHostPresentationFrame = false;
++        ++m_hostPresentationSequence;
+     }
+ 
+     m_debugHistoryWrite = 0;
+@@ -550,6 +551,7 @@
+             m_hostPresentationFrame.clear();
+             m_hasHostPresentationFrame = false;
+             m_hostPresentationWidth = m_hostPresentationHeight = 0u;
++            ++m_hostPresentationSequence;
+             return;
+         }
+         request = buildPresentationRequestUnlocked();
+@@ -581,6 +583,7 @@
+         m_hostPresentationSourceFbp = sourceFbp;
+         m_hostPresentationUsedPreferred = usedPreferred;
+         m_hasHostPresentationFrame = hasFrame;
++        ++m_hostPresentationSequence;
+     }
+ 
+     if (hasFrame)
+@@ -588,6 +591,12 @@
+         std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+         recordPresentDebugEventUnlocked(displayFbp, sourceFbp, width, height, usedPreferred);
+     }
++}
++
++uint64_t GS::hostPresentationSequence() const
++{
++    std::lock_guard<std::mutex> lock(m_presentationMutex);
++    return m_hostPresentationSequence;
+ }
+ 
+ bool GS::copyLatchedHostPresentationFrame(std::vector<uint8_t> &outPixels,
+diff --git a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+--- a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
++++ b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+@@ -1888,6 +1888,9 @@
+         }
+         m_vsyncFlagAddress = 0u;
+         m_vsyncTickAddress = 0u;
++        // Freeze the completed scanout on its producer thread, before waking
++        // guest code that can swap DISPFB and start drawing the next frame.
++        m_runtime.gs().latchHostPresentationFrame();
+         completeVSync(m_vsyncTick);
+         if (m_gsVSyncCallback != 0u && m_runtime.hasFunction(m_gsVSyncCallback))
+         {
+diff --git a/ps2xRuntime/src/lib/ps2_runtime.cpp b/ps2xRuntime/src/lib/ps2_runtime.cpp
+--- a/ps2xRuntime/src/lib/ps2_runtime.cpp
++++ b/ps2xRuntime/src/lib/ps2_runtime.cpp
+@@ -376,7 +376,6 @@
+ static void UploadFrame(Texture2D &tex, PS2Runtime *rt, uint32_t &outWidth, uint32_t &outHeight)
+ {
+     static uint64_t s_lastPresentationTick = std::numeric_limits<uint64_t>::max();
+-    static bool s_hasLatchedInitialFrame = false;
+     static uint32_t s_lastDisplayFbp = std::numeric_limits<uint32_t>::max();
+     static uint32_t s_lastSourceFbp = std::numeric_limits<uint32_t>::max();
+     static bool s_lastPreferred = false;
+@@ -386,20 +385,16 @@
+     static std::vector<uint8_t> s_scratch;
+     static std::vector<uint8_t> s_uploadBuffer(DEFAULT_FB_SIZE, 0u);
+ 
+-    const uint64_t currentTick = rt->eeScheduler().currentVSyncTick();
+-    const bool needsLatch = !s_hasLatchedInitialFrame || currentTick != s_lastPresentationTick;
+-    if (needsLatch)
+-    {
+-        rt->gs().latchHostPresentationFrame();
+-        s_lastPresentationTick = currentTick;
+-        s_hasLatchedInitialFrame = true;
+-    }
+-    else if (s_hasUploadedFrame)
++    // The scheduler publishes immutable frames at VBlank. Never read live
++    // display registers / VRAM from this independent window thread.
++    const uint64_t currentTick = rt->gs().hostPresentationSequence();
++    if (s_hasUploadedFrame && currentTick == s_lastPresentationTick)
+     {
+         outWidth = (s_lastWidth != 0u) ? s_lastWidth : FB_WIDTH;
+         outHeight = (s_lastHeight != 0u) ? s_lastHeight : DEFAULT_DISPLAY_HEIGHT;
+         return;
+     }
++    s_lastPresentationTick = currentTick;
+ 
+     s_scratch.clear();
+     uint32_t width = 0u;
+@@ -731,7 +726,7 @@
+ #if defined(PLATFORM_VITA)
+         InitWindow(HOST_WINDOW_WIDTH, HOST_WINDOW_HEIGHT, title); // raylib vita does not support audio
+ #else
+-        SetConfigFlags(FLAG_WINDOW_RESIZABLE);
++        SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
+         InitWindow(HOST_WINDOW_WIDTH, HOST_WINDOW_HEIGHT, title);
+         InitAudioDevice();
+         m_audioBackend.setAudioReady(IsAudioDeviceReady());

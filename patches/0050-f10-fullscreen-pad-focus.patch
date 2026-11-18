@@ -1,0 +1,29 @@
+diff --git a/ps2xRuntime/src/lib/ps2_runtime.cpp b/ps2xRuntime/src/lib/ps2_runtime.cpp
+index 2420559..23d9e8e 100644
+--- a/ps2xRuntime/src/lib/ps2_runtime.cpp
++++ b/ps2xRuntime/src/lib/ps2_runtime.cpp
+@@ -2521,6 +2521,10 @@ void PS2Runtime::run()
+         }
+         EndDrawing();
+ 
++        // F10 switches between the window and borderless full screen.
++        if (IsKeyPressed(KEY_F10))
++            ToggleBorderlessWindowed();
++
+         if (WindowShouldClose())
+         {
+             RUNTIME_LOG("[run] window close requested, breaking out of loop");
+diff --git a/ps2xRuntime/src/lib/ps2_pad.cpp b/ps2xRuntime/src/lib/ps2_pad.cpp
+index ef7576a..c0040aa 100644
+--- a/ps2xRuntime/src/lib/ps2_pad.cpp
++++ b/ps2xRuntime/src/lib/ps2_pad.cpp
+@@ -52,6 +52,9 @@ namespace
+     // player 2 instead of both ports mirroring gamepad 0.
+     int gamepadForPort(int port)
+     {
++        // A controller used in another program must not play this game in the background.
++        if (!IsWindowFocused())
++            return -1;
+         int seen = 0;
+         for (int i = 0; i < kMaxGamepads; ++i)
+         {

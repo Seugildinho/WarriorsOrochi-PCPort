@@ -1,0 +1,50 @@
+diff --git a/pcsx2/GS/Renderers/HW/GSRendererHW.cpp b/pcsx2/GS/Renderers/HW/GSRendererHW.cpp
+index 98483f2..23852c3 100644
+--- a/pcsx2/GS/Renderers/HW/GSRendererHW.cpp
++++ b/pcsx2/GS/Renderers/HW/GSRendererHW.cpp
+@@ -72,6 +72,9 @@ bool GSRendererHW::CanUpscale()
+ 	return GSConfig.UpscaleMultiplier != 1.0f;
+ }
+ 
++// Set by the Warriors Orochi port (OROCHI_PCSX2_FIXES edge=1), see Draw().
++bool g_orochi_sprite_edge_inset = false;
++
+ float GSRendererHW::GetUpscaleMultiplier()
+ {
+ 	return GSConfig.UpscaleMultiplier;
+@@ -5110,6 +5113,35 @@ void GSRendererHW::Draw()
+ 			}
+ 		}
+ 
++		// Warriors Orochi port (g_orochi_sprite_edge_inset): a sprite's outermost
++		// upscaled pixels sample half an upscaled pixel past the outermost
++		// native sample, which reaches the texel beside the image in VRAM and
++		// shows as a thin line on HUD art (portraits, bars). Pull each sprite's
++		// U/V range in so the first and last upscaled samples land on the
++		// native first and last samples; the interior scales by under 1%.
++		// Bilinear only: nearest sprites (frame copies) already land on texel centres.
++		if (g_orochi_sprite_edge_inset && PRIM->FST && draw_sprite_tex && m_process_texture && m_vt.IsLinear())
++		{
++			const float scale = rt->GetScale();
++			auto inset = [scale](u16& t0, u16& t1, int length) {
++				if (length <= 16 && length >= -16)
++					return;
++				const float span = static_cast<float>(t1) - static_cast<float>(t0);
++				const float pixels = static_cast<float>(length) / 16.0f;
++				const float native = span / pixels * 0.5f;       // half a native pixel, in 1/16 texels
++				const float first = t0 + native, last = t1 - native;
++				const float shrunk = (last - first) / (1.0f - 1.0f / (pixels * scale));
++				const float start = first - shrunk / (pixels * scale) * 0.5f;
++				t0 = static_cast<u16>(std::clamp(std::lround(start), 0l, 0x3FFFl));
++				t1 = static_cast<u16>(std::clamp(std::lround(start + shrunk), 0l, 0x3FFFl));
++			};
++			for (u32 i = 0; i + 1 < count; i += 2)
++			{
++				inset(v[i].U, v[i + 1].U, v[i + 1].XYZ.X - v[i].XYZ.X);
++				inset(v[i].V, v[i + 1].V, v[i + 1].XYZ.Y - v[i].XYZ.Y);
++			}
++		}
++
+ 		// Noting to do if no texture is sampled
+ 		if (PRIM->FST && draw_sprite_tex && m_process_texture)
+ 		{

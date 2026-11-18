@@ -1,0 +1,81 @@
+diff --git a/ps2xIOP/src/emulator/imports/iop_heaplib.cpp b/ps2xIOP/src/emulator/imports/iop_heaplib.cpp
+index caa1417..d5241e3 100644
+--- a/ps2xIOP/src/emulator/imports/iop_heaplib.cpp
++++ b/ps2xIOP/src/emulator/imports/iop_heaplib.cpp
+@@ -22,19 +22,50 @@ namespace ps2x::iop::detail
+         switch (ordinal)
+         {
+         case 4: // CreateHeap
+-            setV0(m_memory.allocate(16u, 16u));
++        {
++            const uint32_t heap = m_memory.allocate(16u, 16u);
++            if (heap != 0u)
++                m_heapChunks[heap].clear();
++            setV0(heap);
+             return true;
++        }
+         case 5: // DeleteHeap
+             if (a0 != 0u)
++            {
++                // Chunks never passed to FreeHeapMemory belong to the heap and
++                // are released with it; dropping only the handle leaks them.
++                if (const auto heap = m_heapChunks.find(a0); heap != m_heapChunks.end())
++                {
++                    for (const uint32_t chunk : heap->second)
++                        (void)m_memory.freeAllocation(chunk);
++                    m_heapChunks.erase(heap);
++                }
+                 (void)m_memory.freeAllocation(a0);
++            }
+             setV0(0u);
+             return true;
+-        case 6:
+-            setV0(m_memory.allocate(a1, 16u));
++        case 6: // AllocHeapMemory
++        {
++            const uint32_t chunk = m_memory.allocate(a1, 16u);
++            if (chunk != 0u)
++            {
++                if (const auto heap = m_heapChunks.find(a0); heap != m_heapChunks.end())
++                    heap->second.push_back(chunk);
++            }
++            setV0(chunk);
+             return true;
+-        case 7:
+-            setV0(m_memory.freeAllocation(a1) ? 0u : 0xFFFFFFFFu);
++        }
++        case 7: // FreeHeapMemory
++        {
++            const bool freed = m_memory.freeAllocation(a1);
++            if (freed)
++            {
++                if (const auto heap = m_heapChunks.find(a0); heap != m_heapChunks.end())
++                    std::erase(heap->second, a1);
++            }
++            setV0(freed ? 0u : 0xFFFFFFFFu);
+             return true;
++        }
+         case 8:
+             setV0(m_memory.maxFreeMemory());
+             return true;
+diff --git a/ps2xIOP/src/emulator/imports/iop_heaplib.h b/ps2xIOP/src/emulator/imports/iop_heaplib.h
+index 26b7ec5..3cf8c06 100644
+--- a/ps2xIOP/src/emulator/imports/iop_heaplib.h
++++ b/ps2xIOP/src/emulator/imports/iop_heaplib.h
+@@ -1,6 +1,8 @@
+ #pragma once
+ 
+ #include <cstdint>
++#include <unordered_map>
++#include <vector>
+ 
+ namespace ps2x::iop::detail
+ {
+@@ -16,5 +18,7 @@ namespace ps2x::iop::detail
+ 
+     private:
+         IopMemory &m_memory;
++        // DeleteHeap releases every chunk still owned by the heap, as on hardware.
++        std::unordered_map<uint32_t, std::vector<uint32_t>> m_heapChunks;
+     };
+ }

@@ -1,0 +1,172 @@
+diff --git a/ps2xRuntime/src/lib/ps2_vif1_interpreter.cpp b/ps2xRuntime/src/lib/ps2_vif1_interpreter.cpp
+index ebb26fb..e3cfb0b 100644
+--- a/ps2xRuntime/src/lib/ps2_vif1_interpreter.cpp
++++ b/ps2xRuntime/src/lib/ps2_vif1_interpreter.cpp
+@@ -1,6 +1,8 @@
+ // Based on Blackline Interactive implementation
+ #include "runtime/ps2_memory.h"
++#include "ps2_log.h"
+ #include <cstring>
++#include <vector>
+ 
+ enum VIFCmd : uint8_t
+ {
+@@ -314,11 +316,45 @@ void PS2Memory::processVIF1Data(uint32_t srcPhys, uint32_t sizeBytes)
+     processVIF1Data(m_rdram + srcPhys, sizeBytes);
+ }
+ 
++namespace
++{
++    // The VIF reads one stream: a DMA transfer can end inside a command (its
++    // data, or a DIRECT's last partial qword) and the next transfer carries
++    // on. Dropping that tail made later bytes parse as VIFcodes, and image
++    // pixels then reached the GS as GIF tags (the striped menus).
++    std::vector<uint8_t> s_vif1Carry;
++}
++
++void ps2ResetVif1Carry()
++{
++    s_vif1Carry.clear();
++}
++
+ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
+ {
+     if (sizeBytes == 0u)
+         return;
+ 
++    std::vector<uint8_t> joined;
++    if (!s_vif1Carry.empty())
++    {
++        joined.swap(s_vif1Carry);
++        joined.insert(joined.end(), data, data + sizeBytes);
++        data = joined.data();
++        sizeBytes = static_cast<uint32_t>(joined.size());
++    }
++    // Keeps [from, end) for the next transfer.
++    auto carry = [&](uint32_t from)
++    {
++        static int s_logs = 0;
++        // A real command is at most 64K qwords; more means the stream is lost.
++        if (sizeBytes - from > (1u << 21))
++            return;
++        if (s_logs++ < 8)
++            RUNTIME_LOG("[vif1:carry] bytes=" << (sizeBytes - from) << " transfer=" << sizeBytes << std::endl);
++        s_vif1Carry.assign(data + from, data + sizeBytes);
++    };
++
+     uint32_t pos = 0;
+ 
+     while (pos + 4 <= sizeBytes)
+@@ -328,7 +364,8 @@ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
+             const uint32_t availableQw = (sizeBytes - pos) / 16u;
+             if (availableQw == 0u)
+             {
+-                break;
++                carry(pos);
++                return;
+             }
+ 
+             const uint32_t chunkQw = std::min<uint32_t>(m_vif1PendingDirectQwc, availableQw);
+@@ -346,6 +383,7 @@ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
+             continue;
+         }
+ 
++        const uint32_t cmdStart = pos;
+         uint32_t cmd;
+         memcpy(&cmd, data + pos, 4);
+         pos += 4;
+@@ -456,7 +494,10 @@ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
+         else if (opcode == VIF_STMASK)
+         {
+             if (pos + 4 > sizeBytes)
+-                break;
++            {
++                carry(cmdStart);
++                return;
++            }
+             uint32_t maskValue = 0;
+             std::memcpy(&maskValue, data + pos, sizeof(maskValue));
+             vif1_regs.mask = maskValue;
+@@ -466,7 +507,10 @@ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
+         else if (opcode == VIF_STROW)
+         {
+             if (pos + 16 > sizeBytes)
+-                break;
++            {
++                carry(cmdStart);
++                return;
++            }
+             std::memcpy(vif1_regs.row, data + pos, 16);
+             pos += 16;
+             continue;
+@@ -474,7 +518,10 @@ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
+         else if (opcode == VIF_STCOL)
+         {
+             if (pos + 16 > sizeBytes)
+-                break;
++            {
++                carry(cmdStart);
++                return;
++            }
+             std::memcpy(vif1_regs.col, data + pos, 16);
+             pos += 16;
+             continue;
+@@ -484,6 +531,11 @@ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
+             uint32_t destAddr = (uint32_t)imm * 8u;
+             const uint32_t instructionCount = (num == 0u) ? 256u : static_cast<uint32_t>(num);
+             const uint32_t mpgBytes = instructionCount * 8u;
++            if (pos + mpgBytes > sizeBytes)
++            {
++                carry(cmdStart);
++                return;
++            }
+             if (m_vu1Code && destAddr < PS2_VU1_CODE_SIZE && mpgBytes > 0)
+             {
+                 uint32_t copyBytes = mpgBytes;
+@@ -523,8 +575,11 @@ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
+             pos += qwCount * 16;
+             if (truncated)
+             {
+-                pos = sizeBytes;
+-                break;
++                // The rest of the payload, and a last partial qword, come with
++                // the next transfer.
++                if (pos < sizeBytes)
++                    carry(pos);
++                return;
+             }
+             continue;
+         }
+@@ -577,6 +632,11 @@ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
+ 
+             uint32_t totalBytes = sourceVectorCount * bytesPerVector;
+             totalBytes = (totalBytes + 3) & ~3u;
++            if (pos + totalBytes > sizeBytes)
++            {
++                carry(cmdStart);
++                return;
++            }
+ 
+             uint32_t vuAddr = (uint32_t)imm & 0x3FFu;
+             if ((imm & 0x8000u) != 0u)
+diff --git a/ps2xRuntime/src/lib/ps2_memory.cpp b/ps2xRuntime/src/lib/ps2_memory.cpp
+index 3ee05be..986d03d 100644
+--- a/ps2xRuntime/src/lib/ps2_memory.cpp
++++ b/ps2xRuntime/src/lib/ps2_memory.cpp
+@@ -2007,6 +2007,8 @@ void PS2Memory::processPendingTransfers()
+     }
+ }
+ 
++void ps2ResetVif1Carry(); // ps2_vif1_interpreter.cpp
++
+ void PS2Memory::applyVif1RegisterWrite(uint32_t address, uint32_t value)
+ {
+     switch (address)
+@@ -2018,6 +2020,7 @@ void PS2Memory::applyVif1RegisterWrite(uint32_t address, uint32_t value)
+             std::memset(&vif1_regs, 0, sizeof(vif1_regs));
+             m_vif1PendingDirectQwc = 0u;
+             m_vif1PendingDirectHl = false;
++            ps2ResetVif1Carry();
+             m_path3Masked = false;
+             if (wasPath3Masked)
+                 flushMaskedPath3Packets();

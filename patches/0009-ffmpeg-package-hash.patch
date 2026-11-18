@@ -1,0 +1,12 @@
+diff --git a/ps2xRuntime/CMakeLists.txt b/ps2xRuntime/CMakeLists.txt
+index 589d768..062c35f 100644
+--- a/ps2xRuntime/CMakeLists.txt
++++ b/ps2xRuntime/CMakeLists.txt
+@@ -268,6 +268,7 @@ elseif(WIN32)
+ 
+     ExternalProject_Add(ffmpeg_external
+         URL "${FFMPEG_PREBUILT_URL}"
++        URL_HASH SHA256=b985887dbca8c0a9a4c47f9d2bac7ec3ab994335b1b7fe7000bdb1dcd772ac68
+         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+         PREFIX "${FFMPEG_PREFIX_DIR}"
+         CONFIGURE_COMMAND ""

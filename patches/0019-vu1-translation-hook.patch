@@ -1,0 +1,80 @@
+diff --git a/ps2xRuntime/include/runtime/ps2_vu1.h b/ps2xRuntime/include/runtime/ps2_vu1.h
+index 86ca76f..4dd6eff 100644
+--- a/ps2xRuntime/include/runtime/ps2_vu1.h
++++ b/ps2xRuntime/include/runtime/ps2_vu1.h
+@@ -62,7 +62,23 @@ public:
+     VU1State &state() { return m_state; }
+     const VU1State &state() const { return m_state; }
+ 
++    // Ahead-of-time translated microprograms. execute() asks the lookup for a
++    // translation of the current code image (by content hash) and entry PC;
++    // a returned program replaces run() for that call, so it must reproduce
++    // run()'s observable state, memory, PATH1 output and cycle count.
++    using TranslatedProgram = void (*)(VU1Interpreter &vu, uint8_t *vuData, uint32_t dataSize,
++                                       GS &gs, PS2Memory *memory, uint32_t maxCycles);
++    using TranslationLookup = TranslatedProgram (*)(uint64_t codeHash, uint32_t startPc,
++                                                    const uint8_t *vuCode, uint32_t codeSize);
++    static void setTranslationLookup(TranslationLookup lookup) { s_translationLookup = lookup; }
++
+ private:
++    friend struct VU1TranslationAccess;
++    static inline TranslationLookup s_translationLookup = nullptr;
++    uint64_t m_translationGeneration = ~0ull;
++    uint64_t m_translationCodeHash = 0;
++    bool runTranslated(uint8_t *vuCode, uint32_t codeSize, uint8_t *vuData, uint32_t dataSize,
++                       GS &gs, PS2Memory *memory, uint32_t maxCycles);
+     enum Pipeline : uint8_t
+     {
+         PipelineNone = 0,
+diff --git a/ps2xRuntime/src/lib/vu/ps2_vu1_core.cpp b/ps2xRuntime/src/lib/vu/ps2_vu1_core.cpp
+index 70a7a33..50650d2 100644
+--- a/ps2xRuntime/src/lib/vu/ps2_vu1_core.cpp
++++ b/ps2xRuntime/src/lib/vu/ps2_vu1_core.cpp
+@@ -1677,9 +1677,34 @@ void VU1Interpreter::execute(uint8_t *vuCode, uint32_t codeSize,
+     m_state.vf[0][1] = 0.0f;
+     m_state.vf[0][2] = 0.0f;
+     m_state.vf[0][3] = 1.0f;
++    if (runTranslated(vuCode, codeSize, vuData, dataSize, gs, memory, maxCycles))
++        return;
+     run(vuCode, codeSize, vuData, dataSize, gs, memory, maxCycles);
+ }
+ 
++bool VU1Interpreter::runTranslated(uint8_t *vuCode, uint32_t codeSize, uint8_t *vuData, uint32_t dataSize,
++                                   GS &gs, PS2Memory *memory, uint32_t maxCycles)
++{
++    if (!s_translationLookup || m_unit != Unit::VU1 || !memory || vuCode != memory->getVU1Code())
++        return false;
++    // Microcode is re-uploaded often with identical contents; hash it once
++    // per upload generation so translations follow the code, not the upload.
++    const uint64_t generation = memory->getVU1CodeGeneration();
++    if (generation != m_translationGeneration)
++    {
++        uint64_t hash = 0xcbf29ce484222325ull;
++        for (uint32_t i = 0; i < codeSize; ++i)
++            hash = (hash ^ vuCode[i]) * 0x100000001b3ull;
++        m_translationCodeHash = hash;
++        m_translationGeneration = generation;
++    }
++    const TranslatedProgram program = s_translationLookup(m_translationCodeHash, m_state.pc, vuCode, codeSize);
++    if (!program)
++        return false;
++    program(*this, vuData, dataSize, gs, memory, maxCycles);
++    return true;
++}
++
+ void VU1Interpreter::resume(uint8_t *vuCode, uint32_t codeSize,
+                             uint8_t *vuData, uint32_t dataSize,
+                             GS &gs, PS2Memory *memory,
+@@ -1689,6 +1714,12 @@ void VU1Interpreter::resume(uint8_t *vuCode, uint32_t codeSize,
+     m_state.itop = itop;
+     m_state.stoppedByD = false;
+     m_state.stoppedByT = false;
++    // Translations assume run()'s state after a completed program: empty
++    // pipelines and no pending branch, E bit or halt. A program that stopped
++    // on its cycle budget keeps running on the interpreter.
++    if (!pipelinesPending() && !m_state.branchPending && !m_state.ebit && !m_state.haltAfterDelaySlot &&
++        runTranslated(vuCode, codeSize, vuData, dataSize, gs, memory, maxCycles))
++        return;
+     run(vuCode, codeSize, vuData, dataSize, gs, memory, maxCycles);
+ }
+ 

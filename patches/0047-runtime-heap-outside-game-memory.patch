@@ -1,0 +1,55 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/Syscalls/System.cpp b/ps2xRuntime/src/lib/Kernel/Syscalls/System.cpp
+index 9614016..855a0ce 100644
+--- a/ps2xRuntime/src/lib/Kernel/Syscalls/System.cpp
++++ b/ps2xRuntime/src/lib/Kernel/Syscalls/System.cpp
+@@ -535,6 +535,9 @@ namespace ps2_syscalls
+     }
+ 
+     // 0x3D SetupHeap: returns heap base/start pointer
++    // What EndOfHeap reports: the game's heap, not the runtime's own blocks.
++    static uint32_t s_gameHeapLimit = 0x01F00000u;
++
+     void SetupHeap(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
+     {
+         const uint32_t heapBaseRaw = getRegU32(ctx, 4); // $a0
+@@ -559,7 +562,15 @@ namespace ps2_syscalls
+ 
+         if (runtime)
+         {
+-            runtime->configureGuestHeap(heapBase, heapLimit);
++            // Everything above the image belongs to the game, which runs its
++            // own allocator there. The runtime's blocks (SIF command packets,
++            // stub allocations) keep to unused memory below the image: placed
++            // at heapBase, each packet overwrote whatever file the game had
++            // loaded first, which lost stage textures.
++            static constexpr uint32_t kRuntimeHeapBase = 0x00080000u;
++            static constexpr uint32_t kRuntimeHeapEnd = 0x00100000u;
++            s_gameHeapLimit = heapLimit;
++            runtime->configureGuestHeap(kRuntimeHeapBase, kRuntimeHeapEnd);
+ 
+             PS2_IF_AGRESSIVE_LOGS({
+                 std::cerr << "[SetupHeap]"
+@@ -571,7 +582,7 @@ namespace ps2_syscalls
+                           << std::dec << std::endl;
+             });
+ 
+-            setReturnU32(ctx, runtime->guestHeapBase());
++            setReturnU32(ctx, heapBase);
+             return;
+         }
+ 
+@@ -583,13 +594,7 @@ namespace ps2_syscalls
+     {
+         (void)rdram;
+ 
+-        static constexpr uint32_t kDefaultGuestHeapEnd = 0x01F00000u;
+-
+-        const uint32_t ret = runtime
+-                                 ? runtime->guestHeapLimit()
+-                                 : kDefaultGuestHeapEnd;
+-
+-        setReturnU32(ctx, ret);
++        setReturnU32(ctx, s_gameHeapLimit);
+     }
+ 
+     void GetMemorySize(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)

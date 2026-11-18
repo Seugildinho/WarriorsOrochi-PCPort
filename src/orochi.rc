@@ -1,0 +1,4 @@
+// Program icon (assets/orochi.ico). GLFW_ICON is the name GLFW loads for
+// the window, so the title bar and taskbar show it too.
+1 ICON "../assets/orochi.ico"
+GLFW_ICON ICON "../assets/orochi.ico"

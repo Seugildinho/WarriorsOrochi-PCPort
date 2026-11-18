@@ -1,0 +1,1420 @@
+[Orochi] Experimental native EE build; gameplay is unverified.
+INFO: Initializing raylib 5.5
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Trying to enable VSYNC
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 1920 x 1080
+INFO:     > Screen size:  640 x 448
+INFO:     > Render size:  640 x 448
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 302
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   ATI Technologies Inc.
+INFO:     > Renderer: AMD Radeon RX 9060 XT
+INFO:     > Version:  3.3.0 Core Profile Context 26.10.1.261008
+INFO:     > GLSL:     4.60
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW - Win32): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: SYSTEM: Working Directory: D:\Ps2\Warriors\port_pc\Warriors Orochi\data
+INFO: AUDIO: Device initialized successfully
+INFO:     > Backend:       miniaudio | WASAPI
+INFO:     > Format:        32-bit IEEE Floating Point -> 32-bit IEEE Floating Point
+INFO:     > Channels:      2 -> 2
+INFO:     > Sample rate:   48000 -> 48000
+INFO:     > Periods size:  1440
+INFO: TIMER: Target time per frame: 16.667 milliseconds
+[Orochi] ELF: "D:\\Ps2\\Warriors\\port_pc\\Warriors Orochi\\data\\SLUS_216.62"
+[Orochi] Disc: "D:\\Ps2\\Warriors\\Warriors Orochi (USA).iso"
+Loading segment: 0x100000 - 0x819000 (filesz: 0x258500, memsz: 0x719000)
+Registered code region: 100000 - 358500Loading segment: 0x819000 - 0x83d800 (filesz: 0x0, memsz: 0x24800)
+Loading segment: 0x819000 - 0x825800 (filesz: 0x0, memsz: 0xc800)
+ELF file loaded successfully. Entry point: 0x100008[Orochi] PCSX2 GS renderer (Direct3D 11), internal scale 8x, window 1777x1000, 16:9
+[Orochi:image-decoder] backend=libavcodec verifyFrames=0
+[Orochi:cheats] invincible=0 life=0 musou=1 points=1
+[Orochi:draw] characters drawn in full: up to 147 (game: 51)
+[Orochi:vu1] translated programs=47 verify=0
+[Orochi:vif1] async=1
+[Orochi] Entering recompiled PS2 code.
+Starting execution at address 0x100008INFO: TEXTURE: [ID 3] Texture loaded successfully (640x512 | R8G8B8A8 | 1 mipmaps)
+INFO: STREAM: Initialized successfully (48000 Hz, 16 bit, Stereo)
+[SifInitRpc] InitializedMarked code at 305388 as modified[Orochi:disc-search] \MODULES\MODULE_R.BIN;1 layer=0 found=1 sector=1617 bytes=338080
+[Orochi:iop-load] source=0x10000 imageBytes=6641 module=1 startResult=0
+[Orochi:iop-load] source=0x10000 imageBytes=45925 module=2 startResult=0
+[Orochi:iop-load] source=0x10000 imageBytes=96181 module=3 startResult=2
+[Orochi:iop-load] source=0x10000 imageBytes=7385 module=4 startResult=2
+[Orochi:iop-load] source=0x10000 imageBytes=30085 module=5 startResult=0
+[Orochi:iop-load] source=0x10000 imageBytes=14685 module=6 startResult=2
+[Orochi:iop-load] source=0x10000 imageBytes=33521 module=7 startResult=2
+[Orochi:iop-load] source=0x10000 imageBytes=103573 module=8 startResult=0
+PS2 GsPutIMR:  new=0x65280 a0_64=0x65280 a0_32=0x65280 a1_32=0x65536 pc=0x1273768 ra=0x1263124
+PS2 GsSetCrt: interlaced=1, videoMode=2, frameMode=1
+[Orochi:display-set] env=0x3fb3b0 ra=0x135f1c psm=0 width=512 height=448
+[Orochi:display-set-result] w0=0x66 w1=0x3 w2=0x1000 w3=0x37f9ff0203227c w4=0x0
+[Orochi:display-set] env=0x3fb3d8 ra=0x135f38 psm=0 width=512 height=448
+[Orochi:display-set-result] w0=0x66 w1=0x3 w2=0x1000 w3=0x37f9ff0203227c w4=0x0
+[Orochi:display-set] env=0x3fb3b0 ra=0x1024a0 psm=0 width=512 height=224
+[Orochi:display-set-result] w0=0x66 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[Orochi:display-set] env=0x3fb3d8 ra=0x1024c0 psm=0 width=512 height=224
+[Orochi:display-set-result] w0=0x66 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x1000a000 madr=0x80003f90 qwc=0x3 tadr=0x80003f90 chcr=0x181
+[sceDmaSend] ch=0x1000a000 madr=0x80003dd0 qwc=0xe tadr=0x80003dd0 chcr=0x181
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x0 guest=0x0
+[Orochi:vsync] cause=2 gp=0x360170
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x0 guest=0x0
+[Orochi:vsync] cause=2 gp=0x360170
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x0 guest=0x0
+[Orochi:vsync] cause=2 gp=0x360170
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x0 guest=0x0
+[Orochi:vsync] cause=2 gp=0x360170
+[Orochi:vsync] cause=2 gp=0x360170
+[Orochi:vsync] cause=2 gp=0x360170
+[Orochi:vsync] cause=2 gp=0x360170
+[Orochi:vsync] cause=2 gp=0x360170
+[Orochi:disc-search] \\LINKDATA.ANS;1 layer=0 found=1 sector=984875 bytes=606021632
+[Orochi:disc-search] \LINKDATA.ANS;1;1 layer=0 found=1 sector=984875 bytes=606021632
+[Orochi:disc-search] \\LINKDATA.BNS;1 layer=0 found=1 sector=189186 bytes=1629571072
+[Orochi:disc-search] \LINKDATA.BNS;1;1 layer=0 found=1 sector=189186 bytes=1629571072
+[Orochi:disc-search] \\LINKDATA.CNS;1 layer=0 found=1 sector=1879 bytes=383604736
+[Orochi:disc-search] \LINKDATA.CNS;1;1 layer=0 found=1 sector=1879 bytes=383604736
+[Orochi:disc-search] \\LINKDATA.DNS;1 layer=0 found=1 sector=1783 bytes=196608
+[Orochi:disc-search] \LINKDATA.DNS;1;1 layer=0 found=1 sector=1783 bytes=196608
+[sceDmaSend] ch=0x10008000 madr=0x0 qwc=0x0 tadr=0x316f00 chcr=0x185
+[MC] GetInfo port=0 type=2 free=8192 format=1 result=0[sceDmaSend] ch=0x1000a000 madr=0x35a510 qwc=0x99 tadr=0x35a510 chcr=0x181
+[Orochi:display-put] env=0x3fb3d8 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[MC] Sync cmd=1 result=0[sceDmaSend] ch=0x1000a000 madr=0x359b80 qwc=0x99 tadr=0x359b80 chcr=0x181
+[Orochi:display-put] env=0x3fb3b0 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[MC] GetDir port=0 '/BASLUS-21662/*' maxent=-1 -> result=5[sceDmaSend] ch=0x1000a000 madr=0x35a510 qwc=0x99 tadr=0x35a510 chcr=0x181
+[Orochi:display-put] env=0x3fb3d8 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[MC] Sync cmd=13 result=5[sceDmaSend] ch=0x1000a000 madr=0x359b80 qwc=0x99 tadr=0x359b80 chcr=0x181
+[Orochi:display-put] env=0x3fb3b0 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[sceDmaSend] ch=0x1000a000 madr=0x35a510 qwc=0x99 tadr=0x35a510 chcr=0x181
+[Orochi:display-put] env=0x3fb3d8 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[MC] Sync cmd=2 result=1[sceDmaSend] ch=0x1000a000 madr=0x359b80 qwc=0x99 tadr=0x359b80 chcr=0x181
+[Orochi:display-put] env=0x3fb3b0 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[sceDmaSend] ch=0x1000a000 madr=0x35a510 qwc=0x99 tadr=0x35a510 chcr=0x181
+[Orochi:display-put] env=0x3fb3d8 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[MC] Sync cmd=4 result=0[sceDmaSend] ch=0x1000a000 madr=0x359b80 qwc=0x99 tadr=0x359b80 chcr=0x181
+[Orochi:display-put] env=0x3fb3b0 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[sceDmaSend] ch=0x1000a000 madr=0x35a510 qwc=0x99 tadr=0x35a510 chcr=0x181
+[Orochi:display-put] env=0x3fb3d8 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[MC] Sync cmd=5 result=147792[sceDmaSend] ch=0x1000a000 madr=0x359b80 qwc=0x99 tadr=0x359b80 chcr=0x181
+[Orochi:display-put] env=0x3fb3b0 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[sceDmaSend] ch=0x1000a000 madr=0x35a510 qwc=0x99 tadr=0x35a510 chcr=0x181
+[Orochi:display-put] env=0x3fb3d8 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[MC] Sync cmd=3 result=0[sceDmaSend] ch=0x1000a000 madr=0x359b80 qwc=0x99 tadr=0x359b80 chcr=0x181
+[Orochi:display-put] env=0x3fb3b0 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[sceDmaSend] ch=0x1000a000 madr=0x35a510 qwc=0x99 tadr=0x35a510 chcr=0x181
+[Orochi:display-put] env=0x3fb3d8 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[sceDmaSend] ch=0x1000a000 madr=0x359b80 qwc=0x99 tadr=0x359b80 chcr=0x181
+[Orochi:display-put] env=0x3fb3b0 ra=0x1361a8 w0=0x8066 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[sceDmaSend] ch=0x1000a000 madr=0x35a510 qwc=0x99 tadr=0x35a510 chcr=0x181
+[Orochi:display-put] env=0x3fb3d8 ra=0x1361a8 w0=0x8064 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[sceDmaSend] ch=0x1000a000 madr=0x359b80 qwc=0x99 tadr=0x359b80 chcr=0x181
+[Orochi:display-put] env=0x3fb3b0 ra=0x1361a8 w0=0x8064 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[sceDmaSend] ch=0x1000a000 madr=0x35a510 qwc=0x99 tadr=0x35a510 chcr=0x181
+[Orochi:display-put] env=0x3fb3d8 ra=0x1361a8 w0=0x8064 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[sceDmaSend] ch=0x1000a000 madr=0x359b80 qwc=0x99 tadr=0x359b80 chcr=0x181
+[Orochi:display-put] env=0x3fb3b0 ra=0x1361a8 w0=0x8064 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[sceDmaSend] ch=0x1000a000 madr=0x35a510 qwc=0x99 tadr=0x35a510 chcr=0x181
+[Orochi:display-put] env=0x3fb3d8 ra=0x1361a8 w0=0x8064 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x5 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000005
+[Orochi:display-set] env=0x42fab0 ra=0x13517c psm=0 width=640 height=448
+[Orochi:display-set-result] w0=0x66 w1=0x1 w2=0x1400 w3=0x1bf9ff0183227c w4=0x0
+[Orochi:display-set] env=0x42fad8 ra=0x135198 psm=0 width=640 height=448
+[Orochi:display-set-result] w0=0x66 w1=0x1 w2=0x1400 w3=0x1bf9ff0183227c w4=0x0
+[Orochi:sif-sreg] index=25 received=0x1900000 guest=0x1900000
+[sceDmaSend] ch=0x1000a000 madr=0x302da0 qwc=0xf tadr=0x302da0 chcr=0x181
+[Orochi:display-put] env=0x42fab0 ra=0x1353b8 w0=0x8067 w1=0x1 w2=0x1400 w3=0x1bf9ff0183227c w4=0x0
+[Orochi:mpeg-native] accepted bytes=4074
+[Orochi:mpeg-native] accepted bytes=4077
+[Orochi:mpeg-native] accepted bytes=4063
+[Orochi:mpeg-native] accepted bytes=4077
+[dma:chain] channel=0x1000a000 tags=2242 bytes=1218608
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900080 guest=0x1900080
+[Orochi:sif-sreg] index=25 received=0x1900100 guest=0x1900100
+[Orochi:sif-sreg] index=25 received=0x1900180 guest=0x1900180
+[Orochi:sif-sreg] index=25 received=0x1900200 guest=0x1900200
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:hitch] vsync=43 ms=377
+[Orochi:sif-sreg] index=24 received=0x1 guest=0x1
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:display-put] env=0x42fad8 ra=0x1353b8 w0=0x8067 w1=0x1 w2=0x148c w3=0x1bf9ff0183227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:display-put] env=0x42fab0 ra=0x1353b8 w0=0x8067 w1=0x1 w2=0x1400 w3=0x1bf9ff0183227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:display-put] env=0x42fad8 ra=0x1353b8 w0=0x8067 w1=0x1 w2=0x148c w3=0x1bf9ff0183227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:display-put] env=0x42fab0 ra=0x1353b8 w0=0x8067 w1=0x1 w2=0x1400 w3=0x1bf9ff0183227c w4=0x0
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x3ab3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[sceDmaSend] ch=0x10009000 madr=0x0 qwc=0x0 tadr=0x35b3b0 chcr=0x1c5
+[sceDmaSend:head] ch=0x10009000 tagQwc=0x7 id=0x1 irq=0x0 addr=0x0 w2=0x13000000 w3=0x51000007
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x19003fe guest=0x19003fe
+[Orochi:sif-sreg] index=25 received=0x190037e guest=0x190037e
+[Orochi:sif-sreg] index=25 received=0x19002fe guest=0x19002fe
+[Orochi:sif-sreg] index=25 received=0x190027e guest=0x190027e
+[Orochi:sif-sreg] index=25 received=0x19001fe guest=0x19001fe
+[Orochi:sif-sreg] index=25 received=0x190017e guest=0x190017e
+[Orochi:sif-sreg] index=25 received=0x19000fe guest=0x19000fe
+[Orochi:sif-sreg] index=25 received=0x190007e guest=0x190007e
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x1900000 guest=0x1900000
+[Orochi:display-set] env=0x42fab0 ra=0x13517c psm=0 width=640 height=448
+[Orochi:display-set-result] w0=0x66 w1=0x1 w2=0x1400 w3=0x1bf9ff0183227c w4=0x0
+[Orochi:display-set] env=0x42fad8 ra=0x135198 psm=0 width=640 height=448
+[Orochi:display-set-result] w0=0x66 w1=0x1 w2=0x1400 w3=0x1bf9ff0183227c w4=0x0
+[Orochi:sif-sreg] index=25 received=0x1900080 guest=0x1900080
+[Orochi:sif-sreg] index=25 received=0x1900100 guest=0x1900100
+[Orochi:sif-sreg] index=25 received=0x1900180 guest=0x1900180
+[Orochi:sif-sreg] index=25 received=0x1900200 guest=0x1900200
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:hitch] vsync=549 ms=376
+[Orochi:sif-sreg] index=24 received=0x1 guest=0x1
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x19003fe guest=0x19003fe
+[Orochi:sif-sreg] index=25 received=0x190037e guest=0x190037e
+[Orochi:sif-sreg] index=25 received=0x19002fe guest=0x19002fe
+[Orochi:sif-sreg] index=25 received=0x190027e guest=0x190027e
+[Orochi:sif-sreg] index=25 received=0x19001fe guest=0x19001fe
+[Orochi:sif-sreg] index=25 received=0x190017e guest=0x190017e
+[Orochi:sif-sreg] index=25 received=0x19000fe guest=0x19000fe
+[Orochi:sif-sreg] index=25 received=0x190007e guest=0x190007e
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x1900000 guest=0x1900000
+[Orochi:display-set] env=0x42fab0 ra=0x13517c psm=0 width=640 height=448
+[Orochi:display-set-result] w0=0x66 w1=0x1 w2=0x1400 w3=0x1bf9ff0183227c w4=0x0
+[Orochi:display-set] env=0x42fad8 ra=0x135198 psm=0 width=640 height=448
+[Orochi:display-set-result] w0=0x66 w1=0x1 w2=0x1400 w3=0x1bf9ff0183227c w4=0x0
+[Orochi:sif-sreg] index=25 received=0x1900080 guest=0x1900080
+[Orochi:sif-sreg] index=25 received=0x1900100 guest=0x1900100
+[Orochi:sif-sreg] index=25 received=0x1900180 guest=0x1900180
+[Orochi:sif-sreg] index=25 received=0x1900200 guest=0x1900200
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:hitch] vsync=857 ms=376
+[Orochi:sif-sreg] index=24 received=0x1 guest=0x1
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900400 guest=0x1900400
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x1900000 guest=0x1900000
+[Orochi:image-decode] asset=0x62a228 ra=0x2a22c0 selection=0 w0=0x0 w1=0x0 w2=0x1a45e00 w3=0x300 w4=0x1d00 w5=0x1849f00 w6=0x176ee40 w7=0x1864f80
+[Orochi:image-native] source=0x1a464a0 destination=0x1789ec0 pixels=786432 completed=1
+[Orochi:image-irq] cause=3
+[Orochi:image-decode] asset=0x62a228 ra=0x2a22c0 selection=1 w0=0x1a464a0 w1=0x2fd0 w2=0x1a45e00 w3=0x300 w4=0x1d00 w5=0x1849f00 w6=0x176ee40 w7=0x1864f80
+[Orochi:image-native] source=0x1a49470 destination=0x1864f80 pixels=786432 completed=1
+[Orochi:image-irq] cause=3
+[Orochi:image-decode] asset=0x62a228 ra=0x2a22c0 selection=1 w0=0x1a49470 w1=0x3090 w2=0x1a45e00 w3=0x300 w4=0x1d00 w5=0x1849f00 w6=0x176ee40 w7=0x1864f80
+[Orochi:image-native] source=0x1a49470 destination=0x1789ec0 pixels=786432 completed=1
+[Orochi:image-irq] cause=3
+[Orochi:image-decode] asset=0x62a228 ra=0x2a22c0 selection=2 w0=0x1a49470 w1=0x3090 w2=0x1a45e00 w3=0x300 w4=0x1d00 w5=0x1849f00 w6=0x176ee40 w7=0x1864f80
+[Orochi:image-native] source=0x1a4c500 destination=0x1864f80 pixels=786432 completed=1
+[Orochi:image-irq] cause=3
+[Orochi:image-native] source=0x1a4c500 destination=0x1789ec0 pixels=786432 completed=1
+[Orochi:image-irq] cause=3
+[Orochi:image-native] source=0x1a4f580 destination=0x1864f80 pixels=786432 completed=1
+[Orochi:image-irq] cause=3
+[Orochi:image-native] source=0x1a4f580 destination=0x1789ec0 pixels=786432 completed=1
+[Orochi:image-irq] cause=3
+[Orochi:image-native] source=0x1a525d0 destination=0x1864f80 pixels=786432 completed=1
+[Orochi:image-irq] cause=3
+[Orochi:sif-sreg] index=24 received=0x8000 guest=0x8000
+[Orochi:sif-sreg] index=25 received=0x5000580 guest=0x5000580
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5000d80 guest=0x5000d80
+[Orochi:sif-sreg] index=25 received=0x5000e00 guest=0x5000e00
+[Orochi:sif-sreg] index=25 received=0x5001780 guest=0x5001780
+[Orochi:sif-sreg] index=25 received=0x5002100 guest=0x5002100
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x5000000 guest=0x5000000
+[Orochi:disc-search] \LINKDATA.DNS;1 layer=0 found=1 sector=1783 bytes=196608
+Registered code region: 819080 - 83bc40[Orochi:overlay] ovl_00.bin verified against compiled code; bytes=142400
+[Orochi:sif-sreg] index=24 received=0x8000 guest=0x8000
+[Orochi:sif-sreg] index=25 received=0x5000280 guest=0x5000280
+[Orochi:sif-sreg] index=25 received=0x5000c80 guest=0x5000c80
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5000d80 guest=0x5000d80
+[Orochi:sif-sreg] index=25 received=0x5001480 guest=0x5001480
+[Orochi:sif-sreg] index=25 received=0x5001e80 guest=0x5001e80
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x5000000 guest=0x5000000
+[Orochi:display-set] env=0x42fab0 ra=0x13517c psm=0 width=640 height=448
+[Orochi:display-set-result] w0=0x66 w1=0x1 w2=0x1400 w3=0x1bf9ff0183227c w4=0x0
+[Orochi:display-set] env=0x42fad8 ra=0x135198 psm=0 width=640 height=448
+[Orochi:display-set-result] w0=0x66 w1=0x1 w2=0x1400 w3=0x1bf9ff0183227c w4=0x0
+[Orochi:sif-sreg] index=25 received=0x1900000 guest=0x1900000
+[Orochi:sif-sreg] index=25 received=0x1900080 guest=0x1900080
+[Orochi:sif-sreg] index=25 received=0x1900100 guest=0x1900100
+[Orochi:sif-sreg] index=25 received=0x1900180 guest=0x1900180
+[Orochi:sif-sreg] index=25 received=0x1900200 guest=0x1900200
+[Orochi:sif-sreg] index=25 received=0x1900280 guest=0x1900280
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:hitch] vsync=3183 ms=382
+[Orochi:sif-sreg] index=24 received=0x1 guest=0x1
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=25 received=0x1900300 guest=0x1900300
+[Orochi:sif-sreg] index=25 received=0x1900380 guest=0x1900380
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x1900000 guest=0x1900000
+[Orochi:sif-sreg] index=24 received=0x8000 guest=0x8000
+[Orochi:sif-sreg] index=25 received=0x5000580 guest=0x5000580
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5000d80 guest=0x5000d80
+[Orochi:sif-sreg] index=25 received=0x5000e00 guest=0x5000e00
+[Orochi:sif-sreg] index=25 received=0x5001780 guest=0x5001780
+[Orochi:sif-sreg] index=25 received=0x5002100 guest=0x5002100
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x5000000 guest=0x5000000
+[Orochi:display-set] env=0x3fb3b0 ra=0x135f1c psm=0 width=512 height=224
+[Orochi:display-set-result] w0=0x66 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[Orochi:display-set] env=0x3fb3d8 ra=0x135f38 psm=0 width=512 height=224
+[Orochi:display-set-result] w0=0x66 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[Orochi:display-set] env=0x3fb3b0 ra=0x1024a0 psm=0 width=512 height=224
+[Orochi:display-set-result] w0=0x66 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[Orochi:display-set] env=0x3fb3d8 ra=0x1024c0 psm=0 width=512 height=224
+[Orochi:display-set-result] w0=0x66 w1=0x3 w2=0x1000 w3=0x1bf9ff0203227c w4=0x0
+[Orochi:sif-sreg] index=24 received=0x8000 guest=0x8000
+[Orochi:sif-sreg] index=25 received=0x5000180 guest=0x5000180
+[Orochi:sif-sreg] index=25 received=0x5000b00 guest=0x5000b00
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5000d80 guest=0x5000d80
+[Orochi:sif-sreg] index=25 received=0x5001280 guest=0x5001280
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=25 received=0x5001300 guest=0x5001300
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:hitch] vsync=3366 ms=111
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5001b00 guest=0x5001b00
+[Orochi:sif-sreg] index=25 received=0x5002480 guest=0x5002480
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x0 guest=0x0
+[Orochi:sif-sreg] index=25 received=0x5000000 guest=0x5000000
+[Orochi:sif-sreg] index=24 received=0x8000 guest=0x8000
+[Orochi:sif-sreg] index=25 received=0x5000380 guest=0x5000380
+[Orochi:sif-sreg] index=25 received=0x5000d00 guest=0x5000d00
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5000d80 guest=0x5000d80
+[Orochi:sif-sreg] index=25 received=0x5001200 guest=0x5001200
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=25 received=0x5001280 guest=0x5001280
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5001580 guest=0x5001580
+[Orochi:sif-sreg] index=25 received=0x5001f00 guest=0x5001f00
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[dma:chain] channel=0x10009000 tags=3074 bytes=4041232
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x43 guest=0x43
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=24 received=0x8003 guest=0x8003
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=24 received=0x3 guest=0x3
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[Orochi:sif-sreg] index=25 received=0x5002780 guest=0x5002780
+[Orochi:sif-sreg] index=25 received=0x5002800 guest=0x5002800
+[run] window close requested, breaking out of loopGame thread returned. PC=0x136ca8 RA=0x101670
+INFO: TEXTURE: [ID 3] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 3] Default shader unloaded successfully
+INFO: TEXTURE: [ID 1] Default texture unloaded successfully
+INFO: Window closed successfully
+[run] exiting loop[Orochi] Runtime stopped; inspect logs for guest errors.

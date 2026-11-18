@@ -1,0 +1,20 @@
+diff --git a/ps2xRuntime/src/lib/vu/ps2_vu1_core.cpp b/ps2xRuntime/src/lib/vu/ps2_vu1_core.cpp
+index 65461bf..b0d4371 100644
+--- a/ps2xRuntime/src/lib/vu/ps2_vu1_core.cpp
++++ b/ps2xRuntime/src/lib/vu/ps2_vu1_core.cpp
+@@ -1694,11 +1694,13 @@ void VU1Interpreter::execute(uint8_t *vuCode, uint32_t codeSize,
+ bool VU1Interpreter::runTranslated(uint8_t *vuCode, uint32_t codeSize, uint8_t *vuData, uint32_t dataSize,
+                                    GS &gs, PS2Memory *memory, uint32_t maxCycles)
+ {
+-    if (!s_translationLookup || m_unit != Unit::VU1 || !memory || vuCode != memory->getVU1Code())
++    const bool vu1 = m_unit == Unit::VU1;
++    if (!s_translationLookup || !memory || vuCode != (vu1 ? memory->getVU1Code() : memory->getVU0Code()))
+         return false;
+     // Microcode is re-uploaded often with identical contents; hash it once
+     // per upload generation so translations follow the code, not the upload.
+-    const uint64_t generation = memory->getVU1CodeGeneration();
++    // VU0 (4 KiB) and VU1 (16 KiB) images never share a hash in practice.
++    const uint64_t generation = vu1 ? memory->getVU1CodeGeneration() : memory->getVU0CodeGeneration();
+     if (generation != m_translationGeneration)
+     {
+         uint64_t hash = 0xcbf29ce484222325ull;

@@ -1,0 +1,26 @@
+WARRIORS OROCHI - PORT PARA PC: PACOTE COMPLETO
+
+Este pacote tem tres pastas:
+
+programa\
+  O port pronto para jogar. Abra WarriorsOrochi-Setup.exe, escolha a sua ISO
+  do Warriors Orochi (USA, SLUS-21662) na aba Jogo e clique em "Salvar e
+  jogar". Depois basta abrir WarriorsOrochi.exe. O LEIA-ME.txt dessa pasta
+  explica controles, trapacas e onde ficam os saves.
+  A ISO nao vem junto: cada um precisa da sua propria copia do jogo.
+
+codigo-fonte\
+  O codigo do port, para quem quiser compilar. Veja COMPILAR.txt
+  (com make: "make deps", "make check", "make generate", "make install").
+
+logs\
+  Registros de execucoes no PC de quem montou o pacote, para comparar.
+
+PARA REPORTAR UM PROBLEMA
+Depois de jogar, mande:
+- programa\data\port.log (o registro da ultima execucao);
+- se algo aparecer errado na tela, aperte F12 nesse momento: o screenshot
+  fica em programa\data;
+- em que parte do jogo aconteceu.
+Mantenha a pasta programa num local com permissao de escrita (nao use
+"Arquivos de Programas").

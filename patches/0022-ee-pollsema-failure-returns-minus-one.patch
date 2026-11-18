@@ -1,0 +1,23 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+index b3899e1..830d83e 100644
+--- a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
++++ b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+@@ -894,13 +894,16 @@ int EeScheduler::pollSemaphore(int id)
+ {
+     assertExecutor();
+     EeSemaphore *object = semaphore(id);
++    // The EE kernel's PollSema reports any failure as -1; KE_SEMA_ZERO is the
++    // IOP convention. EE code tests for -1 (Orochi's CD loader 0x122a60), so
++    // the IOP value made a busy semaphore look acquired.
+     if (!object)
+     {
+-        return KE_UNKNOWN_SEMID;
++        return KE_ERROR;
+     }
+     if (object->count == 0)
+     {
+-        return KE_SEMA_ZERO;
++        return KE_ERROR;
+     }
+     --object->count;
+     publishSnapshot();

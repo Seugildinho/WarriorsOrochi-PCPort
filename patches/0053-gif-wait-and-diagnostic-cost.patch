@@ -1,0 +1,35 @@
+diff --git a/ps2xRuntime/src/lib/ps2_memory.cpp b/ps2xRuntime/src/lib/ps2_memory.cpp
+index 986d03d..4669895 100644
+--- a/ps2xRuntime/src/lib/ps2_memory.cpp
++++ b/ps2xRuntime/src/lib/ps2_memory.cpp
+@@ -2149,9 +2149,15 @@ void PS2Memory::gifWorkerLoop()
+                 // Packets come in bursts: poll briefly before sleeping, so the
+                 // VIF1 worker rarely pays for a wake-up.
+                 lock.unlock();
++                // The clock is read every 64 pauses: reading it each time made
++                // this wait mostly QueryPerformanceCounter calls.
+                 const auto until = std::chrono::steady_clock::now() + std::chrono::microseconds(50);
+-                while (m_gifBusy.load(std::memory_order_acquire) == 0u && std::chrono::steady_clock::now() < until)
++                for (uint32_t spin = 1u; m_gifBusy.load(std::memory_order_acquire) == 0u; ++spin)
++                {
+                     _mm_pause();
++                    if ((spin & 63u) == 0u && std::chrono::steady_clock::now() >= until)
++                        break;
++                }
+                 lock.lock();
+             }
+             m_gifWorkerWaiting = true;
+diff --git a/ps2xRuntime/src/lib/gs/gs_frontend.cpp b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+index b4b65d1..20c536f 100644
+--- a/ps2xRuntime/src/lib/gs/gs_frontend.cpp
++++ b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+@@ -860,7 +860,8 @@ void GS::processCompleteGIFPacket(const uint8_t *data, uint32_t sizeBytes)
+                     uint64_t lo = loadLE64(data + offset);
+                     uint64_t hi = loadLE64(data + offset + 8);
+                     offset += 16;
+-                    captureReservedGifAd("stream",data,sizeBytes,offset-16,tagLo,tagHi,regs[r],hi);
++                    if (regs[r] == 0xeu) // the capture only looks at A+D writes
++                        captureReservedGifAd("stream",data,sizeBytes,offset-16,tagLo,tagHi,regs[r],hi);
+                     writeRegisterPacked(regs[r], lo, hi);
+                 }
+             }

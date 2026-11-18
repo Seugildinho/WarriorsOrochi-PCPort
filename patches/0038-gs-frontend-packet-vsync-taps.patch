@@ -1,0 +1,136 @@
+diff --git a/ps2xRuntime/include/runtime/gs/gs_frontend.h b/ps2xRuntime/include/runtime/gs/gs_frontend.h
+index 6dd1e0f..4773a6c 100644
+--- a/ps2xRuntime/include/runtime/gs/gs_frontend.h
++++ b/ps2xRuntime/include/runtime/gs/gs_frontend.h
+@@ -12,6 +12,8 @@
+ 
+ #include "runtime/gs/gs_backend.h"
+ 
++struct GSRegisters;
++
+ struct GSDebugSnapshot
+ {
+     GSContext ctx[2]{};
+@@ -112,6 +114,11 @@ public:
+     // and presents when queued GS work reaches that point, instead of waiting
+     // for it; at most one latch is outstanding.
+     void setAsyncLatch(std::function<void(std::function<void()>)> queue) { m_asyncLatch = std::move(queue); }
++    // Copies of the GS input for an external GS implementation: every GIF
++    // packet in arrival order (native fast paths re-encoded as GIF packets)
++    // and, at each VBlank in that order, the privileged registers.
++    void setPacketTap(std::function<void(const uint8_t *, uint32_t)> tap) { m_packetTap = std::move(tap); }
++    void setVsyncTap(std::function<void(const GSRegisters &, uint64_t)> tap) { m_vsyncTap = std::move(tap); }
+     void reset();
+     void setRasterBackend(std::unique_ptr<GSRasterBackend> backend);
+ 
+@@ -195,6 +202,8 @@ private:
+     mutable std::recursive_mutex m_stateMutex;
+     std::function<void()> m_externalSync;
+     std::function<void(std::function<void()>)> m_asyncLatch;
++    std::function<void(const uint8_t *, uint32_t)> m_packetTap;
++    std::function<void(const GSRegisters &, uint64_t)> m_vsyncTap;
+     std::mutex m_latchMutex;
+     std::condition_variable m_latchCv;
+     uint32_t m_latchesInFlight = 0;
+diff --git a/ps2xRuntime/src/lib/gs/gs_frontend.cpp b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+index e74672f..b4b65d1 100644
+--- a/ps2xRuntime/src/lib/gs/gs_frontend.cpp
++++ b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+@@ -577,6 +577,37 @@ void GS::latchHostPresentationFrame()
+ 
+ void GS::latchHostPresentationFrameNow(const GSPresentationRequest *scanout)
+ {
++    if (m_vsyncTap && m_privRegs)
++    {
++        GSRegisters regs{};
++        regs.pmode = m_privRegs->pmode;
++        regs.smode1 = m_privRegs->smode1;
++        regs.smode2 = m_privRegs->smode2;
++        regs.srfsh = m_privRegs->srfsh;
++        regs.synch1 = m_privRegs->synch1;
++        regs.synch2 = m_privRegs->synch2;
++        regs.syncv = m_privRegs->syncv;
++        regs.dispfb1 = m_privRegs->dispfb1;
++        regs.display1 = m_privRegs->display1;
++        regs.dispfb2 = m_privRegs->dispfb2;
++        regs.display2 = m_privRegs->display2;
++        regs.bgcolor = m_privRegs->bgcolor;
++        regs.csr.store(m_privRegs->csr.load(std::memory_order_relaxed), std::memory_order_relaxed);
++        uint64_t tick = m_privRegs->vsyncTick.load(std::memory_order_acquire);
++        if (scanout)
++        {
++            // The registers as of the VBlank.
++            regs.pmode = scanout->pmode;
++            regs.smode2 = scanout->smode2;
++            regs.dispfb1 = scanout->dispfb1;
++            regs.display1 = scanout->display1;
++            regs.dispfb2 = scanout->dispfb2;
++            regs.display2 = scanout->display2;
++            regs.bgcolor = scanout->bgcolor;
++            tick = scanout->vsyncTick;
++        }
++        m_vsyncTap(regs, tick);
++    }
+     GSPresentationRequest request{};
+     {
+         std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+@@ -712,6 +743,8 @@ bool GS::copyLatchedHostPresentationFrame(std::vector<uint8_t> &outPixels,
+ void GS::processGIFPacket(const uint8_t *data, uint32_t sizeBytes)
+ {
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
++    if (data && sizeBytes && m_packetTap)
++        m_packetTap(data, sizeBytes);
+     if (!data || !sizeBytes || !m_backend) return;
+     if (m_gifStreamPending.empty())
+     {
+@@ -868,6 +901,8 @@ bool GS::processNativePackedGIFPacket(const uint8_t *data, uint32_t sizeBytes)
+ 
+     if (!validatePackedGifPacket(data, sizeBytes))
+         return false;
++    if (m_packetTap)
++        m_packetTap(data, sizeBytes);
+ 
+     const bool processed = visitPackedGifPacket(data, sizeBytes, [&](const PackedGifPacketTag &tag)
+                                                 {
+@@ -911,6 +946,28 @@ void GS::uploadImageNative(uint64_t bitbltbuf,
+     if (m_externalSync)
+         m_externalSync();
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
++    if (m_packetTap && data && sizeBytes >= 16u)
++    {
++        // The same upload as a GIF packet: A+D BITBLTBUF/TRXPOS/TRXREG/TRXDIR,
++        // then an IMAGE tag with the whole quadwords of the data.
++        const uint32_t imageQwords = sizeBytes / 16u;
++        std::vector<uint64_t> packet;
++        packet.reserve(12u + imageQwords * 2u);
++        packet.push_back(4ull | (1ull << 60));
++        packet.push_back(0xEull);
++        const uint64_t regs[4] = {bitbltbuf, trxpos, trxreg, trxdir};
++        for (uint32_t i = 0; i < 4u; ++i)
++        {
++            packet.push_back(regs[i]);
++            packet.push_back(0x50ull + i);
++        }
++        packet.push_back(imageQwords | (1ull << 15) | (2ull << 58));
++        packet.push_back(0);
++        const size_t header = packet.size();
++        packet.resize(header + imageQwords * 2u);
++        std::memcpy(packet.data() + header, data, imageQwords * 16u);
++        m_packetTap(reinterpret_cast<const uint8_t *>(packet.data()), static_cast<uint32_t>(packet.size() * 8u));
++    }
+     uploadImageNativeUnlocked(bitbltbuf, trxpos, trxreg, trxdir, data, sizeBytes);
+ }
+ 
+@@ -1200,6 +1257,12 @@ void GS::writeRegister(uint8_t regAddr, uint64_t value)
+     if (m_externalSync)
+         m_externalSync();
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
++    if (m_packetTap)
++    {
++        // One A+D write: GIFtag (NLOOP 1, EOP, PACKED, NREG 1, REGS A+D), then data.
++        const uint64_t packet[4] = {1ull | (1ull << 15) | (1ull << 60), 0xEull, value, regAddr};
++        m_packetTap(reinterpret_cast<const uint8_t *>(packet), sizeof(packet));
++    }
+     writeRegisterUnlocked(regAddr, value);
+ }
+ 

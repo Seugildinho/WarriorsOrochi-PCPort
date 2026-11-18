@@ -1,0 +1,29 @@
+{
+  "comment": "Runtime-selectable game patches applied to the generated code by tools/apply_game_patches.py. Each one changes only the 16-bit immediate of a LUI/ORI, so the generated line keeps both values and the option picks one.",
+  "options": {
+    "widescreen": {
+      "variable": "OROCHI_WIDESCREEN",
+      "source": "PCSX2 pcsx2_patches SLUS-21662_2030F647.pnach, [Widescreen 16:9] by ElHecht",
+      "patches": [
+        {"address": "0x0019a3a8", "original": "0x3c023f4c", "value": "0x3c023f19", "note": "horizontal FOV, 1 player"},
+        {"address": "0x0019a3b0", "original": "0x3442cccd", "value": "0x3442999a", "note": "horizontal FOV, 1 player"},
+        {"address": "0x0019a238", "original": "0x3c033f4c", "value": "0x3c033f19", "note": "horizontal FOV, 2 players"},
+        {"address": "0x0019a240", "original": "0x3463cccd", "value": "0x3463999a", "note": "horizontal FOV, 2 players"},
+        {"address": "0x00199f60", "original": "0x3c0243cf", "value": "0x3c02440a", "note": "enemies drawn to the screen edges, 1 player"},
+        {"address": "0x00199e60", "original": "0x3c0243cf", "value": "0x3c02440a", "note": "enemies drawn to the screen edges, 2 players"},
+        {"address": "0x0024f2c8", "original": "0x3c024380", "value": "0x3c0243ab", "note": "names and health bars"}
+      ]
+    },
+    "fixedFieldOffset": {
+      "variable": "OROCHI_FIELD_OFFSET",
+      "source": "XYOFFSET of the odd field in captures (Y 1936.5 against 1936.0): the half line an interlaced TV needs makes the picture shake on a progressive display",
+      "patches": [
+        {"address": "0x00101c6c", "original": "0x24027908", "value": "0x24027900", "note": "odd field XYOFFSET Y, drawing environment"},
+        {"address": "0x0023490c", "original": "0x24037908", "value": "0x24037900", "note": "odd field XYOFFSET Y, frame setup"},
+        {"address": "0x00298f58", "original": "0x24027908", "value": "0x24027900", "note": "odd field XYOFFSET Y, 3D pass"},
+        {"address": "0x00135c14", "original": "0x64420008", "value": "0x64420000", "note": "sceGsSetHalfOffset, first drawing environment"},
+        {"address": "0x00135e7c", "original": "0x64420008", "value": "0x64420000", "note": "sceGsSetHalfOffset2, second drawing environment"}
+      ]
+    }
+  }
+}

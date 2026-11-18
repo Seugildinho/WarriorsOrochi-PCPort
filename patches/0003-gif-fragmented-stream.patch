@@ -1,0 +1,207 @@
+diff --git a/ps2xRuntime/include/runtime/gs/gs_frontend.h b/ps2xRuntime/include/runtime/gs/gs_frontend.h
+index 4c3f641..a70967e 100644
+--- a/ps2xRuntime/include/runtime/gs/gs_frontend.h
++++ b/ps2xRuntime/include/runtime/gs/gs_frontend.h
+@@ -149,6 +149,8 @@ public:
+     uint32_t ReadVram(uint32_t psm, uint32_t base, uint32_t bw, uint32_t x, uint32_t y) const;
+ 
+ private:
++    void processCompleteGIFPacket(const uint8_t *data, uint32_t sizeBytes);
++    std::vector<uint8_t> m_gifStreamPending;
+     void snapshotVRAM();
+     void writeRegisterUnlocked(uint8_t regAddr, uint64_t value);
+     void writeRegisterPacked(uint8_t regDesc, uint64_t lo, uint64_t hi);
+diff --git a/ps2xRuntime/include/runtime/gs/ps2_gif_arbiter.h b/ps2xRuntime/include/runtime/gs/ps2_gif_arbiter.h
+index 2012083..2da03a5 100644
+--- a/ps2xRuntime/include/runtime/gs/ps2_gif_arbiter.h
++++ b/ps2xRuntime/include/runtime/gs/ps2_gif_arbiter.h
+@@ -2,6 +2,8 @@
+ #define PS2_GIF_ARBITER_H
+ 
+ #include <cstdint>
++#include <array>
++#include <algorithm>
+ #include <functional>
+ #include <vector>
+ 
+@@ -33,11 +35,13 @@ public:
+     void submit(GifPathId pathId, const uint8_t *data, uint32_t sizeBytes, bool path2DirectHl = false);
+ 
+     void drain();
+-    bool empty() const { return m_queue.empty(); }
++    bool empty() const { return m_queue.empty() && std::all_of(m_partial.begin(),m_partial.end(),
++        [](const auto &data) { return data.empty(); }); }
+ 
+ private:
+     ProcessPacketFn m_processFn;
+     std::vector<GifArbiterPacket> m_queue;
++    std::array<std::vector<uint8_t>,4> m_partial;
+ 
+     static bool isImagePacket(const uint8_t *data, uint32_t sizeBytes);
+     static uint8_t pathPriority(GifPathId id);
+diff --git a/ps2xRuntime/src/lib/gs/gs_frontend.cpp b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+index 5658928..ac2642f 100644
+--- a/ps2xRuntime/src/lib/gs/gs_frontend.cpp
++++ b/ps2xRuntime/src/lib/gs/gs_frontend.cpp
+@@ -8,12 +8,26 @@
+ #include <cstdio>
+ #include <cstring>
+ #include <iostream>
++#include <fstream>
+ #include <sstream>
+ 
+ namespace
+ {
+     static constexpr uint32_t kHostFrameWidth = 640u;
+ 
++    void captureReservedGifAd(const char *origin,const uint8_t *data,uint32_t size,
++                              uint32_t offset,uint64_t tagLo,uint64_t tagHi,uint8_t descriptor,uint64_t valueHi)
++    {
++        if(descriptor!=0xeu || (valueHi&0xffu)<0x59u || (valueHi&0xffu)>0x5fu) return;
++        static unsigned captures=0;
++        if(captures++>=2) return;
++        const std::string path=std::string("gif-reserved-")+origin+".bin";
++        std::ofstream file(path,std::ios::binary);
++        file.write(reinterpret_cast<const char *>(data),size);
++        RUNTIME_LOG("[gs:bad-packet] origin=" << origin << " bytes=" << size << " offset=" << offset
++            << " tagLo=0x" << std::hex << tagLo << " tagHi=0x" << tagHi << std::dec << " file=" << path << std::endl);
++    }
++
+     GSPrimReg decodePrimRegister(uint64_t value)
+     {
+         GSPrimReg prim{};
+@@ -125,6 +139,7 @@ void GS::init(uint8_t *vram, uint32_t vramSize, GSRegisters *privRegs)
+ void GS::reset()
+ {
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
++    m_gifStreamPending.clear();
+     std::memset(m_ctx, 0, sizeof(m_ctx));
+     m_prim = {};
+     m_primRegister = {};
+@@ -639,6 +654,32 @@ bool GS::copyLatchedHostPresentationFrame(std::vector<uint8_t> &outPixels,
+ }
+ 
+ void GS::processGIFPacket(const uint8_t *data, uint32_t sizeBytes)
++{
++    std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
++    if (!data || !sizeBytes || !m_backend) return;
++    m_gifStreamPending.insert(m_gifStreamPending.end(),data,data+sizeBytes);
++    size_t complete=0;
++    while (m_gifStreamPending.size()-complete>=16u)
++    {
++        const uint64_t tag=loadLE64(m_gifStreamPending.data()+complete);
++        const size_t loops=tag&0x7fffu;
++        const unsigned format=static_cast<unsigned>((tag>>58)&3u);
++        size_t registers=(tag>>60)&15u;
++        if (!registers) registers=16;
++        const size_t payload=format==0 ? loops*registers*16u :
++            format==1 ? ((loops*registers+1u)/2u)*16u : loops*16u;
++        const size_t bytes=16u+payload;
++        if (m_gifStreamPending.size()-complete<bytes) break;
++        complete+=bytes;
++    }
++    if (complete)
++    {
++        processCompleteGIFPacket(m_gifStreamPending.data(),static_cast<uint32_t>(complete));
++        m_gifStreamPending.erase(m_gifStreamPending.begin(),m_gifStreamPending.begin()+complete);
++    }
++}
++
++void GS::processCompleteGIFPacket(const uint8_t *data, uint32_t sizeBytes)
+ {
+     std::lock_guard<std::recursive_mutex> lock(m_stateMutex);
+     if (!data || sizeBytes < 16 || !m_backend)
+@@ -706,6 +747,7 @@ void GS::processGIFPacket(const uint8_t *data, uint32_t sizeBytes)
+                     uint64_t lo = loadLE64(data + offset);
+                     uint64_t hi = loadLE64(data + offset + 8);
+                     offset += 16;
++                    captureReservedGifAd("stream",data,sizeBytes,offset-16,tagLo,tagHi,regs[r],hi);
+                     writeRegisterPacked(regs[r], lo, hi);
+                 }
+             }
+@@ -725,7 +767,7 @@ void GS::processGIFPacket(const uint8_t *data, uint32_t sizeBytes)
+             if ((nloop * nreg) & 1)
+                 offset += 8;
+         }
+-        else if (flg == GIF_FMT_IMAGE)
++        else if (flg == GIF_FMT_IMAGE || flg == 3u)
+         {
+             uint32_t imageBytes = nloop * 16;
+             if (offset + imageBytes > sizeBytes)
+@@ -763,6 +805,7 @@ bool GS::processNativePackedGIFPacket(const uint8_t *data, uint32_t sizeBytes)
+                 const uint64_t lo = loadLE64(data + offset);
+                 const uint64_t hi = loadLE64(data + offset + 8u);
+                 offset += 16u;
++                captureReservedGifAd("native",data,sizeBytes,offset-16,tag.lo,tag.hi,tag.regs[r],hi);
+                 writeRegisterPacked(tag.regs[r], lo, hi);
+             }
+         }
+@@ -1048,6 +1091,15 @@ void GS::writeRegisterPacked(uint8_t regDesc, uint64_t lo, uint64_t hi)
+     case 0x0E:
+     {
+         uint8_t addr = static_cast<uint8_t>(hi & 0xFF);
++        // Privileged display registers are MMIO-only. These values are
++        // reserved in GIF A+D; keep the legacy direct-HLE aliases out of GIF.
++        if (addr >= 0x59u && addr <= 0x5fu)
++        {
++            static unsigned reservedCount=0;
++            if (reservedCount++<8) RUNTIME_LOG("[gs:reserved-ad] address=0x" << std::hex
++                << static_cast<unsigned>(addr) << " value=0x" << lo << " high=0x" << hi << std::dec << std::endl);
++            break;
++        }
+         writeRegisterUnlocked(addr, lo);
+         break;
+     }
+diff --git a/ps2xRuntime/src/lib/gs/ps2_gif_arbiter.cpp b/ps2xRuntime/src/lib/gs/ps2_gif_arbiter.cpp
+index c289ba0..167e640 100644
+--- a/ps2xRuntime/src/lib/gs/ps2_gif_arbiter.cpp
++++ b/ps2xRuntime/src/lib/gs/ps2_gif_arbiter.cpp
+@@ -20,16 +20,39 @@ bool GifArbiter::isImagePacket(const uint8_t *data, uint32_t sizeBytes)
+ 
+ void GifArbiter::submit(GifPathId pathId, const uint8_t *data, uint32_t sizeBytes, bool path2DirectHl)
+ {
+-    if (!data || sizeBytes < 16 || !m_processFn)
++    if (!data || !sizeBytes || !m_processFn)
+         return;
+-
+-    GifArbiterPacket pkt;
+-    pkt.pathId = pathId;
+-    pkt.path2DirectHl = (pathId == GifPathId::Path2) && path2DirectHl;
+-    pkt.path3Image = (pathId == GifPathId::Path3) && isImagePacket(data, sizeBytes);
+-    pkt.data.resize(sizeBytes);
+-    std::memcpy(pkt.data.data(), data, sizeBytes);
+-    m_queue.push_back(std::move(pkt));
++    const auto path=static_cast<unsigned>(pathId);
++    if(path<1 || path>3) return;
++    auto &pending=m_partial[path];
++    pending.insert(pending.end(),data,data+sizeBytes);
++    size_t cursor=0,packetStart=0;
++    bool hasImage=false;
++    // DMA fragments belong to a GIF path until their tag payload is complete.
++    // Assemble through EOP before arbitrating paths, so another path's command
++    // tag can never be consumed as the first path's image pixels (or vice versa).
++    while(pending.size()-cursor>=16u) {
++        uint64_t tag{}; std::memcpy(&tag,pending.data()+cursor,8);
++        const size_t loops=tag&0x7fffu;
++        const unsigned format=(tag>>58)&3u;
++        size_t registers=(tag>>60)&15u;
++        if(!registers) registers=16;
++        const size_t payload=format==0 ? loops*registers*16u :
++            format==1 ? ((loops*registers+1u)/2u)*16u : loops*16u;
++        if(pending.size()-cursor<16u+payload) break;
++        cursor+=16u+payload;
++        hasImage|=format>=2;
++        if(tag&(1ull<<15)) {
++            GifArbiterPacket pkt;
++            pkt.pathId=pathId;
++            pkt.path2DirectHl=(pathId==GifPathId::Path2)&&path2DirectHl;
++            pkt.path3Image=(pathId==GifPathId::Path3)&&hasImage;
++            pkt.data.assign(pending.begin()+packetStart,pending.begin()+cursor);
++            m_queue.push_back(std::move(pkt));
++            packetStart=cursor; hasImage=false;
++        }
++    }
++    if(packetStart) pending.erase(pending.begin(),pending.begin()+packetStart);
+ }
+ 
+ void GifArbiter::drain()

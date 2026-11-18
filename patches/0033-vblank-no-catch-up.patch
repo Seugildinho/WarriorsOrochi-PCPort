@@ -1,0 +1,24 @@
+diff --git a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+index c010a96..e0cd7c2 100644
+--- a/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
++++ b/ps2xRuntime/src/lib/Kernel/EeScheduler.cpp
+@@ -1850,11 +1850,18 @@ void EeScheduler::processDueDeadlines()
+         {
+             if (scheduled.event.type == EeEventType::VBlankStart)
+             {
++                // After a slow stretch the host deadlines lie in the past; the
++                // game would then run above 60 VBlanks per second until it
++                // caught up. Keep at most one period of lateness instead.
++                auto nextHostDeadline = scheduled.hostDeadline + kVBlankPeriod;
++                const auto hostNow = std::chrono::steady_clock::now();
++                if (nextHostDeadline + kVBlankPeriod < hostNow)
++                    nextHostDeadline = hostNow;
+                 scheduleEvent(scheduled.deadlineCycle + kVBlankDurationCycles,
+                               scheduled.hostDeadline + kVBlankDuration,
+                               EeEvent{EeEventType::VBlankEnd, 0, m_vsyncTick + 1u});
+                 scheduleEvent(scheduled.deadlineCycle + kVBlankPeriodCycles,
+-                              scheduled.hostDeadline + kVBlankPeriod,
++                              nextHostDeadline,
+                               EeEvent{EeEventType::VBlankStart, 0, 0});
+             }
+             processEvent(scheduled.event);

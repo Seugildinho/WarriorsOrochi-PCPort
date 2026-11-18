@@ -1,0 +1,18 @@
+# Handoff — Warriors Orochi PC port
+- **Stack:** C++20/x64 (MSVC), CMake, Python 3.12+, PS2Recomp (`eb8688b2fd191129f103a39543002c005b33409c`), FFmpeg 7.1 shared libraries; Windows/D3D11, raylib/OpenGL presentation.
+- **Build silencioso (PowerShell, em `port_pc`):** `python tools/workflow.py configure-native *> $null; & 'C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe' --build build-tools --config Release --target ps2EntryRunner --parallel 4 *> $null`
+- **Regressões silenciosas:** `python tools/run_regressions.py *> $null` (escreve `relatorios/regressoes.json`; confira `passed`).
+- Requer `vendor/PS2Recomp`, FFmpeg configurado e a ISO original USA ao lado da pasta `port_pc`.
+- `config/attach_game.cmake` — integra fontes, otimizações Release e exclusão de `native_gpu.cpp` dos lotes unity do Windows.
+- `config/analysis.json` — funções verificadas, funções suplementares e tabelas de saltos derivadas do ELF original.
+- `tools/generate_supplemental.py` — recompila funções verificadas ausentes e gera entradas locais protegidas por hash.
+- `src/native_gpu.cpp` / `src/gpu_sprite_shader.h` — aceleração D3D11 parcial de sprites RGBA32, profundidade e uploads.
+- `src/native_overlay.cpp` — adapta a função vazia do menu e registra funções suplementares com validação dos bytes originais.
+- `tools/run_probe.py` / `tools/run_regressions.py` — teste longo do jogo e suítes automatizadas.
+- **Pronto:** sincronização do quadro no VBlank + solicitação de VSync; D3D11 automático com fallback CPU; funções ausentes `0x1f2360`, `0x294ba0` e `0x2949a0` verificadas e corrigidas; correção de compilação unity para D3D11.
+- **Verificação:** build atual compila; 15 suítes passam, incluindo 452 comparações de VRAM e 80 sprites reais validados contra CPU. ELF original permanece intacto.
+- **Desempenho:** menu medido em ~19 atualizações visuais/s; ainda abaixo da velocidade normal. Batalha não validada.
+- **Estado:** nenhum arquivo está em edição neste momento; nenhuma suíte está falhando. Último probe (`local/tests/performance-20261023/final-two-geometry.json`) chega ao título/menu e para numa chamada indireta ausente.
+- **Bug atual:** salto `0x2e3c84 → 0x2e2020`; origem lê alvo de uma tabela indexada por `$a3` na região `0x3508c0`. Mapa existente inclui `FUN_002e2080`, mas não o alvo `0x2e2020`.
+- **Próximo passo imediato:** inspecionar instruções originais e limites da rotina iniciada em `0x2e2020`; registrar/recompilar a função ou caso de tabela comprovado em `config/analysis.json`/mapa e adaptar `tools/generate_supplemental.py` apenas se necessário. Depois reconstruir, rodar regressões e repetir `tools/run_probe.py` para descobrir a próxima falha.
+- Atualizações do GitHub estão pausadas; não enviar alterações sem novo pedido.

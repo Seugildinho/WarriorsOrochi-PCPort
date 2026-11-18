@@ -1,0 +1,220 @@
+diff --git a/ps2xRuntime/src/lib/ps2_pad.cpp b/ps2xRuntime/src/lib/ps2_pad.cpp
+index 8590f14..ef7576a 100644
+--- a/ps2xRuntime/src/lib/ps2_pad.cpp
++++ b/ps2xRuntime/src/lib/ps2_pad.cpp
+@@ -1,11 +1,17 @@
+ #include "runtime/ps2_pad.h"
+ #include "ps2_host_backend.h"
++#include <algorithm>
++#include <cmath>
+ #include <cstring>
++#include <string>
+ 
+ namespace
+ {
+     constexpr uint8_t kPadAnalogMarker = 0x73;
+     constexpr uint8_t kPadStickCenter = 0x80;
++    constexpr int kMaxGamepads = 4;
++    constexpr float kStickDeadzone = 0.20f;
++    constexpr float kTriggerThreshold = 0.5f;
+ 
+     constexpr uint16_t PAD_LEFT = 0x0080u;
+     constexpr uint16_t PAD_DOWN = 0x0040u;
+@@ -23,9 +29,51 @@ namespace
+     constexpr uint16_t PAD_L1 = 0x0400u;
+     constexpr uint16_t PAD_R2 = 0x0200u;
+     constexpr uint16_t PAD_L2 = 0x0100u;
++
++    // An optional SDL_GameControllerDB file next to the executable adds
++    // mappings for controllers GLFW does not recognise as gamepads by default.
++    void loadGamepadMappingsOnce()
++    {
++        static bool loaded = false;
++        if (loaded)
++            return;
++        loaded = true;
++        const std::string path = std::string(GetApplicationDirectory()) + "gamecontrollerdb.txt";
++        if (!FileExists(path.c_str()))
++            return;
++        if (char *text = LoadFileText(path.c_str()))
++        {
++            SetGamepadMappings(text);
++            UnloadFileText(text);
++        }
++    }
++
++    // Port N follows the Nth connected gamepad, so a second controller drives
++    // player 2 instead of both ports mirroring gamepad 0.
++    int gamepadForPort(int port)
++    {
++        int seen = 0;
++        for (int i = 0; i < kMaxGamepads; ++i)
++        {
++            if (!IsGamepadAvailable(i))
++                continue;
++            if (seen == port)
++                return i;
++            ++seen;
++        }
++        return -1;
++    }
++
++    uint8_t axisToByte(float value)
++    {
++        if (value > -kStickDeadzone && value < kStickDeadzone)
++            return kPadStickCenter;
++        value = std::clamp(value, -1.0f, 1.0f);
++        return static_cast<uint8_t>(std::lround(127.5f + value * 127.5f));
++    }
+ }
+ 
+-bool PSPadBackend::readState(int /*port*/, int /*slot*/, uint8_t *data, size_t size)
++bool PSPadBackend::readState(int port, int /*slot*/, uint8_t *data, size_t size)
+ {
+     if (!data || size < 32)
+         return false;
+@@ -38,72 +86,71 @@ bool PSPadBackend::readState(int /*port*/, int /*slot*/, uint8_t *data, size_t s
+     data[4] = data[5] = data[6] = data[7] = kPadStickCenter;
+ 
+     uint16_t btns = 0xFFFFu;
+-    constexpr int kGamepad = 0;
+-    const bool useGamepad = IsGamepadAvailable(kGamepad);
+     auto clearBit = [&btns](uint16_t mask)
+     { btns &= ~mask; };
+ 
+-    if (useGamepad)
++    loadGamepadMappingsOnce();
++    const int gamepad = gamepadForPort(port);
++    if (gamepad >= 0)
+     {
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_LEFT_FACE_UP))
+-            clearBit(PAD_UP);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_LEFT_FACE_DOWN))
+-            clearBit(PAD_DOWN);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_LEFT_FACE_LEFT))
+-            clearBit(PAD_LEFT);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_LEFT_FACE_RIGHT))
+-            clearBit(PAD_RIGHT);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))
+-            clearBit(PAD_CROSS);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT))
+-            clearBit(PAD_CIRCLE);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_RIGHT_FACE_LEFT))
+-            clearBit(PAD_SQUARE);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_RIGHT_FACE_UP))
+-            clearBit(PAD_TRIANGLE);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_LEFT_TRIGGER_1))
+-            clearBit(PAD_L1);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_RIGHT_TRIGGER_1))
+-            clearBit(PAD_R1);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_LEFT_TRIGGER_2))
++        struct ButtonMap
++        {
++            int button;
++            uint16_t mask;
++        };
++        static constexpr ButtonMap kButtons[] = {
++            {GAMEPAD_BUTTON_LEFT_FACE_UP, PAD_UP},
++            {GAMEPAD_BUTTON_LEFT_FACE_DOWN, PAD_DOWN},
++            {GAMEPAD_BUTTON_LEFT_FACE_LEFT, PAD_LEFT},
++            {GAMEPAD_BUTTON_LEFT_FACE_RIGHT, PAD_RIGHT},
++            {GAMEPAD_BUTTON_RIGHT_FACE_DOWN, PAD_CROSS},
++            {GAMEPAD_BUTTON_RIGHT_FACE_RIGHT, PAD_CIRCLE},
++            {GAMEPAD_BUTTON_RIGHT_FACE_LEFT, PAD_SQUARE},
++            {GAMEPAD_BUTTON_RIGHT_FACE_UP, PAD_TRIANGLE},
++            {GAMEPAD_BUTTON_LEFT_TRIGGER_1, PAD_L1},
++            {GAMEPAD_BUTTON_RIGHT_TRIGGER_1, PAD_R1},
++            {GAMEPAD_BUTTON_LEFT_TRIGGER_2, PAD_L2},
++            {GAMEPAD_BUTTON_RIGHT_TRIGGER_2, PAD_R2},
++            {GAMEPAD_BUTTON_MIDDLE_RIGHT, PAD_START},
++            {GAMEPAD_BUTTON_MIDDLE_LEFT, PAD_SELECT},
++            {GAMEPAD_BUTTON_LEFT_THUMB, PAD_L3},
++            {GAMEPAD_BUTTON_RIGHT_THUMB, PAD_R3},
++        };
++        for (const auto &entry : kButtons)
++        {
++            if (IsGamepadButtonDown(gamepad, entry.button))
++                clearBit(entry.mask);
++        }
++        // XInput triggers are axes in [-1, 1]; not every mapping mirrors them as buttons.
++        if (GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_TRIGGER) > kTriggerThreshold)
+             clearBit(PAD_L2);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_RIGHT_TRIGGER_2))
++        if (GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_RIGHT_TRIGGER) > kTriggerThreshold)
+             clearBit(PAD_R2);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_MIDDLE_RIGHT))
+-            clearBit(PAD_START);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_MIDDLE_LEFT))
+-            clearBit(PAD_SELECT);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_LEFT_THUMB))
+-            clearBit(PAD_L3);
+-        if (IsGamepadButtonDown(kGamepad, GAMEPAD_BUTTON_RIGHT_THUMB))
+-            clearBit(PAD_R3);
+ 
+-        float lx = GetGamepadAxisMovement(kGamepad, GAMEPAD_AXIS_LEFT_X);
+-        float ly = GetGamepadAxisMovement(kGamepad, GAMEPAD_AXIS_LEFT_Y);
+-        float rx = GetGamepadAxisMovement(kGamepad, GAMEPAD_AXIS_RIGHT_X);
+-        float ry = GetGamepadAxisMovement(kGamepad, GAMEPAD_AXIS_RIGHT_Y);
+-        data[6] = static_cast<uint8_t>(128 + lx * 127);
+-        data[7] = static_cast<uint8_t>(128 + ly * 127);
+-        data[4] = static_cast<uint8_t>(128 + rx * 127);
+-        data[5] = static_cast<uint8_t>(128 + ry * 127);
++        data[6] = axisToByte(GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_X));
++        data[7] = axisToByte(GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_Y));
++        data[4] = axisToByte(GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_RIGHT_X));
++        data[5] = axisToByte(GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_RIGHT_Y));
+     }
+-    else
++
++    // The keyboard always drives player 1, together with any gamepad on port 0.
++    if (port == 0)
+     {
+-        if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W))
++        if (IsKeyDown(KEY_UP))
+             clearBit(PAD_UP);
+-        if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S))
++        if (IsKeyDown(KEY_DOWN))
+             clearBit(PAD_DOWN);
+-        if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A))
++        if (IsKeyDown(KEY_LEFT))
+             clearBit(PAD_LEFT);
+-        if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D))
++        if (IsKeyDown(KEY_RIGHT))
+             clearBit(PAD_RIGHT);
+-        if (IsKeyDown(KEY_X) || IsKeyDown(KEY_SPACE))
++        if (IsKeyDown(KEY_X) || IsKeyDown(KEY_SPACE) || IsKeyDown(KEY_K))
+             clearBit(PAD_CROSS);
+-        if (IsKeyDown(KEY_C) || IsKeyDown(KEY_ESCAPE))
++        if (IsKeyDown(KEY_C) || IsKeyDown(KEY_ESCAPE) || IsKeyDown(KEY_L))
+             clearBit(PAD_CIRCLE);
+-        if (IsKeyDown(KEY_Z) || IsKeyDown(KEY_KP_0))
++        if (IsKeyDown(KEY_Z) || IsKeyDown(KEY_KP_0) || IsKeyDown(KEY_J))
+             clearBit(PAD_SQUARE);
+-        if (IsKeyDown(KEY_V) || IsKeyDown(KEY_KP_1))
++        if (IsKeyDown(KEY_V) || IsKeyDown(KEY_KP_1) || IsKeyDown(KEY_I))
+             clearBit(PAD_TRIANGLE);
+         if (IsKeyDown(KEY_Q))
+             clearBit(PAD_L1);
+@@ -111,12 +158,20 @@ bool PSPadBackend::readState(int /*port*/, int /*slot*/, uint8_t *data, size_t s
+             clearBit(PAD_R1);
+         if (IsKeyDown(KEY_LEFT_SHIFT))
+             clearBit(PAD_L2);
+-        if (IsKeyDown(KEY_RIGHT_SHIFT))
++        if (IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_U))
+             clearBit(PAD_R2);
+         if (IsKeyDown(KEY_ENTER))
+             clearBit(PAD_START);
+-        if (IsKeyDown(KEY_TAB))
++        if (IsKeyDown(KEY_TAB) || IsKeyDown(KEY_BACKSPACE))
+             clearBit(PAD_SELECT);
++
++        // WASD is the analog left stick, used for movement; arrows stay the D-pad.
++        const int stickX = (IsKeyDown(KEY_D) ? 1 : 0) - (IsKeyDown(KEY_A) ? 1 : 0);
++        const int stickY = (IsKeyDown(KEY_S) ? 1 : 0) - (IsKeyDown(KEY_W) ? 1 : 0);
++        if (stickX != 0)
++            data[6] = stickX > 0 ? 0xFF : 0x00;
++        if (stickY != 0)
++            data[7] = stickY > 0 ? 0xFF : 0x00;
+     }
+ 
+     data[2] = static_cast<uint8_t>(btns & 0xFF);
