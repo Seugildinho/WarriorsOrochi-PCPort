@@ -67,6 +67,60 @@ OrochiPadButtonMap orochiPadButtonMapFromText(const std::string &text)
     return *at == '\0' ? map : kOrochiDefaultPadButtonMap;
 }
 
+// orochiKeyboardMapToText: mapa -> "a;b,c;...". Posicoes vazias (0) nao
+// aparecem. Ex.: acao {88, 32, 75, 0} -> "88,32,75"; acao vazia -> "".
+std::string orochiKeyboardMapToText(const OrochiKeyboardMap &map)
+{
+    std::string text;
+    for (size_t action = 0; action < map.size(); ++action)
+    {
+        if (action)
+            text += ';';
+        bool first = true;
+        for (const int code : map[action])
+            if (code > 0)
+            {
+                text += (first ? "" : ",") + std::to_string(code);
+                first = false;
+            }
+    }
+    return text;
+}
+
+// Codigo aceito no mapa de teclado (mesma regra do ps2_pad.cpp).
+static bool orochiIsValidKeyOrMouseCode(long code)
+{
+    return (code >= 1 && code <= 399) || (code >= kOrochiMouseButtonCodeBase && code <= kOrochiMouseButtonCodeBase + 6) ||
+           code == kOrochiMouseWheelUpCode || code == kOrochiMouseWheelDownCode;
+}
+
+// orochiKeyboardMapFromText: texto -> mapa. Precisa de 20 acoes, cada uma
+// com 0 a 4 codigos validos; qualquer erro devolve o padrao inteiro.
+OrochiKeyboardMap orochiKeyboardMapFromText(const std::string &text)
+{
+    OrochiKeyboardMap map{};
+    const char *at = text.c_str();
+    for (int action = 0; action < kOrochiKeyboardActionCount; ++action)
+    {
+        int slot = 0;
+        while (*at && *at != ';')
+        {
+            char *end = nullptr;
+            const long code = std::strtol(at, &end, 10);
+            if (end == at || !orochiIsValidKeyOrMouseCode(code) || slot >= kOrochiCodesPerKeyboardAction)
+                return kOrochiDefaultKeyboardMap;
+            map[action][slot++] = static_cast<int>(code);
+            at = *end == ',' ? end + 1 : end;
+        }
+        const bool lastAction = action == kOrochiKeyboardActionCount - 1;
+        if (lastAction ? *at != '\0' : *at != ';')
+            return kOrochiDefaultKeyboardMap;
+        if (!lastAction)
+            ++at;
+    }
+    return map;
+}
+
 std::filesystem::path orochiProgramFolder()
 {
     return orochiPathFromUtf8(GetApplicationDirectory());
@@ -145,6 +199,11 @@ OrochiSettings orochiLoadSettings()
             settings.keyboardPlayer = value == "2" ? 2 : value == "0" ? 0 : 1;
         else if (key == "pad_buttons_player1" || key == "pad_buttons_player2")
             settings.padButtons[key.back() == '1' ? 0 : 1] = orochiPadButtonMapFromText(value);
+        // Teclado e mouse. Ex.: "keyboard_map=265;264;...", "mouse_buttons=on".
+        else if (key == "keyboard_map")
+            settings.keyboardMap = orochiKeyboardMapFromText(value);
+        else if (key == "mouse_buttons")
+            settings.mouseButtons = value != "off";
     }
     settings.pcsx2 = settings.pcsx2 && kOrochiHasPcsx2;
     if (std::find(kScales.begin(), kScales.end(), settings.scale) == kScales.end())
@@ -184,5 +243,8 @@ void orochiSaveSettings(const OrochiSettings &settings)
          << "keyboard_player=" << settings.keyboardPlayer << '\n'
          << "pad_buttons_player1=" << orochiPadButtonMapToText(settings.padButtons[0]) << '\n'
          << "pad_buttons_player2=" << orochiPadButtonMapToText(settings.padButtons[1]) << '\n'
+         // Teclado e mouse (formato em orochi_settings.h, kOrochiKeyboardActionCount).
+         << "keyboard_map=" << orochiKeyboardMapToText(settings.keyboardMap) << '\n'
+         << "mouse_buttons=" << (settings.mouseButtons ? "on" : "off") << '\n'
          << "disc=" << settings.disc << '\n';
 }

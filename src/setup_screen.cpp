@@ -200,6 +200,95 @@ namespace
         }
     }
 
+    // ---------------------------------------------------------------------
+    // TECLADO E MOUSE: nomes mostrados na tela "Teclado e mouse"
+    // ---------------------------------------------------------------------
+    // Nome de cada acao do mapa de teclado (orochi_settings.h,
+    // kOrochiKeyboardActionCount): 0..15 botoes do PS2, 16..19 analogico.
+    const char *keyboardActionName(int action)
+    {
+        static const char *const kStickNames[4] = {"Mover ↑ (analógico)", "Mover ↓ (analógico)",
+                                                   "Mover ← (analógico)", "Mover → (analógico)"};
+        return action < kOrochiPs2ButtonCount ? kPs2ButtonNamesInMapOrder[action] : kStickNames[action - kOrochiPs2ButtonCount];
+    }
+
+    // Nome de um codigo do mapa (tecla do raylib ou botao/roda do mouse).
+    // Ex.: 88 -> "X", 32 -> "Espaço", 320 -> "Num 0", 1000 -> "Clique esquerdo",
+    // 1010 -> "Roda ↑". Codigo sem nome conhecido -> "Tecla 123".
+    std::string keyOrMouseCodeName(int code)
+    {
+        switch (code)
+        {
+        case kOrochiMouseButtonCodeBase + MOUSE_BUTTON_LEFT: return "Clique esquerdo";
+        case kOrochiMouseButtonCodeBase + MOUSE_BUTTON_RIGHT: return "Clique direito";
+        case kOrochiMouseButtonCodeBase + MOUSE_BUTTON_MIDDLE: return "Botão do meio";
+        case kOrochiMouseButtonCodeBase + MOUSE_BUTTON_SIDE: return "Mouse lateral";
+        case kOrochiMouseButtonCodeBase + MOUSE_BUTTON_EXTRA: return "Mouse extra";
+        case kOrochiMouseButtonCodeBase + MOUSE_BUTTON_FORWARD: return "Mouse avançar";
+        case kOrochiMouseButtonCodeBase + MOUSE_BUTTON_BACK: return "Mouse voltar";
+        case kOrochiMouseWheelUpCode: return "Roda ↑";
+        case kOrochiMouseWheelDownCode: return "Roda ↓";
+        case KEY_SPACE: return "Espaço";
+        case KEY_ESCAPE: return "Esc";
+        case KEY_ENTER: return "Enter";
+        case KEY_TAB: return "Tab";
+        case KEY_BACKSPACE: return "Backspace";
+        case KEY_INSERT: return "Insert";
+        case KEY_DELETE: return "Delete";
+        case KEY_UP: return "Seta ↑";
+        case KEY_DOWN: return "Seta ↓";
+        case KEY_LEFT: return "Seta ←";
+        case KEY_RIGHT: return "Seta →";
+        case KEY_PAGE_UP: return "Page Up";
+        case KEY_PAGE_DOWN: return "Page Down";
+        case KEY_HOME: return "Home";
+        case KEY_END: return "End";
+        case KEY_CAPS_LOCK: return "Caps Lock";
+        case KEY_LEFT_SHIFT: return "Shift esq.";
+        case KEY_RIGHT_SHIFT: return "Shift dir.";
+        case KEY_LEFT_CONTROL: return "Ctrl esq.";
+        case KEY_RIGHT_CONTROL: return "Ctrl dir.";
+        case KEY_LEFT_ALT: return "Alt esq.";
+        case KEY_RIGHT_ALT: return "Alt dir.";
+        case KEY_KP_ENTER: return "Enter (num.)";
+        case KEY_KP_DECIMAL: return "Num .";
+        case KEY_KP_ADD: return "Num +";
+        case KEY_KP_SUBTRACT: return "Num -";
+        case KEY_KP_MULTIPLY: return "Num *";
+        case KEY_KP_DIVIDE: return "Num /";
+        case KEY_APOSTROPHE: return "'";
+        case KEY_COMMA: return ",";
+        case KEY_MINUS: return "-";
+        case KEY_PERIOD: return ".";
+        case KEY_SLASH: return "/";
+        case KEY_SEMICOLON: return ";";
+        case KEY_EQUAL: return "=";
+        case KEY_LEFT_BRACKET: return "[";
+        case KEY_BACKSLASH: return "\\";
+        case KEY_RIGHT_BRACKET: return "]";
+        case KEY_GRAVE: return "`";
+        default: break;
+        }
+        if ((code >= KEY_A && code <= KEY_Z) || (code >= KEY_ZERO && code <= KEY_NINE))
+            return std::string(1, static_cast<char>(code));
+        if (code >= KEY_F1 && code <= KEY_F12)
+            return "F" + std::to_string(code - KEY_F1 + 1);
+        if (code >= KEY_KP_0 && code <= KEY_KP_9)
+            return "Num " + std::to_string(code - KEY_KP_0);
+        return "Tecla " + std::to_string(code);
+    }
+
+    // Todos os codigos de uma acao, separados por virgula. Ex.: acao X do
+    // padrao -> "X, Espaço, K"; acao vazia -> "—".
+    std::string keyboardActionCodesText(const OrochiKeyboardAction &codes)
+    {
+        std::string text;
+        for (const int code : codes)
+            if (code > 0)
+                text += (text.empty() ? "" : ", ") + keyOrMouseCodeName(code);
+        return text.empty() ? "—" : text;
+    }
+
     // Quantos controles o raylib acompanha (indices 0..3), igual ao jogo.
     constexpr int kSetupMaxGamepads = 4;
 
@@ -373,6 +462,202 @@ namespace
         // Ultima vez (GetTime, segundos) em que cada controle teve um botao
         // apertado: a lista "Controles conectados" acende o controle por 0,6 s.
         mutable std::array<double, kSetupMaxGamepads> m_lastGamepadActivity{-10.0, -10.0, -10.0, -10.0};
+        // Tela "Teclado e mouse":
+        //   m_keyboardFocus      : acao selecionada (0..19, ver keyboardActionName)
+        //   m_waitingForNewKey   : esperando a tecla/botao do mouse novo
+        //   m_newKeyIsAddition   : true = adiciona (Insert); false = substitui (Enter)
+        //   m_keyboardNotice     : aviso curto, ex.: "Espaço saiu de X (pular)"
+        int m_keyboardFocus = 0;
+        bool m_waitingForNewKey = false;
+        bool m_newKeyIsAddition = false;
+        std::string m_keyboardNotice;
+
+        // Retangulo da acao "action" na tela de teclado: duas colunas de 10.
+        Rectangle keyboardActionRect(int action) const
+        {
+            const float k = scale();
+            const int column = action / 10, line = action % 10;
+            return {k * (60 + column * 425), k * (kRowsTop + line * 36), k * 415, k * 32};
+        }
+
+        // Grava "code" na acao selecionada.
+        //   - O codigo sai de qualquer outra acao que o usasse (uma tecla faz
+        //     uma coisa so). Se isso acontecer, m_keyboardNotice avisa.
+        //   - Substituir: a acao fica so com esse codigo.
+        //   - Adicionar: entra na primeira posicao vazia; sem vaga (4 ja
+        //     usadas), substitui a ultima.
+        // Ex.: X tem "X, Espaço, K"; Enter + tecla N -> X tem so "N".
+        //      Insert + clique esquerdo -> "X, Espaço, K, Clique esquerdo" e o
+        //      clique sai do quadrado.
+        void assignCodeToFocusedKeyboardAction(int code)
+        {
+            OrochiKeyboardMap &map = m_settings.keyboardMap;
+            m_keyboardNotice.clear();
+            for (int action = 0; action < kOrochiKeyboardActionCount; ++action)
+                for (int &existing : map[action])
+                    if (existing == code && action != m_keyboardFocus)
+                    {
+                        existing = 0;
+                        m_keyboardNotice = keyOrMouseCodeName(code) + " saiu de \"" + keyboardActionName(action) + "\".";
+                    }
+            OrochiKeyboardAction &codes = map[m_keyboardFocus];
+            if (!m_newKeyIsAddition)
+            {
+                codes = {code, 0, 0, 0};
+                return;
+            }
+            if (std::find(codes.begin(), codes.end(), code) != codes.end())
+                return; // ja estava nesta acao
+            for (int &slot : codes)
+                if (slot == 0)
+                {
+                    slot = code;
+                    return;
+                }
+            codes.back() = code;
+        }
+
+        // Enquanto espera: a tecla, botao do mouse ou roda apertado agora
+        // (codigo do mapa), ou 0. F9, F10 e F12 sao atalhos do port e nao
+        // podem virar acao do jogo: devolvem -1 (aviso na tela).
+        int keyOrMouseCodePressedNow() const
+        {
+            for (int key = GetKeyPressed(); key != 0; key = GetKeyPressed())
+            {
+                if (key == KEY_F9 || key == KEY_F10 || key == KEY_F12)
+                    return -1;
+                if (key > 0 && key <= 399 && key != KEY_ESCAPE)
+                    return key;
+            }
+            for (int button = MOUSE_BUTTON_LEFT; button <= MOUSE_BUTTON_BACK; ++button)
+                if (IsMouseButtonPressed(button))
+                    return kOrochiMouseButtonCodeBase + button;
+            const float wheel = GetMouseWheelMove();
+            if (wheel > 0.0f)
+                return kOrochiMouseWheelUpCode;
+            if (wheel < 0.0f)
+                return kOrochiMouseWheelDownCode;
+            return 0;
+        }
+
+        // Entrada da tela "Teclado e mouse".
+        void inputKeyboardAndMousePage()
+        {
+            const bool pad = IsGamepadAvailable(0);
+            auto pressed = [](int key) { return IsKeyPressed(key) || IsKeyPressedRepeat(key); };
+            auto padPressed = [pad](int button) { return pad && IsGamepadButtonPressed(0, button); };
+            const Vector2 mouse = GetMousePosition();
+            const bool click = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+            if (m_waitingForNewKey)
+            {
+                // Esc cancela; qualquer outra tecla, botao do mouse ou roda e gravado.
+                if (IsKeyPressed(KEY_ESCAPE))
+                {
+                    m_waitingForNewKey = false;
+                    return;
+                }
+                const int code = keyOrMouseCodePressedNow();
+                if (code == -1)
+                    m_keyboardNotice = "F9, F10 e F12 são atalhos do port (captura, tela cheia, screenshot).";
+                else if (code > 0)
+                {
+                    assignCodeToFocusedKeyboardAction(code);
+                    m_waitingForNewKey = false;
+                }
+                return;
+            }
+
+            if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE) || padPressed(GAMEPAD_BUTTON_RIGHT_FACE_RIGHT) ||
+                (click && CheckCollisionPointRec(mouse, backButtonRect())))
+            {
+                closeSubPage();
+                return;
+            }
+            // Navegacao: ↑↓ dentro da coluna de 10, ←→ troca de coluna.
+            if (pressed(KEY_DOWN) || padPressed(GAMEPAD_BUTTON_LEFT_FACE_DOWN))
+                m_keyboardFocus = (m_keyboardFocus + 1) % kOrochiKeyboardActionCount;
+            if (pressed(KEY_UP) || padPressed(GAMEPAD_BUTTON_LEFT_FACE_UP))
+                m_keyboardFocus = (m_keyboardFocus + kOrochiKeyboardActionCount - 1) % kOrochiKeyboardActionCount;
+            if (pressed(KEY_RIGHT) || pressed(KEY_LEFT) || padPressed(GAMEPAD_BUTTON_LEFT_FACE_RIGHT) ||
+                padPressed(GAMEPAD_BUTTON_LEFT_FACE_LEFT))
+                m_keyboardFocus = (m_keyboardFocus + 10) % kOrochiKeyboardActionCount;
+            // Delete: esta acao volta ao padrao. R: todas. M: liga/desliga o mouse.
+            if (IsKeyPressed(KEY_DELETE))
+            {
+                m_settings.keyboardMap[m_keyboardFocus] = kOrochiDefaultKeyboardMap[m_keyboardFocus];
+                m_keyboardNotice.clear();
+            }
+            if (IsKeyPressed(KEY_R))
+            {
+                m_settings.keyboardMap = kOrochiDefaultKeyboardMap;
+                m_keyboardNotice.clear();
+            }
+            if (IsKeyPressed(KEY_M))
+                m_settings.mouseButtons = !m_settings.mouseButtons;
+            // Enter/Espaco/A/clique: substituir. Insert: adicionar. A tecla ou
+            // clique que abriu a espera nao conta (a fila de teclas e
+            // esvaziada aqui e o clique so vale neste quadro).
+            const bool replace = IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER) || IsKeyPressed(KEY_SPACE) ||
+                                 padPressed(GAMEPAD_BUTTON_RIGHT_FACE_DOWN);
+            const bool add = IsKeyPressed(KEY_INSERT);
+            for (int action = 0; action < kOrochiKeyboardActionCount; ++action)
+                if (CheckCollisionPointRec(mouse, keyboardActionRect(action)))
+                {
+                    if (GetMouseDelta().x != 0.0f || GetMouseDelta().y != 0.0f)
+                        m_keyboardFocus = action;
+                    if (click)
+                    {
+                        m_keyboardFocus = action;
+                        m_newKeyIsAddition = false;
+                        m_waitingForNewKey = true;
+                    }
+                }
+            if (replace || add)
+            {
+                m_newKeyIsAddition = add;
+                m_waitingForNewKey = true;
+            }
+            if (m_waitingForNewKey)
+                while (GetKeyPressed() != 0)
+                {
+                }
+        }
+
+        // Desenho do conteudo da tela "Teclado e mouse" (dentro do painel) e
+        // o texto de ajuda; o resto (titulo, Voltar) e de drawSubPage.
+        std::string drawKeyboardAndMousePage(float k) const
+        {
+            const Color gold{226, 186, 92, 255}, ink{232, 234, 240, 255}, focus{60, 82, 130, 255};
+            for (int action = 0; action < kOrochiKeyboardActionCount; ++action)
+            {
+                const Rectangle r = keyboardActionRect(action);
+                const bool focused = action == m_keyboardFocus;
+                if (focused)
+                    DrawRectangleRounded(r, 0.2f, 6, m_waitingForNewKey ? Color{130, 90, 40, 255} : focus);
+                text(m_fonts.small, keyboardActionName(action), r.x + k * 12, r.y + k * 6, k * 19, ink);
+                const bool changed = m_settings.keyboardMap[action] != kOrochiDefaultKeyboardMap[action];
+                const std::string shown = focused && m_waitingForNewKey ? (m_newKeyIsAddition ? "adicionar: aperte…" : "aperte…")
+                                                                        : keyboardActionCodesText(m_settings.keyboardMap[action]);
+                // Texto longo encolhe para caber na metade direita da linha.
+                const float room = r.width * 0.55f, wide = MeasureTextEx(m_fonts.small, shown.c_str(), k * 19, 0.0f).x;
+                const float size = k * 19 * std::min(1.0f, room / std::max(wide, 1.0f));
+                const float width = MeasureTextEx(m_fonts.small, shown.c_str(), size, 0.0f).x;
+                text(m_fonts.small, shown, r.x + r.width - width - k * 12, r.y + k * 6, size, changed ? gold : ink);
+            }
+            // Estado do mouse, acima do painel, a direita do titulo.
+            const std::string mouseState = std::string("Mouse no jogo: ") + (m_settings.mouseButtons ? "ligado" : "desligado") + " (M)";
+            const float mouseWidth = MeasureTextEx(m_fonts.small, mouseState.c_str(), k * 20, 0.0f).x;
+            text(m_fonts.small, mouseState, k * 900 - mouseWidth, k * 128, k * 20, m_settings.mouseButtons ? gold : ink);
+            if (m_waitingForNewKey)
+                return std::string("Aperte a tecla, o botão do mouse ou gire a roda para \"") + keyboardActionName(m_keyboardFocus) +
+                       "\". Esc cancela." + (m_keyboardNotice.empty() ? "" : " " + m_keyboardNotice);
+            std::string about = "Enter: trocar (só a nova tecla). Insert: adicionar mais uma (até 4). Delete: padrão desta ação. "
+                                "R: restaura todas. M: liga/desliga o mouse. Atalhos fixos: F10 tela cheia, F12 screenshot, Alt+F4 fechar.";
+            if (!m_keyboardNotice.empty())
+                about = m_keyboardNotice + " " + about;
+            return about;
+        }
 
         // Abre uma tela extra. Esc deixa de fechar o Setup (raylib fecha a
         // janela com Esc por padrao) e passa a significar "voltar".
@@ -455,6 +740,12 @@ namespace
         // Teclado/controle/mouse das telas extras.
         void inputSubPage()
         {
+            // A tela "Teclado e mouse" tem entrada propria (captura de teclas).
+            if (m_page == Page::KeyboardKeys)
+            {
+                inputKeyboardAndMousePage();
+                return;
+            }
             const bool pad = IsGamepadAvailable(0);
             auto pressed = [](int key) { return IsKeyPressed(key) || IsKeyPressedRepeat(key); };
             auto padPressed = [pad](int button) { return pad && IsGamepadButtonPressed(0, button); };
@@ -537,23 +828,28 @@ namespace
             text(m_fonts.title, "WARRIORS OROCHI", k * 60, k * 30, k * 44, gold);
             const char *title = m_page == Page::ButtonsPlayer1   ? "Controles — botões do jogador 1"
                               : m_page == Page::ButtonsPlayer2 ? "Controles — botões do jogador 2"
-                                                               : "Controles — teclas do teclado";
+                                                               // Texto original desativado:
+                                                               // : "Controles — teclas do teclado";
+                                                               : "Controles — teclado e mouse";
             text(m_fonts.text, title, k * 60, k * 122, k * 26, gold);
             DrawRectangleRec({k * 50, k * 168, k * 860, k * (kPanelBottom - 168)}, panel);
 
             std::string about;
             if (m_page == Page::KeyboardKeys)
             {
-                // A lista que antes ficava direto na aba Controles.
-                float y = kRowsTop - 6;
-                for (const KeyLine &line : kKeys)
-                {
-                    text(m_fonts.small, line.action, k * 76, k * y, k * 20, ink);
-                    text(m_fonts.small, line.keys, k * 460, k * y, k * 20, gold);
-                    y += 29;
-                }
-                about = "O teclado controla o jogador escolhido em \"Teclado controla\". As teclas ainda não podem "
-                        "ser trocadas.";
+                // Bloco original desativado: a tela so listava as teclas fixas
+                // (kKeys). Agora mostra e edita o mapa de teclado e mouse.
+                // // A lista que antes ficava direto na aba Controles.
+                // float y = kRowsTop - 6;
+                // for (const KeyLine &line : kKeys)
+                // {
+                //     text(m_fonts.small, line.action, k * 76, k * y, k * 20, ink);
+                //     text(m_fonts.small, line.keys, k * 460, k * y, k * 20, gold);
+                //     y += 29;
+                // }
+                // about = "O teclado controla o jogador escolhido em \"Teclado controla\". As teclas ainda não podem "
+                //         "ser trocadas.";
+                about = drawKeyboardAndMousePage(k);
             }
             else
             {
@@ -581,7 +877,14 @@ namespace
             const Rectangle back = backButtonRect();
             DrawRectangleRounded(back, 0.25f, 6, CheckCollisionPointRec(GetMousePosition(), back) ? focus : Color{44, 50, 66, 255});
             centered(m_fonts.text, "Voltar", back, k * 26, ink);
-            text(m_fonts.small, "↑↓←→ escolher    Enter trocar    Delete padrão    R restaurar todos    Esc voltar",
+            // Linhas originais desativadas: a tela de teclado tem atalhos a mais
+            // (Insert, M), entao a dica do rodape depende da tela.
+            // text(m_fonts.small, "↑↓←→ escolher    Enter trocar    Delete padrão    R restaurar todos    Esc voltar",
+            //      k * 60, k * 730, k * 18, dim);
+            text(m_fonts.small,
+                 m_page == Page::KeyboardKeys
+                     ? "↑↓←→ escolher    Enter trocar    Insert adicionar    Delete padrão    R restaurar    M mouse    Esc voltar"
+                     : "↑↓←→ escolher    Enter trocar    Delete padrão    R restaurar todos    Esc voltar",
                  k * 60, k * 730, k * 18, dim);
             EndDrawing();
         }
@@ -693,7 +996,9 @@ namespace
             case Row::KeyboardPlayer: return "Teclado controla";
             case Row::ButtonsPlayer1: return "Botões do jogador 1";
             case Row::ButtonsPlayer2: return "Botões do jogador 2";
-            case Row::KeyboardKeys: return "Teclas do teclado";
+            // Linha original desativada: a tela agora tambem edita teclas e mouse.
+            // case Row::KeyboardKeys: return "Teclas do teclado";
+            case Row::KeyboardKeys: return "Teclado e mouse";
             default: return "";
             }
         }
@@ -804,8 +1109,18 @@ namespace
                 return (changed == 0 ? std::string("Padrão") : std::to_string(changed) + " trocado" + (changed > 1 ? "s" : "")) +
                        " — Enter para configurar";
             }
-            case Row::KeyboardKeys:
-                return "Enter para ver";
+            // Linhas originais desativadas: a linha agora resume o mapa de teclas.
+            // case Row::KeyboardKeys:
+            //     return "Enter para ver";
+            case Row::KeyboardKeys: {
+                // Ex.: "Padrão · mouse ligado — Enter para configurar" ou
+                //      "3 trocadas · mouse desligado — Enter para configurar".
+                int changed = 0;
+                for (int action = 0; action < kOrochiKeyboardActionCount; ++action)
+                    changed += s.keyboardMap[action] != kOrochiDefaultKeyboardMap[action];
+                return (changed == 0 ? std::string("Padrão") : std::to_string(changed) + " trocada" + (changed > 1 ? "s" : "")) +
+                       (s.mouseButtons ? " · mouse ligado" : " · mouse desligado") + " — Enter para configurar";
+            }
             default:
                 return "";
             }
@@ -875,8 +1190,12 @@ namespace
             case Row::ButtonsPlayer2:
                 return "Troca qual botão do controle faz cada ação do PS2 (por exemplo, pular no B em vez do A). "
                        "Cada jogador tem o seu próprio mapa.";
+            // Linhas originais desativadas (a tela agora edita as teclas):
+            // case Row::KeyboardKeys:
+            //     return "Mostra as teclas do teclado e os atalhos do port (tela cheia, screenshot).";
             case Row::KeyboardKeys:
-                return "Mostra as teclas do teclado e os atalhos do port (tela cheia, screenshot).";
+                return "Troca as teclas do teclado e os botões do mouse de cada ação (até 4 por ação), e liga ou "
+                       "desliga o mouse no jogo. Padrão: clique esquerdo ataca, direito faz o ataque carregado.";
             case Row::Play:
                 return "Salva as opções e abre o jogo.";
             case Row::Save:

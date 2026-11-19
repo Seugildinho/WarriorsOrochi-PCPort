@@ -46,6 +46,57 @@ inline constexpr OrochiPadButtonMap kOrochiDefaultPadButtonMap = {1, 3, 4, 2, 7,
 std::string orochiPadButtonMapToText(const OrochiPadButtonMap &map);
 OrochiPadButtonMap orochiPadButtonMapFromText(const std::string &text);
 
+// ---------------------------------------------------------------------------
+// TECLADO E MOUSE: mapa de teclas (patch 0055, ps2_pad.cpp). 20 acoes:
+//   0..15 = botoes do PS2 na mesma ordem do mapa do controle (acima)
+//   16 analogico cima, 17 baixo, 18 esquerda, 19 direita
+// Cada acao tem ate 4 codigos (0 = vazio):
+//   1..399     tecla (enum KeyboardKey do raylib: 88 = X, 32 = Espaco,
+//              265 = seta para cima, 340 = Shift esquerdo...)
+//   1000..1006 botao do mouse (1000 + MOUSE_BUTTON_*: 1000 esquerdo,
+//              1001 direito, 1002 meio, 1003 lateral, 1004 extra,
+//              1005 avancar, 1006 voltar)
+//   1010 / 1011 roda do mouse para cima / para baixo
+// Formato de texto (ini e OROCHI_KEYBOARD_MAP): acoes separadas por ";",
+// codigos por ",". Ex. do comeco do padrao: "265;264;263;262;88,32,75;...".
+// O padrao e IGUAL ao kOrochiDefaultKeyboardAndMouseMap do ps2_pad.cpp; se
+// mudar um, mude o outro.
+// ---------------------------------------------------------------------------
+inline constexpr int kOrochiKeyboardActionCount = 20;
+inline constexpr int kOrochiCodesPerKeyboardAction = 4;
+inline constexpr int kOrochiMouseButtonCodeBase = 1000;
+inline constexpr int kOrochiMouseWheelUpCode = 1010;
+inline constexpr int kOrochiMouseWheelDownCode = 1011;
+using OrochiKeyboardAction = std::array<int, kOrochiCodesPerKeyboardAction>;
+using OrochiKeyboardMap = std::array<OrochiKeyboardAction, kOrochiKeyboardActionCount>;
+// Teclas de sempre + mouse (esquerdo = quadrado, direito = triangulo,
+// meio = circulo). Numeros = KeyboardKey do raylib (comentados ao lado).
+inline constexpr OrochiKeyboardMap kOrochiDefaultKeyboardMap = {{
+    {265},                 // cima: seta para cima
+    {264},                 // baixo: seta para baixo
+    {263},                 // esquerda: seta para a esquerda
+    {262},                 // direita: seta para a direita
+    {88, 32, 75},          // X: X, Espaco, K
+    {67, 256, 76, 1002},   // circulo: C, Esc, L, botao do meio do mouse
+    {90, 320, 74, 1000},   // quadrado: Z, 0 do teclado numerico, J, clique esquerdo
+    {86, 321, 73, 1001},   // triangulo: V, 1 do teclado numerico, I, clique direito
+    {81},                  // L1: Q
+    {69},                  // R1: E
+    {340},                 // L2: Shift esquerdo
+    {344, 85},             // R2: Shift direito, U
+    {257},                 // Start: Enter
+    {258, 259},            // Select: Tab, Backspace
+    {},                    // L3: nenhuma
+    {},                    // R3: nenhuma
+    {87},                  // analogico cima: W
+    {83},                  // analogico baixo: S
+    {65},                  // analogico esquerda: A
+    {68},                  // analogico direita: D
+}};
+// Texto <-> mapa (texto invalido devolve o padrao inteiro).
+std::string orochiKeyboardMapToText(const OrochiKeyboardMap &map);
+OrochiKeyboardMap orochiKeyboardMapFromText(const std::string &text);
+
 struct OrochiSettings
 {
     // Campos de imagem/resolucao:
@@ -81,6 +132,10 @@ struct OrochiSettings
     std::array<std::string, 2> padPlayer{"auto", "auto"};
     int keyboardPlayer = 1;
     std::array<OrochiPadButtonMap, 2> padButtons{kOrochiDefaultPadButtonMap, kOrochiDefaultPadButtonMap};
+    // Teclado e mouse (patch 0055): o mapa de teclas e se os botoes do
+    // mouse valem no jogo (desligado = mouse ignorado, mapa preservado).
+    OrochiKeyboardMap keyboardMap = kOrochiDefaultKeyboardMap;
+    bool mouseButtons = true;
     std::string disc; // full path, in UTF-8; empty until one is chosen
 
     // wide(): 16:9 de fato ativo (so funciona com o renderizador PCSX2).

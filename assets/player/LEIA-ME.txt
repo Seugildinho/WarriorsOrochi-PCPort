@@ -32,6 +32,12 @@ CONTROLES DE JOGO (aba Controles do Setup)
 - Botoes do jogador 1 / 2: escolha a acao, aperte Enter (ou clique) e depois
   o botao do controle que vai fazer essa acao. Se o botao ja fizer outra
   acao, as duas trocam. Delete volta uma acao ao padrao, R restaura todas.
+- Teclado e mouse: cada acao (botoes do PS2 e o analogico de movimento) aceita
+  ate 4 teclas ou botoes do mouse (inclusive a roda). Enter troca, Insert
+  adiciona mais uma, Delete volta a acao ao padrao, R restaura todas e M liga
+  ou desliga o mouse no jogo. Padrao do mouse: clique esquerdo = quadrado
+  (ataque normal), clique direito = triangulo (ataque carregado), botao do
+  meio = circulo (musou). F9, F10 e F12 continuam sendo atalhos do port.
 - O log data\port.log registra qual controle ficou com cada jogador, por
   exemplo: "[Orochi:pad] jogador 1: controle 0 (Xbox Controller)".
 

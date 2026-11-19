@@ -1,0 +1,271 @@
+diff --git a/ps2xRuntime/src/lib/ps2_pad.cpp b/ps2xRuntime/src/lib/ps2_pad.cpp
+index 2a66df4..c7fd0a4 100644
+--- a/ps2xRuntime/src/lib/ps2_pad.cpp
++++ b/ps2xRuntime/src/lib/ps2_pad.cpp
+@@ -9,6 +9,8 @@
+ #include <array>
+ #include <cstdlib>
+ #include <iostream>
++// [patch 0055] Relogio para segurar o toque da roda do mouse (isMouseWheelHeld).
++#include <chrono>
+ 
+ namespace
+ {
+@@ -313,6 +315,153 @@ namespace
+     }
+ }
+ 
++// =========================================================================
++// [Warriors Orochi port, patch 0055] TECLADO E MOUSE CONFIGURAVEIS
++// =========================================================================
++// O Setup (aba Controles > "Teclado e mouse") grava o mapa no ini e o jogo o
++// repassa em variaveis de ambiente (src/game_settings.cpp):
++//
++//   OROCHI_KEYBOARD_MAP: 20 acoes separadas por ";", cada uma com ate 4
++//     codigos separados por ",". Acao sem nenhum codigo = vazia ("").
++//     Ordem das acoes: 0..15 = botoes do PS2 na mesma ordem do mapa do
++//     controle (cima, baixo, esquerda, direita, X, circulo, quadrado,
++//     triangulo, L1, R1, L2, R2, Start, Select, L3, R3) e 16..19 = analogico
++//     esquerdo (cima, baixo, esquerda, direita).
++//     Codigos: 1..399 = tecla (enum KeyboardKey do raylib, ex.: 88 = X,
++//     32 = Espaco, 265 = seta para cima); 1000..1006 = botao do mouse
++//     (1000 + MOUSE_BUTTON_*, ex.: 1000 = esquerdo, 1001 = direito,
++//     1002 = meio); 1010 = roda para cima; 1011 = roda para baixo.
++//     Ex. (comeco do padrao): "265;264;263;262;88,32,75;67,256,76,1002;..."
++//   OROCHI_MOUSE_BUTTONS: "0" desliga todos os codigos de mouse (o mapa
++//     continua guardado); qualquer outro valor ou ausente = ligado.
++// Mapa ausente ou invalido = padrao (as teclas de sempre + mouse).
++namespace
++{
++    constexpr int kOrochiKeyboardActionCount = 20;
++    constexpr int kOrochiCodesPerKeyboardAction = 4;
++    constexpr int kOrochiMouseButtonCodeBase = 1000;   // 1000 + MOUSE_BUTTON_LEFT ... _BACK (0..6)
++    constexpr int kOrochiMouseWheelUpCode = 1010;
++    constexpr int kOrochiMouseWheelDownCode = 1011;
++    using OrochiKeyboardAndMouseMap =
++        std::array<std::array<int, kOrochiCodesPerKeyboardAction>, kOrochiKeyboardActionCount>;
++
++    // Padrao = as teclas fixas que existiam antes (bloco comentado em
++    // readState) + mouse: clique esquerdo = quadrado (ataque normal), clique
++    // direito = triangulo (ataque carregado), botao do meio = circulo (musou).
++    // 0 = posicao vazia.
++    const OrochiKeyboardAndMouseMap kOrochiDefaultKeyboardAndMouseMap = {{
++        {KEY_UP}, {KEY_DOWN}, {KEY_LEFT}, {KEY_RIGHT},
++        {KEY_X, KEY_SPACE, KEY_K},
++        {KEY_C, KEY_ESCAPE, KEY_L, kOrochiMouseButtonCodeBase + MOUSE_BUTTON_MIDDLE},
++        {KEY_Z, KEY_KP_0, KEY_J, kOrochiMouseButtonCodeBase + MOUSE_BUTTON_LEFT},
++        {KEY_V, KEY_KP_1, KEY_I, kOrochiMouseButtonCodeBase + MOUSE_BUTTON_RIGHT},
++        {KEY_Q}, {KEY_E}, {KEY_LEFT_SHIFT}, {KEY_RIGHT_SHIFT, KEY_U},
++        {KEY_ENTER}, {KEY_TAB, KEY_BACKSPACE}, {}, {},
++        {KEY_W}, {KEY_S}, {KEY_A}, {KEY_D},
++    }};
++
++    // Codigo aceito no mapa? Teclas 1..399, mouse 1000..1006, roda 1010/1011.
++    bool isValidKeyOrMouseCode(long code)
++    {
++        return (code >= 1 && code <= 399) ||
++               (code >= kOrochiMouseButtonCodeBase && code <= kOrochiMouseButtonCodeBase + MOUSE_BUTTON_BACK) ||
++               code == kOrochiMouseWheelUpCode || code == kOrochiMouseWheelDownCode;
++    }
++
++    // Le OROCHI_KEYBOARD_MAP. Precisa de exatamente 20 acoes (19 ";"), cada
++    // uma com 0 a 4 codigos validos; qualquer erro devolve o padrao inteiro.
++    OrochiKeyboardAndMouseMap readKeyboardAndMouseMapFromEnvironment()
++    {
++        const char *text = std::getenv("OROCHI_KEYBOARD_MAP");
++        if (!text || !*text)
++            return kOrochiDefaultKeyboardAndMouseMap;
++        OrochiKeyboardAndMouseMap map{};
++        const char *at = text;
++        for (int action = 0; action < kOrochiKeyboardActionCount; ++action)
++        {
++            int slot = 0;
++            while (*at && *at != ';')
++            {
++                char *end = nullptr;
++                const long code = std::strtol(at, &end, 10);
++                if (end == at || !isValidKeyOrMouseCode(code) || slot >= kOrochiCodesPerKeyboardAction)
++                    return kOrochiDefaultKeyboardAndMouseMap;
++                map[action][slot++] = static_cast<int>(code);
++                at = *end == ',' ? end + 1 : end;
++            }
++            const bool lastAction = action == kOrochiKeyboardActionCount - 1;
++            if (lastAction ? *at != '\0' : *at != ';')
++                return kOrochiDefaultKeyboardAndMouseMap; // acoes demais ou de menos
++            if (!lastAction)
++                ++at;
++        }
++        return map;
++    }
++
++    struct OrochiKeyboardAndMouseSettings
++    {
++        OrochiKeyboardAndMouseMap map;
++        bool mouseButtonsEnabled = true;
++    };
++
++    // Variaveis lidas uma vez so (nao mudam durante o jogo).
++    const OrochiKeyboardAndMouseSettings &keyboardAndMouseSettingsFromEnvironment()
++    {
++        static const OrochiKeyboardAndMouseSettings settings = [] {
++            OrochiKeyboardAndMouseSettings loaded;
++            loaded.map = readKeyboardAndMouseMapFromEnvironment();
++            const char *mouse = std::getenv("OROCHI_MOUSE_BUTTONS");
++            loaded.mouseButtonsEnabled = !(mouse && std::strcmp(mouse, "0") == 0);
++            return loaded;
++        }();
++        return settings;
++    }
++
++    // A roda do mouse so gera um "toque" de um quadro. O jogo pode ler o
++    // controle num quadro diferente, entao o toque vale como botao apertado
++    // por 150 ms. Ex.: girar a roda para cima uma vez = R1 (se mapeado)
++    // apertado por ~9 quadros.
++    bool isMouseWheelHeld(int wheelCode)
++    {
++        using Clock = std::chrono::steady_clock;
++        static Clock::time_point lastUp{}, lastDown{};
++        const Clock::time_point now = Clock::now();
++        const float wheel = GetMouseWheelMove();
++        if (wheel > 0.0f)
++            lastUp = now;
++        if (wheel < 0.0f)
++            lastDown = now;
++        const Clock::time_point last = wheelCode == kOrochiMouseWheelUpCode ? lastUp : lastDown;
++        return last != Clock::time_point{} && now - last < std::chrono::milliseconds(150);
++    }
++
++    // Um codigo do mapa esta apertado agora?
++    //   tecla -> IsKeyDown; mouse -> IsMouseButtonDown (se o mouse estiver
++    //   ligado); roda -> isMouseWheelHeld; 0 (vazio) -> nunca.
++    bool isKeyOrMouseCodeDown(int code, bool mouseButtonsEnabled)
++    {
++        if (code <= 0)
++            return false;
++        if (code < kOrochiMouseButtonCodeBase)
++            return IsKeyDown(code);
++        if (!mouseButtonsEnabled)
++            return false;
++        if (code == kOrochiMouseWheelUpCode || code == kOrochiMouseWheelDownCode)
++            return isMouseWheelHeld(code);
++        return IsMouseButtonDown(code - kOrochiMouseButtonCodeBase);
++    }
++
++    // Alguma das (ate 4) teclas/botoes de uma acao esta apertada?
++    bool isAnyKeyOrMouseCodeOfActionDown(const std::array<int, kOrochiCodesPerKeyboardAction> &codes,
++                                         bool mouseButtonsEnabled)
++    {
++        for (const int code : codes)
++            if (isKeyOrMouseCodeDown(code, mouseButtonsEnabled))
++                return true;
++        return false;
++    }
++}
++
+ bool PSPadBackend::readState(int port, int /*slot*/, uint8_t *data, size_t size)
+ {
+     if (!data || size < 32)
+@@ -401,42 +550,67 @@ bool PSPadBackend::readState(int port, int /*slot*/, uint8_t *data, size_t size)
+     // if (port == 0)
+     if (port == controllerSettingsFromEnvironment().keyboardPlayerPort)
+     {
+-        if (IsKeyDown(KEY_UP))
+-            clearBit(PAD_UP);
+-        if (IsKeyDown(KEY_DOWN))
+-            clearBit(PAD_DOWN);
+-        if (IsKeyDown(KEY_LEFT))
+-            clearBit(PAD_LEFT);
+-        if (IsKeyDown(KEY_RIGHT))
+-            clearBit(PAD_RIGHT);
+-        if (IsKeyDown(KEY_X) || IsKeyDown(KEY_SPACE) || IsKeyDown(KEY_K))
+-            clearBit(PAD_CROSS);
+-        if (IsKeyDown(KEY_C) || IsKeyDown(KEY_ESCAPE) || IsKeyDown(KEY_L))
+-            clearBit(PAD_CIRCLE);
+-        if (IsKeyDown(KEY_Z) || IsKeyDown(KEY_KP_0) || IsKeyDown(KEY_J))
+-            clearBit(PAD_SQUARE);
+-        if (IsKeyDown(KEY_V) || IsKeyDown(KEY_KP_1) || IsKeyDown(KEY_I))
+-            clearBit(PAD_TRIANGLE);
+-        if (IsKeyDown(KEY_Q))
+-            clearBit(PAD_L1);
+-        if (IsKeyDown(KEY_E))
+-            clearBit(PAD_R1);
+-        if (IsKeyDown(KEY_LEFT_SHIFT))
+-            clearBit(PAD_L2);
+-        if (IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_U))
+-            clearBit(PAD_R2);
+-        if (IsKeyDown(KEY_ENTER))
+-            clearBit(PAD_START);
+-        if (IsKeyDown(KEY_TAB) || IsKeyDown(KEY_BACKSPACE))
+-            clearBit(PAD_SELECT);
+-
+-        // WASD is the analog left stick, used for movement; arrows stay the D-pad.
+-        const int stickX = (IsKeyDown(KEY_D) ? 1 : 0) - (IsKeyDown(KEY_A) ? 1 : 0);
+-        const int stickY = (IsKeyDown(KEY_S) ? 1 : 0) - (IsKeyDown(KEY_W) ? 1 : 0);
+-        if (stickX != 0)
+-            data[6] = stickX > 0 ? 0xFF : 0x00;
+-        if (stickY != 0)
+-            data[7] = stickY > 0 ? 0xFF : 0x00;
++        // [patch 0055] Bloco original desativado (teclas fixas). As teclas agora
++        // vem do mapa configuravel do Setup (aba Controles > "Teclado e mouse"),
++        // que tambem aceita botoes do mouse. O padrao reproduz exatamente estas
++        // teclas, mais 3 botoes do mouse (veja kOrochiDefaultKeyboardAndMouseMap).
++        // if (IsKeyDown(KEY_UP))
++        // clearBit(PAD_UP);
++        // if (IsKeyDown(KEY_DOWN))
++        // clearBit(PAD_DOWN);
++        // if (IsKeyDown(KEY_LEFT))
++        // clearBit(PAD_LEFT);
++        // if (IsKeyDown(KEY_RIGHT))
++        // clearBit(PAD_RIGHT);
++        // if (IsKeyDown(KEY_X) || IsKeyDown(KEY_SPACE) || IsKeyDown(KEY_K))
++        // clearBit(PAD_CROSS);
++        // if (IsKeyDown(KEY_C) || IsKeyDown(KEY_ESCAPE) || IsKeyDown(KEY_L))
++        // clearBit(PAD_CIRCLE);
++        // if (IsKeyDown(KEY_Z) || IsKeyDown(KEY_KP_0) || IsKeyDown(KEY_J))
++        // clearBit(PAD_SQUARE);
++        // if (IsKeyDown(KEY_V) || IsKeyDown(KEY_KP_1) || IsKeyDown(KEY_I))
++        // clearBit(PAD_TRIANGLE);
++        // if (IsKeyDown(KEY_Q))
++        // clearBit(PAD_L1);
++        // if (IsKeyDown(KEY_E))
++        // clearBit(PAD_R1);
++        // if (IsKeyDown(KEY_LEFT_SHIFT))
++        // clearBit(PAD_L2);
++        // if (IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_U))
++        // clearBit(PAD_R2);
++        // if (IsKeyDown(KEY_ENTER))
++        // clearBit(PAD_START);
++        // if (IsKeyDown(KEY_TAB) || IsKeyDown(KEY_BACKSPACE))
++        // clearBit(PAD_SELECT);
++        //
++        // // WASD is the analog left stick, used for movement; arrows stay the D-pad.
++        // const int stickX = (IsKeyDown(KEY_D) ? 1 : 0) - (IsKeyDown(KEY_A) ? 1 : 0);
++        // const int stickY = (IsKeyDown(KEY_S) ? 1 : 0) - (IsKeyDown(KEY_W) ? 1 : 0);
++        // if (stickX != 0)
++        // data[6] = stickX > 0 ? 0xFF : 0x00;
++        // if (stickY != 0)
++        // data[7] = stickY > 0 ? 0xFF : 0x00;
++
++        // [patch 0055] Botoes do PS2 (acoes 0..15 do mapa): qualquer tecla ou
++        // botao do mouse da lista da acao aperta o botao. Ex.: padrao do X =
++        // X, Espaco ou K.
++        const auto &keyboardAndMouse = keyboardAndMouseSettingsFromEnvironment();
++        for (size_t ps2Button = 0; ps2Button < kOrochiPs2ButtonMasksInSettingsOrder.size(); ++ps2Button)
++            if (isAnyKeyOrMouseCodeOfActionDown(keyboardAndMouse.map[ps2Button], keyboardAndMouse.mouseButtonsEnabled))
++                clearBit(kOrochiPs2ButtonMasksInSettingsOrder[ps2Button]);
++
++        // [patch 0055] Analogico esquerdo (acoes 16 cima, 17 baixo, 18 esquerda,
++        // 19 direita; padrao W, S, A, D). Inclinacao total, como antes:
++        // data[6] = eixo X (0x00 esquerda, 0xFF direita), data[7] = eixo Y.
++        auto stickActionDown = [&keyboardAndMouse](int action) {
++            return isAnyKeyOrMouseCodeOfActionDown(keyboardAndMouse.map[action], keyboardAndMouse.mouseButtonsEnabled);
++        };
++        const int keyboardStickX = (stickActionDown(19) ? 1 : 0) - (stickActionDown(18) ? 1 : 0);
++        const int keyboardStickY = (stickActionDown(17) ? 1 : 0) - (stickActionDown(16) ? 1 : 0);
++        if (keyboardStickX != 0)
++            data[6] = keyboardStickX > 0 ? 0xFF : 0x00;
++        if (keyboardStickY != 0)
++            data[7] = keyboardStickY > 0 ? 0xFF : 0x00;
+     }
+ 
+     data[2] = static_cast<uint8_t>(btns & 0xFF);

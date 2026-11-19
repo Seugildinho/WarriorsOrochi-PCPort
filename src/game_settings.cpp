@@ -83,6 +83,10 @@ void applyOrochiSettings(const OrochiSettings &settings)
     setDefault("OROCHI_KEYBOARD_PLAYER", std::to_string(settings.keyboardPlayer));
     setDefault("OROCHI_PAD_BUTTONS_PLAYER1", orochiPadButtonMapToText(settings.padButtons[0]));
     setDefault("OROCHI_PAD_BUTTONS_PLAYER2", orochiPadButtonMapToText(settings.padButtons[1]));
+    // Teclado e mouse (patch 0055). Ex.: OROCHI_KEYBOARD_MAP=265;264;263;262;88,32,75;...
+    // OROCHI_MOUSE_BUTTONS=0 desliga os botoes do mouse no jogo.
+    setDefault("OROCHI_KEYBOARD_MAP", orochiKeyboardMapToText(settings.keyboardMap));
+    setDefault("OROCHI_MOUSE_BUTTONS", settings.mouseButtons ? "1" : "0");
     setDefault("OROCHI_PCSX2_FIXES", std::string("deinterlace=") + (settings.deinterlace ? "0" : "1") +
                                          ",fxaa=" + (settings.fxaa ? "1" : "0") +
                                          (settings.seamFix ? ",edge=1,hpo=5" : ",edge=0"));
