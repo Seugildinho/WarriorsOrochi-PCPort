@@ -1,0 +1,11 @@
+# ---------------------------------------------------------------------------
+# Fins de linha que o git NAO pode converter.
+# ---------------------------------------------------------------------------
+# Os patches do PS2Recomp e do PCSX2 (patches/*.patch e patches/pcsx2/*.patch)
+# precisam ficar com fim de linha LF. No Windows o git costuma vir com
+# core.autocrlf=true e converteria os patches para CRLF ao baixar o projeto;
+# ai "git apply" recusa todos ("patch does not apply" ja no 0001) e o
+# configure-native / make install / make reinstall falham.
+# Exemplo de sintoma: tools/runtime_patches.py para em 0001-dmac-addressing-...
+# Com a regra abaixo, os patches saem sempre com LF, em qualquer maquina.
+*.patch text eol=lf
