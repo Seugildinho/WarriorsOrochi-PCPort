@@ -22,6 +22,12 @@ struct OrochiWindowSize
 
 struct OrochiSettings
 {
+    // Campos de imagem/resolucao:
+    //   pcsx2      : usa o renderizador do PCSX2 (necessario para 16:9 e upscale)
+    //   scale      : multiplicador da resolucao interna (1, 2, 3, 4, 5, 6 ou 8)
+    //                ex.: 2 -> 1280x896 internos (2 x 640x448 do PS2)
+    //   widescreen : 16:9 (true) ou 4:3 (false)
+    //   fullscreen : abre em tela cheia sem borda (F10 alterna no jogo)
     bool pcsx2 = kOrochiHasPcsx2;
     int scale = 2;
     bool widescreen = true;
@@ -41,10 +47,14 @@ struct OrochiSettings
     bool cheatInvincible = false, cheatLife = false, cheatMusou = false, cheatPoints = false;
     std::string disc; // full path, in UTF-8; empty until one is chosen
 
+    // wide(): 16:9 de fato ativo (so funciona com o renderizador PCSX2).
+    // sizes(): lista de tamanhos de janela do formato ativo (16:9 ou 4:3).
     bool wide() const { return pcsx2 && widescreen; }
     const std::vector<OrochiWindowSize> &sizes() const;
 };
 
+// Lista de multiplicadores de resolucao oferecidos no Setup.
+// Ler / gravar orochi-settings.ini (ao lado dos executaveis).
 const std::vector<int> &orochiScales();
 OrochiSettings orochiLoadSettings();
 void orochiSaveSettings(const OrochiSettings &settings);

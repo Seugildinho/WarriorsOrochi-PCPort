@@ -2,6 +2,18 @@
 // (relatorios/pcsx2-gs-integracao.md). The port has no PCSX2 VM, UI, capture
 // or input: those entry points do nothing. Compiled into pcsx2_gs with the
 // PCSX2 headers and definitions.
+// ==========================================================================
+// SERVICOS QUE O GS DO PCSX2 PEDE AO "PROGRAMA HOSPEDEIRO"
+// ==========================================================================
+// O GS (renderizador) do PCSX2 foi escrito para rodar dentro do emulador
+// PCSX2 e chama varias funcoes dele (janela, configuracoes, OSD, captura de
+// video, ImGui...). Aqui o port fornece essas funcoes:
+//   - As que importam para a imagem (janela de desenho, contexto ImGui
+//     vazio) tem implementacao real.
+//   - As de recursos que o port NAO usa (gravar video, dumps, PNG, troca de
+//     texturas, interface do PCSX2) retornam "nao" / nao fazem nada.
+// Regra pratica: se aparecer erro de "simbolo nao encontrado" ao atualizar o
+// PCSX2, a funcao que falta deve ser adicionada aqui, quase sempre vazia.
 #include "pcsx2_host.h"
 
 #include "common/Image.h"
@@ -38,10 +50,15 @@
 
 namespace
 {
+    // A janela onde o GS desenha. Protegida por mutex porque e definida pela
+    // thread do jogo (abertura/resize) e lida pela thread do GS.
     std::mutex s_windowMutex;
     std::optional<WindowInfo> s_window;
 }
 
+// SetRenderWindow: guarda a janela Win32 e o tamanho da area de desenho.
+// Exemplo: SetRenderWindow(hwnd, 1920, 1080) ao abrir em tela cheia;
+// SetRenderWindow(nullptr, 1280, 720) num resize mantem a mesma janela.
 void OrochiPcsx2Host::SetRenderWindow(void *hwnd, unsigned width, unsigned height)
 {
     std::lock_guard lock(s_windowMutex);
@@ -73,6 +90,8 @@ u8 *SysMemory::GetCodePtr(size_t offset)
 }
 
 // ---- Host
+// AcquireRenderWindow: o PCSX2 pede "em que janela eu desenho?" ao criar o
+// dispositivo Direct3D 11. Devolvemos a janela guardada acima.
 std::optional<WindowInfo> Host::AcquireRenderWindow(bool)
 {
     std::lock_guard lock(s_windowMutex);
@@ -118,6 +137,9 @@ const char *Host::TranslateToCString(const std::string_view, const std::string_v
 }
 
 // ---- VM and GS thread: the port drives the GS from its own GS thread
+// O PCSX2 pergunta pela "maquina virtual" (o emulador). O port nao tem uma:
+// respondemos fixo que ha um jogo rodando, qual e o disco (SLUS-21662) e
+// que o video e NTSC entrelacado a 59,94 Hz, como no PS2 original.
 bool VMManager::HasValidVM() { return true; }
 std::string VMManager::GetDiscSerial() { return "SLUS-21662"; }
 std::string VMManager::GetTitle(bool) { return "Warriors Orochi"; }
@@ -145,6 +167,9 @@ void PerformanceMetrics::SetGSSWThreadCount(u32) {}
 // ---- No on-screen UI
 // The GS device renders ImGui's draw data on every present, so an (empty)
 // context must exist; the port never adds windows to it.
+// Initialize: cria um contexto ImGui VAZIO. O dispositivo grafico do PCSX2
+// desenha a camada ImGui em toda apresentacao de quadro; sem contexto ele
+// falharia. O port nunca coloca janelas nele (sem OSD, sem menus).
 bool ImGuiManager::Initialize()
 {
     if (!ImGui::GetCurrentContext())
@@ -181,6 +206,8 @@ void ImGuiManager::SkipFrame()
 }
 void ImGuiManager::RenderOSD() {}
 void ImGuiManager::ReloadFonts() {}
+// WindowResized: mantem o tamanho da tela do ImGui igual ao da janela, para
+// que o PCSX2 nao recorte a imagem apos um resize/F10.
 void ImGuiManager::WindowResized()
 {
     if (!ImGui::GetCurrentContext())

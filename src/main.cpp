@@ -1,3 +1,22 @@
+// ==========================================================================
+// PONTO DE ENTRADA DO WarriorsOrochi.exe
+// ==========================================================================
+// Ordem do que acontece ao abrir o jogo (funcao main, abaixo):
+//   1. Testes: "WarriorsOrochi.exe --test-xxx" roda um teste de regressao
+//      e sai (usado por tools/run_regressions.py). Nao abre o jogo.
+//   2. Le as configuracoes do Setup (orochi-settings.ini), entra na pasta
+//      data\, liga o log data\port.log e extrai o executavel do PS2
+//      (SLUS_216.62) da ISO escolhida. Sem ISO valida, abre o Setup.
+//   3. Cria o runtime (CPU do PS2 recompilada, memoria, janela).
+//   4. Aplica as configuracoes (variaveis OROCHI_*, tamanho da janela).
+//   5. Escolhe o renderizador (OROCHI_RENDERER): "pcsx2" (padrao do Setup),
+//      "d3d11" (renderizador proprio na placa de video) ou "auto"
+//      (d3d11, com o renderizador por CPU como reserva).
+//   6. Instala os "adaptadores": funcoes do jogo trocadas por versoes
+//      nativas do PC (disco, controle, imagens, overlays, autosave,
+//      distancia de desenho...).
+//   7. Liga as traducoes do VU1 e a thread do VIF1, e roda o jogo
+//      (runtime.run() so volta quando o jogo termina).
 #include "ps2_runtime.h"
 #include "native_cd.h"
 #include "native_iop.h"
@@ -40,6 +59,13 @@ int runMpegAudioRegressionTests();
 #include "runtime/gs/gs_cpu_backend.h"
 
 // Native EE prototype. Game data stays on the user's original local disc image.
+// Formas de chamar:
+//   WarriorsOrochi.exe                    -> jogo normal, usa o Setup
+//   WarriorsOrochi.exe <elf> <iso>        -> ferramentas de teste escolhem
+//                                            o ELF e a ISO diretamente
+//   WarriorsOrochi.exe --test-gpu (etc.)  -> so roda um teste e sai
+// Codigos de saida: 0 ok, 2 uso/ISO errada, 3 janela, 4 ELF,
+// 5 adaptadores, 6 renderizador.
 int main(int argc, char **argv)
 {
     std::cout.setf(std::ios::unitbuf);
@@ -95,6 +121,9 @@ int main(int argc, char **argv)
                 return 4;
             }
         }
+        // Daqui em diante o "PS2" existe: runtime = CPU EE recompilada + memoria +
+        // GS/VIF/DMA + IOP. Funcoes do jogo que nao existirem no codigo gerado
+        // param o jogo (policy Stop) e aparecem como "missing" no log.
         PS2Runtime runtime;
         installOrochiDiagnostics(runtime);
         runtime.setMissingFunctionPolicy(PS2Runtime::MissingFunctionPolicy::Stop);
@@ -113,6 +142,11 @@ int main(int argc, char **argv)
             std::cerr << "[Orochi] ELF loading failed.\n";
             return 4;
         }
+        // ESCOLHA DO RENDERIZADOR (quem desenha a imagem):
+        //   pcsx2 -> GS do PCSX2 em Direct3D 11 (upscale, 16:9). E o padrao.
+        //   d3d11 -> renderizador proprio do port na GPU (src/native_gpu.cpp).
+        //   auto  -> tenta d3d11; se falhar, desenha na CPU (GSCpuBackend).
+        // O 16:9 so existe no pcsx2: com os outros, o patch widescreen e desligado.
         const auto renderer=std::getenv("OROCHI_RENDERER");
         const std::string rendererMode=renderer ? renderer : "auto";
         std::unique_ptr<GSRasterBackend> raster;
@@ -143,6 +177,9 @@ int main(int argc, char **argv)
         }
         // GS rasterization runs on its own thread unless OROCHI_GS_THREAD=0;
         // queued commands keep their order and every read drains the queue.
+        // Para os renderizadores proprios (d3d11/CPU): o desenho roda numa thread
+        // separada (gs_thread_backend.cpp) para nao atrasar o jogo. O PCSX2 ja tem
+        // a sua propria thread (pcsx2_gs_bridge.cpp), por isso fica de fora.
         const auto gsThread=std::getenv("OROCHI_GS_THREAD");
         if (rendererMode!="pcsx2" && (!gsThread || std::string(gsThread)!="0")) {
             if(!raster) raster=std::make_unique<GSCpuBackend>();
@@ -150,6 +187,10 @@ int main(int argc, char **argv)
             std::cout << "[Orochi] GS rasterization runs on a separate thread.\n";
         }
         if(raster) runtime.gs().setRasterBackend(std::move(raster));
+        // ADAPTADORES: cada install* troca funcoes do jogo por codigo nativo do PC.
+        // Exemplos: leitura do disco vira leitura da ISO; controle vira teclado e
+        // XInput; installOrochiDrawDistance aumenta quantos soldados aparecem.
+        // Se qualquer um falhar, o jogo nao abre (codigo 5).
         if (!installOrochiDiscFunctions(runtime) || !installOrochiSifFunctions(runtime) || !installOrochiIopFunctions(runtime) ||
             !installOrochiGraphicsTrace(runtime) || !installOrochiImageFunctions(runtime) ||
             !installOrochiPadFunctions(runtime) || !installOrochiSupplementalFunctions(runtime) || !installOrochiOverlayFunctions(runtime) ||
@@ -158,6 +199,9 @@ int main(int argc, char **argv)
             std::cerr << "[Orochi] Could not bind native game adapters.\n";
             return 5;
         }
+        // Liga os microprogramas do VU1 traduzidos para C++ (native_vu1.cpp): o
+        // VU1 e o processador que transforma os modelos 3D em triangulos; rodar a
+        // traducao e muito mais rapido do que interpretar instrucao por instrucao.
         installOrochiVu1Translations();
         // VIF1 DMA (VU1 microprograms and their GIF output) runs on its own
         // thread in parallel with the EE; OROCHI_VIF1_THREAD=0 keeps it inline.
@@ -168,7 +212,11 @@ int main(int argc, char **argv)
             std::cout << "[Orochi:vif1] async=" << asyncVif1 << '\n';
         }
         std::cout << "[Orochi] Entering recompiled PS2 code.\n";
+        // O jogo roda aqui ate fechar a janela.
         runtime.run();
+        // Diagnostico opcional: com OROCHI_CAPTURE_RAM=1, ao fechar, salva a
+        // memoria do EE, scratchpad, registradores e o estado do IOP na pasta do
+        // ELF, para investigar travamentos.
         if(std::getenv("OROCHI_CAPTURE_RAM")) {
             const auto directory=gameElf.parent_path();
             std::ofstream dump(directory/"ee-memory-after-stop.bin",std::ios::binary);

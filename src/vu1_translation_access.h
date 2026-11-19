@@ -4,6 +4,18 @@
 // Translated code reproduces VU1Interpreter::run() step by step: the same
 // execUpper/execLower semantics, with stalls and VF/VI/ACC commit points
 // resolved at generation time instead of scanned every cycle.
+// --------------------------------------------------------------------------
+// EM PORTUGUES: este cabecalho e a "caixa de ferramentas" que o codigo C++
+// gerado para cada microprograma do VU1 usa (build-tools/.../
+// vu1_translated.cpp, criado por tools/generate_vu1.py).
+// REGRA DE OURO: o resultado de uma traducao tem que ser IDENTICO, bit a bit,
+// ao do interpretador (VU1Interpreter::run). Por isso varias funcoes aqui
+// sao copias de funcoes do interpretador, com o mesmo arredondamento
+// (em direcao a zero, como o hardware do PS2) e as mesmas flags.
+// Para conferir: OROCHI_VU1_VERIFY=N (native_vu1.cpp) compara os dois.
+// Mudou algo aqui? Recompile e rode com OROCHI_VU1_VERIFY=60000; o log
+// precisa terminar com "mismatches=0".
+// --------------------------------------------------------------------------
 #include "runtime/ps2_vu1.h"
 #include <cfenv>
 #include <cmath>
@@ -27,6 +39,10 @@ struct VU1TranslationAccess
     using Vu = VU1Interpreter;
 
     // Mirrors the prologue of VU1Interpreter::run().
+    // begin: inicio de todo programa traduzido. Aponta o VU para a memoria de
+    // dados e o GS, e muda o arredondamento da CPU para "em direcao a zero"
+    // (o VU do PS2 arredonda assim). Retorna o arredondamento anterior para
+    // end() restaurar (-1 se nao conseguiu trocar).
     static int begin(Vu &vu, uint8_t *vuData, uint32_t dataSize, GS &gs, PS2Memory *memory)
     {
         vu.m_activeVuData = vuData;
@@ -41,6 +57,12 @@ struct VU1TranslationAccess
     // normalizeOperand/normalizeFmacExactResult inline at every operand made
     // the programs ~40% slower: code size.)
     // The backup is held in the locals bkr (register, 0 = none) and bkv.
+    // branchVi: le um registrador inteiro (vi) para um desvio (branch).
+    // Detalhe do hardware: se o registrador acabou de ser escrito na instrucao
+    // anterior, o desvio enxerga o valor ANTIGO. bkr/bkv guardam esse valor
+    // antigo. vi0 vale sempre 0.
+    // Exemplo: "IADDI vi1, vi1, 1" seguido de "IBNE vi1, ..." compara o vi1
+    // de antes da soma.
     static VU1_TRANSLATION_INLINE int32_t branchVi(int32_t bkr, int32_t bkv, const int32_t *vi, uint8_t reg)
     {
         if (reg == 0u)
@@ -76,6 +98,9 @@ struct VU1TranslationAccess
 
     // Translated programs keep VF/VI/ACC in locals; these copy them from and
     // back to the interpreter state around anything that reads vu.m_state.
+    // loadRegs / storeRegs: o codigo traduzido trabalha com copias locais dos
+    // registradores (mais rapido). Antes de chamar algo que le o estado real
+    // do VU, copia de volta (storeRegs); depois recarrega (loadRegs).
     static VU1_TRANSLATION_INLINE void loadRegs(const Vu &vu, float (&vf)[32][4], int32_t (&vi)[16], float (&acc)[4])
     {
         std::memcpy(vf, vu.m_state.vf, sizeof(vf));
@@ -93,6 +118,10 @@ struct VU1TranslationAccess
 
     // execLower's DIV: normalized operands, DI flags and ±FLT_MAX on a zero
     // divisor, normalizeResult(), then queueQ(result, 7, statusDi).
+    // vuDiv: instrucao DIV do VU (Q = numerador / denominador).
+    // Divisao por zero NAO gera infinito como no PC: o VU devolve +-FLT_MAX e
+    // liga as flags D/I. Ex.: 1/0 -> +3.4e38 com flag D; 0/0 -> flag I.
+    // O resultado entra no pipeline de Q e fica disponivel 7 ciclos depois.
     static VU1_TRANSLATION_NOINLINE void vuDiv(Vu &vu, float numerator, float denominator)
     {
         const float num = vu.normalizeOperand(numerator);
@@ -120,6 +149,12 @@ struct VU1TranslationAccess
     // normalizeFmacExactResult() against the same expression evaluated in
     // double (MSVC long double). Same rounding (MXCSR, set by begin()), no FMA,
     // so every lane is bit-identical to the scalar code.
+    // FMAC = as contas vetoriais do VU (soma, subtracao, multiplicacao,
+    // multiplica-e-soma). O VU nao tem infinito nem NaN: valores grandes
+    // saturam em FLT_MAX e o resultado precisa bater com o PS2.
+    // Estrategia: fmacFast tenta o caminho rapido (SSE, 4 lanes de uma vez)
+    // quando da para provar que o resultado e exato; senao cai no caminho
+    // lento, que calcula em double e corrige.
     enum FmacKind { FmacAdd, FmacSub, FmacMul, FmacMadd, FmacMsub };
 
     static VU1_TRANSLATION_INLINE __m128i select(__m128i mask, __m128i yes, __m128i no)
@@ -295,6 +330,9 @@ struct VU1TranslationAccess
     // generated functions overflowed the stack. Dest is a template argument
     // so the lane selection compiles to straight-line code.
     template <int Kind, uint32_t Dest>
+    // fmac: executa UMA instrucao FMAC. Kind = qual conta; Dest = quais lanes
+    // (x,y,z,w) gravar, como bits (ex.: Dest=0b1110 grava x,y,z).
+    // Saidas: out (resultado), mac/status/sticky (flags do VU).
     static VU1_TRANSLATION_NOINLINE void fmac(const float *sourceS, __m128 right, const float *accumulator,
                                            float *out, uint32_t &mac, uint32_t &status, uint32_t &sticky)
     {
@@ -542,6 +580,10 @@ struct VU1TranslationAccess
 
     // commitReadyPipelines() does nothing until one pipeline is due; checking
     // that here saves the call on most cycles.
+    // commitReadyPipelinesInline: no VU, resultados ficam prontos alguns
+    // ciclos depois da instrucao (pipelines). Aqui so chamamos o interpretador
+    // para "entregar" resultados quando algum pipeline realmente venceu neste
+    // ciclo; na maioria dos ciclos nao ha nada e a funcao retorna logo.
     static VU1_TRANSLATION_INLINE void commitReadyPipelinesInline(Vu &vu)
     {
         const uint64_t now = vu.m_cycle;
@@ -554,6 +596,8 @@ struct VU1TranslationAccess
     // A translated VU0 program ran past the VCALLMS cycle budget (a runaway
     // loop). run() would stop mid-program at that point; the translation stops
     // at the next block boundary instead. Never seen in measured programs.
+    // budgetExceeded: protecao contra laco infinito num programa VU0
+    // (passou do limite de ciclos). Para o programa e avisa uma vez no log.
     static void budgetExceeded(Vu &vu, int previousRounding, uint32_t pc)
     {
         static bool reported = false;
@@ -569,6 +613,8 @@ struct VU1TranslationAccess
     }
 
     // pipelinesPending() without the PATH1 transfer.
+    // onlyXgkickPending: true se a UNICA coisa ainda em andamento no VU e o
+    // envio de triangulos para o GS (XGKICK / PATH1). Usado por end().
     static bool onlyXgkickPending(const Vu &vu)
     {
         if (!vu.m_xgkick.active || vu.m_fdiv.valid)
@@ -597,6 +643,9 @@ struct VU1TranslationAccess
     // progressXgkick() for translated code: most cycles copy nothing (no
     // transfer, or the first of the two cycles a qword takes), so that is
     // decided here without the call into the interpreter.
+    // xgkickStep: avanca um ciclo do XGKICK (envio do pacote GIF do VU1 para o
+    // GS). O hardware copia 1 quadword (16 bytes) a cada 2 ciclos; no 1o ciclo
+    // nao ha copia, entao isso e decidido aqui sem chamar o interpretador.
     static VU1_TRANSLATION_INLINE void xgkickStep(Vu &vu)
     {
         if (!vu.m_xgkick.active || !vu.m_activeVuData || vu.m_activeVuDataSize == 0u)
@@ -610,6 +659,12 @@ struct VU1TranslationAccess
     }
 
     // Mirrors the epilogue of run() after the E-bit delay slot.
+    // end: fim de todo programa traduzido (depois da instrucao com bit E).
+    // Se so falta terminar o XGKICK, copia o pacote inteiro de uma vez e soma
+    // os ciclos equivalentes (2 por quadword), em vez de ciclo a ciclo.
+    // Ex.: pacote de 300 quadwords -> uma chamada, +600 ciclos (menos o
+    // credito ja contado). Depois esvazia os pipelines, grava pc/ciclos e
+    // restaura o arredondamento original da CPU.
     static void end(Vu &vu, int previousRounding, uint32_t nextPc)
     {
         // flushPipelines() with only PATH1 left: advanceOneCycle() would find
@@ -642,6 +697,8 @@ struct VU1TranslationAccess
             std::fesetround(previousRounding);
     }
 
+    // interpret: roda o programa no interpretador (usado pela verificacao e
+    // pelo inventario de programas nao traduzidos).
     static void interpret(Vu &vu, uint8_t *vuCode, uint32_t codeSize, uint8_t *vuData, uint32_t dataSize,
                           GS &gs, PS2Memory *memory, uint32_t maxCycles)
     {
@@ -650,6 +707,9 @@ struct VU1TranslationAccess
 
     // A JR whose link register no longer holds the BAL return address: the
     // translation followed the call site it was specialised for.
+    // badReturn: aviso de seguranca. A traducao assumiu para onde um "JR"
+    // (retorno de sub-rotina) iria voltar e o registrador mostrou outro
+    // endereco. Se aparecer no log, aquele programa precisa ser revisto.
     static void badReturn(Vu &vu, uint32_t pc, uint32_t expected)
     {
         static bool reported = false;
@@ -668,6 +728,9 @@ struct VU1TranslationAccess
     static inline thread_local bool s_suppressPath1 = false;
 
     template <int Index>
+    // program<Index>: cada microprograma traduzido e uma especializacao desta
+    // funcao, gerada em vu1_translated.cpp (Index = posicao na lista
+    // config/vu1_programs.json).
     static void program(Vu &vu, uint8_t *vuData, uint32_t dataSize, GS &gs, PS2Memory *memory,
                         uint32_t maxCycles);
 };

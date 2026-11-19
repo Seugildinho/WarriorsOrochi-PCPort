@@ -1,6 +1,18 @@
 // The child window PCSX2's GS presents to: it covers the client area of the
 // game window (raylib's), which keeps keyboard input because the child is
 // disabled. Win32 only, kept apart from raylib's headers.
+// ==========================================================================
+// JANELA DE DESENHO DO PCSX2 + TECLAS F9 E F12
+// ==========================================================================
+// Como a janela e montada:
+//   - A janela principal do jogo e criada pelo raylib (ela recebe teclado,
+//     controle, F10 de tela cheia etc.).
+//   - Por cima da area interna dela, criamos uma janela FILHA, desabilitada
+//     (WS_DISABLED), onde o Direct3D 11 do PCSX2 desenha. Por ser
+//     desabilitada, cliques e teclas continuam indo para a janela do raylib.
+//   - Trocamos o "procedimento de janela" do pai (parentProcedure) para:
+//       * redimensionar a filha junto com o pai (WM_SIZE);
+//       * tratar F9 (captura de diagnostico) e F12 (screenshot).
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -23,6 +35,11 @@ namespace Gdiplus
 
 namespace
 {
+    // s_parentProcedure : procedimento original do raylib (chamado no final de
+    //                     parentProcedure para tudo que nao tratamos).
+    // s_child           : a janela filha onde o PCSX2 desenha.
+    // kTitleTimer       : id do timer que restaura o titulo apos uma mensagem.
+    // s_title           : titulo original, guardado antes de mostrar a mensagem.
     WNDPROC s_parentProcedure = nullptr;
     HWND s_child = nullptr;
     constexpr UINT_PTR kTitleTimer = 0xF12;
@@ -31,6 +48,13 @@ namespace
     // raylib's own F12 screenshot reads its OpenGL frame, which PCSX2's
     // window covers (it came out magenta). This one saves what is on screen:
     // screenshot-<date>-<time>.png in the working folder (data).
+    // saveScreenshot: salva a imagem que esta na tela como PNG.
+    //   1. Copia a area interna da janela com PrintWindow (inclui o conteudo
+    //      Direct3D, por isso PW_RENDERFULLCONTENT).
+    //   2. Converte para PNG com GDI+.
+    //   3. Grava na pasta atual (que e "data"), com data e hora no nome.
+    // Exemplo: F12 em 18/11/2026 17:00:00 -> data\screenshot-20261118-170000.png
+    // Retorna false se a janela estiver minimizada (tamanho 0) ou se falhar.
     bool saveScreenshot(HWND window)
     {
         RECT client{};
@@ -83,6 +107,9 @@ namespace
         return ok;
     }
 
+    // showInTitle: mostra uma mensagem curta no titulo da janela por 2,5 s
+    // (ex.: "screenshot salvo na pasta data") e depois o timer kTitleTimer
+    // devolve o titulo original.
     void showInTitle(HWND window, const wchar_t *text)
     {
         if (!s_title[0])
@@ -123,6 +150,12 @@ namespace
     }
 }
 
+// Create: cria a janela filha do PCSX2 dentro da janela do jogo.
+//   - width/height (saida): tamanho atual da area interna do pai, em pixels.
+//   - Liga WS_CLIPCHILDREN no pai para que o raylib nao pinte por cima da
+//     imagem do Direct3D (isso causava piscadas).
+//   - Instala parentProcedure no pai.
+// Retorna o HWND da filha, ou nullptr se nao conseguiu criar.
 void *OrochiPcsx2Window::Create(void *parentWindow, unsigned &width, unsigned &height)
 {
     HWND parent = static_cast<HWND>(parentWindow);
@@ -146,6 +179,8 @@ void *OrochiPcsx2Window::Create(void *parentWindow, unsigned &width, unsigned &h
     return s_child;
 }
 
+// ExecutableDirectory: pasta onde esta o WarriorsOrochi.exe.
+// Exemplo: "C:\WO\Warriors Orochi". Usada para achar pcsx2-resources.
 std::string OrochiPcsx2Window::ExecutableDirectory()
 {
     char path[MAX_PATH]{};

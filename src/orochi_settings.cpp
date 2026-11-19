@@ -1,4 +1,14 @@
 // The settings file (src/orochi_settings.h).
+// Leitura e gravacao do orochi-settings.ini (texto "chave=valor", uma por
+// linha). Exemplo de arquivo:
+//   renderer=pcsx2
+//   scale=4
+//   aspect=16:9
+//   display=window
+//   window=1280x720
+//   seam_fix=on
+//   crowd=100
+// Valores invalidos ou ausentes ficam no padrao de OrochiSettings.
 #include "orochi_settings.h"
 
 #include "raylib.h"
@@ -9,6 +19,8 @@
 
 namespace
 {
+    // Tamanhos de janela oferecidos no Setup, para 16:9 e para 4:3, e os
+    // multiplicadores de resolucao interna (scale). Ex.: scale 3 = 1920x1344.
     const std::vector<OrochiWindowSize> kWideSizes{{960, 540}, {1280, 720}, {1600, 900}, {1920, 1080}};
     const std::vector<OrochiWindowSize> kStandardSizes{{640, 480}, {960, 720}, {1280, 960}, {1440, 1080}};
     const std::vector<int> kScales{1, 2, 3, 4, 5, 6, 8};
@@ -42,6 +54,12 @@ std::filesystem::path orochiPathFromUtf8(const std::string &text)
     return std::filesystem::path(std::u8string(text.begin(), text.end()));
 }
 
+// orochiLoadSettings: le o ini. Regras de seguranca:
+//   - crowd fica entre 51 e 147 (147 = limite da tabela de personagens).
+//   - volume e arredondado para multiplos de 10, entre 0 e 100.
+//   - scale fora da lista volta para 2.
+//   - window so vale se for um dos tamanhos da lista do formato escolhido.
+//   - disc so e aceito se for um caminho completo.
 OrochiSettings orochiLoadSettings()
 {
     OrochiSettings settings;
@@ -98,6 +116,8 @@ OrochiSettings orochiLoadSettings()
     return settings;
 }
 
+// orochiSaveSettings: grava todas as opcoes (chamado pelo Setup ao clicar
+// em "Salvar e jogar"). O arquivo e sempre reescrito inteiro.
 void orochiSaveSettings(const OrochiSettings &settings)
 {
     const OrochiWindowSize size = settings.sizes()[settings.windowSize];

@@ -1,3 +1,21 @@
+// ==========================================================================
+// VU1 TRADUZIDO: OS MICROPROGRAMAS 3D RODANDO COMO C++
+// ==========================================================================
+// O que e o VU1: um processador vetorial do PS2 que pega os modelos 3D
+// (vertices) e calcula a posicao na tela, luz e cor, e manda os
+// triangulos prontos para o GS desenhar. Em batalhas cheias ele e o maior
+// custo de CPU do port.
+// Como o port acelera: os programas que o jogo carrega no VU1 foram
+// traduzidos ANTES para C++ (tools/generate_vu1.py ->
+// build-tools/.../vu1_translated.cpp). Cada programa e identificado por
+//   (hash do codigo carregado, endereco de entrada).
+// Quando o jogo manda o VU1 executar, o runtime chama lookupTranslation():
+//   - achou traducao  -> roda a funcao C++ (rapido);
+//   - nao achou       -> roda o interpretador instrucao por instrucao (lento).
+// Programa novo encontrado (ex.: numa fase nunca testada)? Rode com
+// OROCHI_VU1_INVENTORY=1 e OROCHI_VU1_CAPTURE=1, copie as imagens de
+// local/vu1 e adicione em config/vu1_programs.json.
+// Variaveis de diagnostico (todas desligadas no jogo normal) logo abaixo.
 #include "native_vu1.h"
 #include "ps2_runtime.h"
 #include "vu1_translation_access.h"
@@ -57,6 +75,10 @@ std::array<uint32_t, 64> sampleSaved{};
 thread_local unsigned sampleIndex{};
 thread_local uint64_t sampleHash{};
 
+// captureImage: salva uma imagem de codigo VU (OROCHI_VU1_CAPTURE=1), uma
+// unica vez por hash, em <pasta do ELF>/vu1/.
+// Exemplo de nome: vu1code-46a42285dcf89f55.bin (16 KB de VU1) ou
+// vu0code-....bin (4 KB de VU0). Esses arquivos sao a entrada do gerador.
 void captureImage(uint64_t hash, const uint8_t *code, uint32_t size) {
     static std::vector<uint64_t> saved;
     for (const auto known : saved) if (known == hash) return;
@@ -73,6 +95,9 @@ void captureImage(uint64_t hash, const uint8_t *code, uint32_t size) {
     std::cout << "[Orochi:vu1] captured code image " << name << '\n';
 }
 
+// sameState: compara TODO o estado do VU (registradores vetoriais vf,
+// inteiros vi, acumulador, Q/P/I/R, flags, pc, ciclos). Usado pela
+// verificacao: traducao e interpretador devem terminar identicos.
 bool sameState(const VU1State &a, const VU1State &b) {
     return std::memcmp(a.vf, b.vf, sizeof(a.vf)) == 0 && std::memcmp(a.vi, b.vi, sizeof(a.vi)) == 0 &&
         std::memcmp(a.acc, b.acc, sizeof(a.acc)) == 0 && std::memcmp(&a.q, &b.q, 4) == 0 &&
@@ -81,6 +106,9 @@ bool sameState(const VU1State &a, const VU1State &b) {
         a.ebit == b.ebit && a.branchPending == b.branchPending && a.top == b.top && a.itop == b.itop;
 }
 
+// reportDifference: imprime no log o que diferiu entre o interpretador
+// ("exp", esperado) e a traducao ("got"): registradores e ate 8 blocos de
+// 16 bytes da memoria de dados do VU.
 void reportDifference(const VU1State &expected, const VU1State &actual, const uint8_t *expectedData,
                       const uint8_t *actualData, uint32_t dataSize) {
     std::cout << std::hex << "[Orochi:vu1-verify] MISMATCH pc=0x" << expected.pc << "/0x" << actual.pc
@@ -108,6 +136,12 @@ void reportDifference(const VU1State &expected, const VU1State &actual, const ui
     std::cout << std::dec;
 }
 
+// verifyProgram (OROCHI_VU1_VERIFY=N): para as N primeiras chamadas
+// traduzidas, roda o INTERPRETADOR no estado real (o jogo usa esse
+// resultado) e a TRADUCAO numa copia, sem mandar nada ao GS (PATH1
+// suprimido), e compara estado, memoria e ciclos.
+// Exemplo: OROCHI_VU1_VERIFY=60000 -> log "[Orochi:vu1-verify]
+// checked=60000 mismatches=0" significa traducoes corretas.
 void verifyProgram(VU1Interpreter &vu, uint8_t *vuData, uint32_t dataSize, GS &gs, PS2Memory *memory,
                    uint32_t maxCycles) {
     std::lock_guard lock(diagnosticsMutex);
@@ -133,6 +167,9 @@ void verifyProgram(VU1Interpreter &vu, uint8_t *vuData, uint32_t dataSize, GS &g
 
 void reportBench();
 
+// benchProgram (OROCHI_VU1_BENCH=1): a cada 16 chamadas, roda a traducao 8
+// vezes em copias para medir nanossegundos por chamada; depois roda a
+// chamada real. Serve para comparar versoes do gerador.
 void benchProgram(VU1Interpreter &vu, uint8_t *vuData, uint32_t dataSize, GS &gs, PS2Memory *memory,
                   uint32_t maxCycles) {
     std::lock_guard lock(diagnosticsMutex);
@@ -159,6 +196,9 @@ void benchProgram(VU1Interpreter &vu, uint8_t *vuData, uint32_t dataSize, GS &gs
     target(vu, vuData, dataSize, gs, memory, maxCycles);
 }
 
+// sampleProgram (OROCHI_VU1_SAMPLE=10,28): salva as entradas de 1 a cada
+// 61 chamadas dos programas indicados (no maximo 2000) para medir fora do
+// jogo com tools/vu1_bench_main.cpp.
 void sampleProgram(VU1Interpreter &vu, uint8_t *vuData, uint32_t dataSize, GS &gs, PS2Memory *memory,
                    uint32_t maxCycles) {
     std::unique_lock lock(diagnosticsMutex);
@@ -181,6 +221,7 @@ void sampleProgram(VU1Interpreter &vu, uint8_t *vuData, uint32_t dataSize, GS &g
     target(vu, vuData, dataSize, gs, memory, maxCycles);
 }
 
+// reportBench: imprime os tempos medidos por benchProgram.
 void reportBench() {
     uint64_t calls = 0, nanoseconds = 0;
     for (unsigned index = 0; index < vu1TranslatedProgramCount && index < benchStats.size(); ++index) {
@@ -196,6 +237,10 @@ void reportBench() {
         std::cout << "[Orochi:vu1-bench] total samples=" << calls << " nsPerCall=" << nanoseconds / calls << '\n';
 }
 
+// reportInventory (OROCHI_VU1_INVENTORY=1): lista os programas que AINDA
+// rodam no interpretador. Formato: hash@entrada=chamadas/avgCICLOS/max/budget
+// Exemplo: "e6220de0f45d4d3f@18=5000/avg900/max1200/budget..." -> o
+// programa com esse hash, entrando no endereco 0x18, falta traduzir.
 void reportInventory() {
     std::cout << "[Orochi:vu1-inventory] lookups=" << lookups << " untranslated entries:";
     for (const auto &[key, stat] : untranslated)
@@ -220,6 +265,13 @@ void measureProgram(VU1Interpreter &vu, uint8_t *vuData, uint32_t dataSize, GS &
     if (++measured % 20000 == 0) reportInventory();
 }
 
+// lookupTranslation: chamada pelo runtime sempre que o VU vai rodar um
+// programa que ele ainda nao conhece neste codigo carregado (o runtime
+// guarda a resposta em cache). Devolve a funcao a executar:
+//   - a traducao C++ (caso normal);
+//   - um embrulho de diagnostico (verify / bench / sample) se ligado;
+//   - measureProgram se o inventario estiver ligado e nao houver traducao;
+//   - nullptr = "use o interpretador".
 VU1Interpreter::TranslatedProgram lookupTranslation(uint64_t hash, uint32_t startPc, const uint8_t *code,
                                                    uint32_t size) {
     std::unique_lock<std::mutex> lock(diagnosticsMutex, std::defer_lock);
@@ -258,6 +310,10 @@ VU1Interpreter::TranslatedProgram lookupTranslation(uint64_t hash, uint32_t star
 }
 }
 
+// installOrochiVu1Translations: chamada uma vez em main.cpp. Le as
+// variaveis de diagnostico e registra lookupTranslation no interpretador.
+// OROCHI_VU1_TRANSLATION=0 desliga as traducoes (tudo no interpretador,
+// util para descobrir se um bug grafico vem de uma traducao).
 void installOrochiVu1Translations() {
     const char *disabled = std::getenv("OROCHI_VU1_TRANSLATION");
     captureImages = std::getenv("OROCHI_VU1_CAPTURE") != nullptr;

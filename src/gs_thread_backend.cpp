@@ -1,4 +1,15 @@
 ﻿#include "gs_thread_backend.h"
+// ==========================================================================
+// THREAD DE DESENHO PARA OS RENDERIZADORES PROPRIOS (d3d11 e CPU)
+// ==========================================================================
+// Usado quando OROCHI_RENDERER e "auto" ou "d3d11" (NAO e usado com pcsx2,
+// que tem a sua propria thread em pcsx2_gs_bridge.cpp).
+// Ideia: em vez de o jogo esperar cada triangulo ser desenhado, os
+// comandos de desenho entram numa fila e uma thread separada (worker)
+// executa, NA MESMA ORDEM. O jogo so espera quando precisa de um resultado
+// (ler a VRAM, limpar o framebuffer, etc.): isso e o "drain" (esvaziar a
+// fila). Resultado: CPU do jogo e desenho trabalham em paralelo.
+// Desligar: OROCHI_GS_THREAD=0 (main.cpp).
 #include "runtime/gs/gs_cpu_backend.h"
 #include <condition_variable>
 #include <cstdlib>
@@ -15,6 +26,8 @@
 #include <vector>
 
 namespace {
+// Tipos de comando que podem esperar na fila (os que nao devolvem nada).
+// Command = um deles (std::variant).
 struct LoadClutCommand { GSTex0Reg tex0; GSTexClutReg texclut; };
 struct UploadCommand { std::vector<uint8_t> data; };
 struct FlushCommand {};
@@ -25,6 +38,12 @@ struct PresentCommand { GSPresentationRequest request; };
 using Command = std::variant<GSPrimitiveBatch, LoadClutCommand, GSTransferCommand, UploadCommand,
                              FlushCommand, TextureFlushCommand, WriteVramCommand, SyncCommand, PresentCommand>;
 
+// ThreadedBackend: "embrulha" um renderizador real (inner) e repassa a
+// ele, pela fila, tudo que pode ser adiado.
+// Funcoes que DEVOLVEM algo ao jogo (ReadVram, ClearFramebuffer,
+// ConsumeLocalToHostBytes, SnapshotVram...) chamam drain() antes:
+// esperam a fila esvaziar e so entao consultam o inner.
+// OROCHI_ASYNC_PRESENT=0 deixa a apresentacao de quadro sincrona.
 class ThreadedBackend final : public GSRasterBackend {
 public:
     explicit ThreadedBackend(std::unique_ptr<GSRasterBackend> wrapped) : inner(std::move(wrapped)) {
@@ -32,6 +51,9 @@ public:
         asyncPresent = !async || std::string(async) != "0";
         worker = std::thread([this] { run(); });
     }
+    // Destrutor: para a thread e imprime no log quantos comandos passaram e
+    // quantas vezes/quanto tempo o jogo esperou em cada tipo de drain.
+    // Ex.: "[Orochi:gs-thread] commands=20050 readVram=21/0ms".
     ~ThreadedBackend() override {
         {
             std::lock_guard lock(mutex);
@@ -66,6 +88,10 @@ public:
         if (asyncPresent && reason == GSSyncReason::Presentation) { push(SyncCommand{reason}); return; }
         drain(3); std::lock_guard innerLock(innerMutex); inner->Sync(reason);
     }
+    // Present: mostrar um quadro. No modo assincrono o jogo recebe o quadro
+    // pronto mais recente (um VBlank atras) e no maximo 1 quadro fica
+    // pendente; se a thread de desenho estiver mais lenta, o jogo espera
+    // aqui (sem isso a fila crescia: segundos de atraso e gigabytes).
     PresentationFrame Present(const GSPresentationRequest &request) override {
         if (!asyncPresent) { drain(4); std::lock_guard innerLock(innerMutex); return inner->Present(request); }
         // The display conversion runs on the GS thread in queue order; the
@@ -97,6 +123,8 @@ public:
 private:
     // Constructs the command in place: one copy of a primitive, not three.
     template <typename... Args>
+    // push: coloca um comando no fim da fila (construido no lugar, sem copias
+    // extras) e acorda o worker se ele estiver dormindo.
     void push(Args &&...args) {
         bool notify;
         {
@@ -115,6 +143,8 @@ private:
         }
         if (notify) wake.notify_one();
     }
+    // drain: espera ate a thread executar TODOS os comandos enfileirados.
+    // "reason" so serve para a estatistica do log (indice no vetor names).
     void drain(size_t reason) const {
         const auto start = std::chrono::steady_clock::now();
         std::unique_lock lock(mutex);
@@ -123,6 +153,7 @@ private:
         waitMicroseconds[reason] += uint64_t(std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::steady_clock::now() - start).count());
     }
+    // execute: roda um comando no renderizador real (na thread worker).
     void execute(Command &command) {
         std::visit([this](auto &value) {
             using T = std::decay_t<decltype(value)>;
@@ -145,6 +176,10 @@ private:
             else inner->WriteVram(value.psm, value.base, value.bw, value.x, value.y, value.value);
         }, command);
     }
+    // run: laco da thread worker. Dorme ate haver comandos, pega a fila
+    // inteira, executa tudo com innerMutex travado (para nao misturar com uma
+    // chamada direta de outra thread), devolve os blocos vazios para reuso
+    // (spare) e avisa quem estiver em drain().
     void run() {
         std::vector<std::unique_ptr<CommandChunk>> batch;
         for (;;) {
@@ -204,11 +239,15 @@ private:
 };
 }
 
+// createOrochiThreadedBackend: cria o embrulho com thread para "inner".
+// Exemplo (main.cpp): createOrochiThreadedBackend(createOrochiGpuBackend())
 std::unique_ptr<GSRasterBackend> createOrochiThreadedBackend(std::unique_ptr<GSRasterBackend> inner) {
     return std::make_unique<ThreadedBackend>(std::move(inner));
 }
 
 namespace {
+// makeCpuBackend: cria um renderizador por CPU com N faixas paralelas
+// (PS2X_GS_RASTER_THREADS), so para o teste abaixo.
 std::unique_ptr<GSCpuBackend> makeCpuBackend(const char *threads) {
 #ifdef _WIN32
     _putenv_s("PS2X_GS_RASTER_THREADS", threads);
@@ -299,6 +338,9 @@ bool runBandRasterComparison() {
 }
 }
 
+// runGsThreadRegressionTests (--test-gs-thread): o mesmo fluxo de comandos
+// direto e pela thread precisa deixar a VRAM identica byte a byte; e o
+// desenho em 4 faixas paralelas precisa bater com o desenho serial.
 int runGsThreadRegressionTests() {
     // Same command stream through the CPU backend directly and through the
     // worker thread: VRAM must be byte-identical, including reads in between.

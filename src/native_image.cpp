@@ -3,6 +3,20 @@
 #define NOUSER
 #define NOGDI
 #include <windows.h>
+// ==========================================================================
+// IMAGENS COMPRIMIDAS "ipu2" (fundos de menu, retratos, telas de carga)
+// ==========================================================================
+// O jogo guarda varias imagens grandes comprimidas no formato do IPU (o
+// decodificador de MPEG do PS2). O fluxo original e:
+//   1. 0x152560 (submit): o jogo escolhe uma imagem dentro de um arquivo
+//      "ipu2" e manda o IPU decodificar via DMA.
+//   2. 0x152840/0x152848 (wait): o jogo espera o IPU terminar.
+// No port nao ha IPU de hardware. Entao:
+//   - recordAndSubmit valida o cabecalho e anota a imagem pedida (jobs);
+//   - waitForImage decodifica com o libavcodec (FFmpeg dentro do .exe),
+//     grava os pixels na RAM no formato que o jogo espera e avisa o jogo
+//     (interrupcao 3) como se o IPU tivesse terminado.
+// Se algo nao bater (imagem invalida), o jogo para com "[Orochi:blocker]".
 #include "native_image.h"
 #include "native_ipu_decoder.h"
 #include "ps2_runtime.h"
@@ -22,6 +36,9 @@
 #include <vector>
 
 namespace {
+// ImageJob: uma imagem a decodificar. source = endereco dos dados
+// comprimidos na RAM, bytes = tamanho, width/height = dimensoes em pixels.
+// jobs: imagens pedidas, indexadas pelo endereco de origem.
 struct ImageJob { uint32_t source, bytes, width, height; };
 PS2Runtime::RecompiledFunction submitOriginal{}, waitOriginal{};
 std::unordered_map<uint32_t,ImageJob> jobs;
@@ -39,7 +56,13 @@ unsigned verifyRemaining{};
 std::unique_ptr<OrochiIpuDecoder> ipuDecoder;
 // The game uploads the same ipu2 selection once per field buffer; reuse the
 // last decoded pixels only when the whole payload and dimensions are identical.
+// cache: a ultima imagem decodificada. O jogo pede a MESMA imagem uma vez
+// para cada buffer de campo; se os bytes comprimidos e o tamanho forem
+// iguais, reaproveitamos os pixels sem decodificar de novo.
 struct DecodedCache { std::vector<uint8_t> payload,rgba; uint32_t width{},height{}; bool valid{}; } cache;
+// inRam: true se [address, address+size) cabe inteiro nos 32 MB da RAM.
+// word: le 4 bytes da RAM (lanca erro se o endereco for invalido).
+// block: escreve o erro no log e para o jogo.
 bool inRam(uint32_t address,uint64_t size) {
     return address<PS2_RAM_SIZE && size<=PS2_RAM_SIZE-address;
 }
@@ -51,6 +74,14 @@ void block(PS2Runtime *runtime,const char *message) {
     std::cerr << "[Orochi:blocker] Native image decoder: " << message << '\n';
     runtime->requestStop();
 }
+// recordAndSubmit: substitui 0x152560.
+// Argumentos do jogo: a0 = descritor do arquivo, a1 = numero da imagem.
+// Formato "ipu2" validado aqui:
+//   +0  assinatura "ipu2"   +4 tamanho total
+//   +8  largura | altura<<16 (multiplos de 16, ate 1024)
+//   +12 quantidade de imagens; depois, por imagem, (deslocamento, bytes)
+// Exemplo: um fundo 640x448 -> dimensions = 640 | (448<<16).
+// Anota a imagem em jobs e chama o submit original (que programa o DMA).
 void recordAndSubmit(uint8_t *ram,R5900Context *ctx,PS2Runtime *runtime) {
     try {
         const auto asset=getRegU32(ctx,4)&0x1fffffffu;
@@ -76,6 +107,8 @@ void recordAndSubmit(uint8_t *ram,R5900Context *ctx,PS2Runtime *runtime) {
     }
 }
 
+// runDecoder: caminho ANTIGO, so para referencia (OROCHI_IPU_DECODER=
+// ffmpeg-cli): chama o ffmpeg.exe externo. Lento (~58 ms por imagem).
 void runDecoder(const std::filesystem::path &input,const std::filesystem::path &output,
                 const std::filesystem::path &log) {
     wchar_t executable[32768]{};
@@ -125,6 +158,18 @@ void decodeWithCli(const uint8_t *payload,uint32_t payloadBytes,uint32_t width,u
       if(!file) throw std::runtime_error("could not read decoded pixels"); }
 }
 
+// decodeActiveImage: faz o trabalho do IPU para a transferencia em curso.
+//   1. Le os registradores de DMA do IPU (origem 0x1000b410, destino
+//      0x1000b010, canal ativo bit 0x100 de 0x1000b000).
+//   2. Acha a imagem anotada e confere se o destino comporta
+//      largura x altura x 4 bytes (RGBA).
+//   3. Corta o enchimento depois do fim de quadro (00 00 01 B0).
+//   4. Decodifica (ou usa o cache).
+//   5. Reordena os pixels: o IPU entrega blocos de 16x16 em sequencia, nao
+//      linhas. Ex.: imagem 640 de largura -> o pixel (x=20, y=3) vai para o
+//      bloco 1, linha 3, coluna 4 do bloco. Alfa fixo 0x80 (opaco no PS2).
+//   6. Zera os contadores de DMA, desliga os canais e dispara a
+//      interrupcao do IPU para o jogo continuar.
 void decodeActiveImage(uint8_t *ram,PS2Runtime *runtime) {
     auto &memory=runtime->memory();
     const auto fromChcr=memory.readIORegister(0x1000b000u);
@@ -204,6 +249,8 @@ void decodeActiveImage(uint8_t *ram,PS2Runtime *runtime) {
     if(decodedFrames++<8) std::cout << "[Orochi:image-native] source=0x" << std::hex << source
         << " destination=0x" << destination << std::dec << " pixels=" << pixelBytes << " completed=1\n";
 }
+// waitForImage: substitui a espera 0x152840/0x152848: decodifica e depois
+// roda a espera original (que agora encontra o trabalho pronto).
 void waitForImage(uint8_t *ram,R5900Context *ctx,PS2Runtime *runtime) {
     try { decodeActiveImage(ram,runtime); }
     catch(const std::exception &error) { block(runtime,error.what()); return; }
@@ -211,6 +258,10 @@ void waitForImage(uint8_t *ram,R5900Context *ctx,PS2Runtime *runtime) {
 }
 }
 
+// installOrochiImageFunctions: chamada por main.cpp. Zera estado e
+// estatisticas, escolhe o decodificador (padrao libavcodec) e troca as
+// funcoes 0x152560, 0x152840 e 0x152848 do jogo.
+// OROCHI_IPU_VERIFY=N compara as N primeiras imagens com o ffmpeg.exe.
 bool installOrochiImageFunctions(PS2Runtime &runtime) {
     jobs.clear(); decodedFrames=0;
     perfDecodedFrames.store(0u,std::memory_order_relaxed);
@@ -230,6 +281,8 @@ bool installOrochiImageFunctions(PS2Runtime &runtime) {
         runtime.replaceFunction(0x152840u,waitForImage) && runtime.replaceFunction(0x152848u,waitForImage);
 }
 
+// getOrochiImagePerfSnapshot: estatisticas (imagens, tempo total, tempo de
+// decodificacao, acertos de cache) para o log de desempenho.
 OrochiImagePerfSnapshot getOrochiImagePerfSnapshot() {
     return {
         perfDecodedFrames.load(std::memory_order_relaxed),

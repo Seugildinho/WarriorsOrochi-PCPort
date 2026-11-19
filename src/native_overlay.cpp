@@ -1,3 +1,19 @@
+// ==========================================================================
+// OVERLAYS: PEDACOS DO JOGO CARREGADOS DO DISCO DURANTE A PARTIDA
+// ==========================================================================
+// O Warriors Orochi nao cabe todo na memoria: partes do codigo (overlays)
+// sao lidas do disco quando precisa, SEMPRE no mesmo endereco 0x819000:
+//   ovl_00.bin -> modo de jogo principal (batalhas, historia)
+//   ovl_01.bin -> menus OPTIONS e GALLERY
+// Problema para um port recompilado: as duas versoes ocupam o MESMO
+// endereco, mas o codigo C++ gerado de cada uma e diferente. Solucao:
+//   1. Interceptamos o carregador do jogo (0x151f40).
+//   2. Depois que ele carrega um overlay, conferimos que os bytes sao
+//      exatamente os que foram recompilados (impressao digital FNV-1a).
+//   3. Trocamos a tabela de funcoes do intervalo 0x819000-0x83d800 para as
+//      funcoes compiladas daquele overlay (activateOverlayEntries).
+// Se o disco tiver um overlay diferente do compilado (outra versao do jogo)
+// o jogo PARA com "[Orochi:blocker]" no log, em vez de rodar codigo errado.
 #include "native_overlay.h"
 #include "ps2_runtime.h"
 #include "runtime/ps2_memory.h"
@@ -8,6 +24,7 @@
 #include <cstring>
 
 namespace {
+// orochiOverlayLoader: a funcao original do jogo que carrega overlays.
 PS2Runtime::RecompiledFunction orochiOverlayLoader{};
 // Both disc modules load at the same address, so only one has live entries in
 // the function table; loadedOverlay is the module those entries belong to.
@@ -16,6 +33,8 @@ int loadedOverlay{overlayNone};
 constexpr uint32_t overlayBase=0x819000;
 // Every address either module (code, data, bss) can occupy, from the ELF's PT_LOADs.
 constexpr uint32_t overlayEnd=0x83d800;
+// OverlayModule: nome do arquivo no disco, tamanho em bytes e a impressao
+// digital esperada (hash FNV-1a 64 bits dos bytes carregados).
 struct OverlayModule {const char *name;uint32_t bytes;uint64_t fingerprint;};
 // Fingerprints of the exact ISO bytes documented in config/overlay_0N.json.
 constexpr OverlayModule overlayModules[]={
@@ -28,6 +47,10 @@ constexpr uint32_t overlayModuleCount=sizeof(overlayModules)/sizeof(overlayModul
 std::vector<OrochiSupplementalEntry> overlay00Entries;
 constexpr uint32_t attractReturnLeaf=0x1f2360;
 
+// returnFromOriginalLeaf: implementacao de uma funcao vazia do jogo
+// (0x1f2360, "JR $ra; NOP"): apenas retorna, sem mudar nenhum registrador.
+// bindOriginalReturnLeaf so a registra se a memoria tiver exatamente essas
+// duas instrucoes.
 void returnFromOriginalLeaf(uint8_t *,R5900Context *ctx,PS2Runtime *) {
     // The original function is exactly JR $ra; NOP. Preserve every register,
     // including v0: this is an actual empty leaf, not a fabricated success code.
@@ -40,6 +63,13 @@ bool bindOriginalReturnLeaf(PS2Runtime &runtime) {
     return runtime.registerFunction(attractReturnLeaf,returnFromOriginalLeaf);
 }
 
+// activateOverlayEntries: deixa ativas na tabela so as funcoes do overlay
+// "module" (0 ou 1).
+//   1. Remove TODAS as funcoes registradas entre 0x819000 e 0x83d800.
+//   2. Registra as do modulo pedido (ovl_00: lista guardada no inicio;
+//      ovl_01: lista gerada orochiOverlay01Entries).
+// Exemplo: entrar em OPTIONS -> module=1 -> 0x8194d0 passa a existir e
+// 0x81cf50 (so do ovl_00) deixa de existir. Voltar -> module=0 desfaz.
 bool activateOverlayEntries(PS2Runtime &runtime,uint32_t module) {
     if(module>=overlayModuleCount) return false;
     for(uint32_t address=overlayBase;address<overlayEnd;address+=4)
@@ -54,6 +84,15 @@ bool activateOverlayEntries(PS2Runtime &runtime,uint32_t module) {
     return true;
 }
 
+// loadOrochiOverlay: substitui o carregador do jogo (0x151f40).
+//   - Na entrada: se o jogo pede um overlay que nao foi compilado
+//     (numero >= 2), para o jogo ANTES de sobrescrever a memoria.
+//   - Chama o carregador original (ele pode levar varios quadros; esta
+//     funcao e chamada de novo a cada retomada).
+//   - Quando o carregamento termina (flag gp-0x7c44 == 1), confere o hash
+//     dos bytes, ativa as funcoes do modulo e marca a regiao como codigo.
+// Enderecos usados: gp-0x7f18 = numero do overlay atual,
+// gp-0x7c44 = 1 quando o carregamento terminou.
 void loadOrochiOverlay(uint8_t *ram,R5900Context *ctx,PS2Runtime *runtime) {
     const auto gp=getRegU32(ctx,28);
     if(ctx->pc==0x151f40u) {
@@ -87,6 +126,10 @@ void loadOrochiOverlay(uint8_t *ram,R5900Context *ctx,PS2Runtime *runtime) {
 }
 }
 
+// installOrochiSupplementalFunctions: registra funcoes "suplementares"
+// (trechos que a analise automatica nao achou e que foram gerados a parte,
+// tools/generate_supplemental.py). Antes confere o hash de cada intervalo
+// na memoria; se o ELF for diferente do esperado, falha (main.cpp sai).
 bool installOrochiSupplementalFunctions(PS2Runtime &runtime) {
     for(const auto &range:orochiSupplementalRanges) {
         uint64_t hash=0xcbf29ce484222325ull;
@@ -99,6 +142,12 @@ bool installOrochiSupplementalFunctions(PS2Runtime &runtime) {
     return true;
 }
 
+// installOrochiOverlayFunctions: chamada uma vez por main.cpp.
+//   1. Registra a funcao vazia 0x1f2360.
+//   2. Guarda as funcoes do ovl_00 que estao na tabela no inicio (para
+//      restaurar depois que o ovl_01 for usado).
+//   3. Troca o carregador 0x151f40 (e seus pontos de retomada ate
+//      0x15201c) por loadOrochiOverlay.
 bool installOrochiOverlayFunctions(PS2Runtime &runtime) {
     if(!bindOriginalReturnLeaf(runtime)) return false;
     loadedOverlay=overlayNone;
@@ -114,6 +163,9 @@ bool installOrochiOverlayFunctions(PS2Runtime &runtime) {
     return true;
 }
 
+// runOverlayRegressionTests (WarriorsOrochi.exe --test-overlay): testa sem
+// ISO a funcao vazia, duas funcoes de geometria, a troca de tabela entre
+// ovl_00/ovl_01 nos dois sentidos e a recusa de um overlay nao compilado.
 int runOverlayRegressionTests() {
     auto runtime=std::make_unique<PS2Runtime>();
     if(!runtime->memory().initialize()) return 2;

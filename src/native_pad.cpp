@@ -1,3 +1,14 @@
+// ==========================================================================
+// LEITURA DO CONTROLE PELO JOGO
+// ==========================================================================
+// O teclado/controle do PC vira um controle de PS2 no runtime
+// (vendor/PS2Recomp/ps2xRuntime/src/lib/ps2_pad.cpp: mapeamento de
+// teclas, controles do Windows via raylib, e so le o controle com a
+// janela em foco).
+// Este arquivo corrige um detalhe da versao USA: a funcao de leitura do
+// controle do jogo (scePadRead, em 0x18eb70) deve devolver 32 (bytes
+// lidos), mas o stub generico devolve 1. Sem a correcao o jogo achava que
+// a leitura falhou e ignorava os botoes.
 #include "native_pad.h"
 #include "ps2_runtime.h"
 #include "runtime/ps2_memory.h"
@@ -11,6 +22,13 @@ namespace {
 constexpr uint32_t orochiPadReadPc=0x0018eb70u;
 PS2Runtime::RecompiledFunction orochiPadReadOriginal{};
 
+// readOrochiPad: substitui scePadRead (0x18eb70).
+// Argumento a2 (registrador 6) = endereco onde gravar o pacote de 32 bytes.
+//   1. Se esse endereco for invalido ou o pacote passar do fim da memoria,
+//      retorna 0 (falha) sem gravar nada.
+//   2. Chama a leitura original (preenche botoes e analogicos).
+//   3. Se ela deu certo (1), troca o retorno para 32, que e o que o jogo
+//      confere em 0x10416c. Porta desconectada continua 0.
 void readOrochiPad(uint8_t *ram,R5900Context *ctx,PS2Runtime *runtime) {
     const auto address=getRegU32(ctx,6);
     auto *data=getMemPtr(ram,address);
@@ -28,6 +46,8 @@ void readOrochiPad(uint8_t *ram,R5900Context *ctx,PS2Runtime *runtime) {
 }
 }
 
+// installOrochiPadFunctions: chamada por main.cpp; troca 0x18eb70 por
+// readOrochiPad. Falha se a funcao original nao existir.
 bool installOrochiPadFunctions(PS2Runtime &runtime) {
     const auto original=runtime.lookupFunction(orochiPadReadPc);
     if(!original || original==readOrochiPad) return false;
@@ -35,6 +55,9 @@ bool installOrochiPadFunctions(PS2Runtime &runtime) {
     return runtime.replaceFunction(orochiPadReadPc,readOrochiPad);
 }
 
+// runPadRegressionTests (--test-pad): confere retorno 32, que o pacote
+// gravado e igual ao original, que o codigo real do jogo aceita o pacote,
+// e que porta fechada / endereco no limite da RAM nao gravam nada.
 int runPadRegressionTests() {
     auto ownedRuntime=std::make_unique<PS2Runtime>();
     auto &runtime=*ownedRuntime;

@@ -1,3 +1,20 @@
+// ==========================================================================
+// RENDERIZADOR PROPRIO NA PLACA DE VIDEO (OROCHI_RENDERER=d3d11 ou auto)
+// ==========================================================================
+// Alternativa ao PCSX2: imita o GS do PS2 na GPU com compute shaders
+// (codigo HLSL em gpu_raster_shader.h). Desenha na resolucao NATIVA do PS2
+// (640x448), sem upscale e sem 16:9; o padrao do Setup e o PCSX2.
+// Ideia central:
+//   - A memoria de video do PS2 (4 MB) vira um buffer na GPU ("memory").
+//   - Triangulos e sprites sao traduzidos (translate) e acumulados num lote.
+//     A tela e dividida em quadrados de 16x16 pixels (tiles); cada tile
+//     guarda quais primitivas o cobrem. Um dispatch desenha o lote inteiro,
+//     um grupo de threads por tile, na ordem original das primitivas.
+//   - O que a GPU nao sabe fazer cai no renderizador por CPU (fallback),
+//     depois de copiar a VRAM de volta (download).
+//   - O resultado precisa ser IDENTICO ao da CPU. OROCHI_GPU_VERIFY=N
+//     compara as N primeiras primitivas com o desenho da CPU.
+// Precisa de GPU Direct3D 11 com suporte a double nos shaders.
 #include "native_gpu.h"
 #include "gpu_raster_shader.h"
 #include "runtime/gs/gs_cpu_backend.h"
@@ -25,6 +42,9 @@
 
 namespace {
 using Microsoft::WRL::ComPtr;
+// vramBytes: tamanho da memoria do GS do PS2 (4 MB).
+// maxPrims: primitivas por lote; tileGrid: 128x128 tiles de 16 px
+// (cobre 2048x2048); clutSlots: versoes de paleta guardadas na GPU.
 constexpr uint32_t vramBytes=4*1024*1024;
 // Batches: primitives, tile references and CLUT versions in flight.
 constexpr uint32_t maxPrims=32768,maxTileRefs=1u<<21,tileGrid=128,clutSlots=4096;
@@ -32,6 +52,11 @@ void checked(HRESULT result,const char *operation) {
     if(FAILED(result)) throw std::runtime_error(std::string(operation)+" HRESULT="+std::to_string(uint32_t(result)));
 }
 // Mirrors of the shader's DrawState and Prim (see gpu_raster_shader.h).
+// GpuDrawState / GpuPrim: copias exatas das estruturas do shader (mesmos
+// bytes). Se mudar uma, mude a outra em gpu_raster_shader.h; o
+// static_assert abaixo confere os tamanhos (96 e 144 bytes).
+// F_*: bits de opcoes por primitiva (blend, textura, filtro linear...).
+// ByteRange: faixa de bytes da VRAM lida ou escrita (para achar conflitos).
 struct GpuDrawState { uint32_t frame[4],zbuf[4],blend[4],tex[4],tex2[4],region[4]; };
 struct GpuPrim { uint32_t head[4]; float a[4],b[4]; uint32_t v[3][4]; float w[3][4]; };
 static_assert(sizeof(GpuDrawState)==96 && sizeof(GpuPrim)==144);
@@ -89,6 +114,11 @@ constexpr uint16_t columns4[512]={
     464,472,496,504,400,408,432,440,466,474,498,506,402,410,434,442,468,476,500,508,404,412,436,444,470,478,502,510,406,414,438,446,
     385,393,417,425,449,457,481,489,387,395,419,427,451,459,483,491,389,397,421,429,453,461,485,493,391,399,423,431,455,463,487,495,
     401,409,433,441,465,473,497,505,403,411,435,443,467,475,499,507,405,413,437,445,469,477,501,509,407,415,439,447,471,479,503,511};
+// Format: como um formato de pixel do PS2 e arrumado na VRAM. O GS nao
+// guarda imagens linha a linha: divide em paginas (ex.: 64x32 pixels em
+// 32 bits), blocos e colunas embaralhados (tabelas acima). pixelWrite
+// calcula em qual palavra de 32 bits e em quais bits um pixel cai.
+// Exemplo: CT32, x=0,y=0 -> pagina 0, bloco 0, palavra 0, mascara 0xffffffff.
 struct Format { uint32_t pageW,pageH,colW,colH; const uint8_t *blocks; const uint16_t *columns; uint32_t unpackedBits,bitOffset,packedBytes; };
 // Formats this backend writes natively; nullptr when the CPU must do it.
 inline const Format *format(uint32_t psm) {
@@ -138,6 +168,7 @@ inline void pixelWrite(const Format &f,uint32_t psm,uint32_t base,uint32_t bw,ui
 }
 
 // OROCHI_GPU_TIMING: adds the microseconds of a scope to *total (when set).
+// Span: mede o tempo de um trecho (OROCHI_GPU_TIMING=1) e soma em *total.
 struct Span {
     double *total;std::chrono::steady_clock::time_point start;
     explicit Span(double *t):total(t) { if(total) start=std::chrono::steady_clock::now(); }
@@ -147,6 +178,13 @@ struct GpuTiming { double wait{},copy{},convert{},image{},submit{},transfer{}; u
 
 // One run of IMAGE units uploaded raw: the GPU applies layout::pixelWrite to
 // each (see uploadRaw in gpu_raster_shader.h for the fields).
+// Envio "cru" de imagens (IMAGE do GS): em vez de calcular o endereco de
+// cada pixel na CPU, os bytes vao direto para a GPU e o shader uploadRaw
+// aplica o mesmo calculo de pixelWrite. RawSegment descreve um trecho;
+// RawRange e o retangulo que uma transferencia pode escrever.
+// conflicts(): duas transferencias na mesma fila nao podem escrever os
+// mesmos bits (os videos mandam centenas de blocos por quadro, entao
+// retangulos separados do mesmo buffer sao permitidos).
 struct RawSegment { uint32_t a[4],b[4],c[4],d[4]; };
 constexpr uint32_t rawCapacity=4*1024*1024,maxRawSegments=4096,maxRawGroups=65535;
 // What a raw transfer may write: its pages, and its rectangle in its buffer.
@@ -167,8 +205,18 @@ bool conflicts(const RawRange &a,const RawRange &b) {
 struct GpuStats { uint64_t triangles{},sprites{},batches{},tileRefs{},fallbacks{},uploads{},readbacks{},
     clutLoads{},verified{},mismatches{},imagePixels{},imageDispatches{}; };
 
+// OrochiGpuBackend: o renderizador. Mantem DUAS copias da VRAM:
+//   host (na RAM, usada pela CPU e pelo jogo) e memory (na GPU).
+//   cpuDirty = a copia da CPU mudou e precisa subir (upload).
+//   gpuDirty = a GPU desenhou e a CPU precisa baixar (download).
+// Toda funcao publica trava "mutex" (pode ser chamada pela thread de
+// desenho e pela thread do jogo).
 class OrochiGpuBackend final : public GSRasterBackend {
 public:
+    // Construtor: cria o dispositivo Direct3D 11 de HARDWARE (nunca o WARP,
+    // que desenharia na CPU), confere suporte a double, compila os 4 compute
+    // shaders (drawBatch, uploadImage, loadClut, uploadRaw) e cria os buffers.
+    // Lanca excecao se algo falhar; main.cpp entao usa o renderizador da CPU.
     OrochiGpuBackend() {
         profileFallbacks=std::getenv("OROCHI_GPU_PROFILE")!=nullptr;
         timed=std::getenv("OROCHI_GPU_TIMING")!=nullptr;
@@ -285,6 +333,14 @@ public:
         std::lock_guard lock(mutex);download();cpu.Reset();cpuDirty=true;nativeTransfer=false;clutCbp.fill(0);
         clutSlot=0;cpuClutSlot=0;
     }
+    // Submit: recebe UMA primitiva (triangulo ou sprite) do jogo.
+    //   1. translate(): converte para o formato da GPU. Pode pedir Skip (nada
+    //      a desenhar) ou Fallback (desenhar na CPU).
+    //   2. Se a primitiva le/escreve algo que o lote atual ainda vai escrever
+    //      de outro jeito (ex.: usa como textura o que o lote desenhou), o lote
+    //      e desenhado antes (flushBatch).
+    //   3. Adiciona a primitiva ao lote e a cada tile de 16x16 que ela cobre.
+    //      Ex.: sprite de (0,0) a (40,20) -> tiles x 0..2, y 0..1 = 6 tiles.
     void Submit(const GSPrimitiveBatch &batch) override {
         std::lock_guard lock(mutex);
         Span span(timed?&timing.submit:nullptr);
@@ -327,6 +383,10 @@ public:
             std::cout << "[Orochi:gpu-draw] triangles=" << stats.triangles << " sprites=" << stats.sprites
                 << " batches=" << stats.batches << " cpuFallbacks=" << stats.fallbacks << " readbacks=" << stats.readbacks << '\n';
     }
+    // LoadClut: carrega uma paleta (CLUT) de texturas indexadas (4/8 bits).
+    // Cada carga vira uma nova "versao" (slot) na GPU, assim primitivas ja no
+    // lote continuam usando a paleta antiga. As regras de quando carregar
+    // (campo CLD) sao as mesmas do renderizador da CPU.
     void LoadClut(const GSTex0Reg &tex,const GSTexClutReg &clut) override {
         // GSCpuBackend::LoadClut: which TEX0 writes load a palette.
         if(!isIndexed(tex.psm) || tex.cld==0 || tex.cld>5) return;
@@ -372,6 +432,9 @@ public:
             }
         }
     }
+    // BeginTransfer: inicio de uma copia de imagem para a VRAM (textura,
+    // quadro de video). Formatos suportados vao direto para a GPU
+    // (nativeTransfer); os outros, e leituras da VRAM, vao para a CPU.
     void BeginTransfer(const GSTransferCommand &command) override {
         std::lock_guard lock(mutex);
         Span span(timed?&timing.transfer:nullptr);
@@ -400,6 +463,9 @@ public:
                            uint32_t(p.dsax)+r.rrw,uint32_t(p.dsay)+r.rrh,inRow};
         } else {download();cpu.BeginTransfer(command);cpuDirty=true;}
     }
+    // UploadImage: os bytes da imagem iniciada em BeginTransfer (pode chegar
+    // em pedacos). Cada pixel e colocado no endereco certo da VRAM; com
+    // rawTransfer, o calculo de endereco e feito na GPU (uploadRaw).
     void UploadImage(const uint8_t *data,uint32_t size) override {
         std::lock_guard lock(mutex);
         Span span(timed?&timing.image:nullptr);
@@ -450,6 +516,8 @@ public:
     }
     void Flush() override { std::lock_guard lock(mutex);flushBatch();flushImageWrites();context->Flush(); }
     void TextureFlush() override { std::lock_guard lock(mutex);cpu.TextureFlush(); }
+    // Sync: FINISH espera a GPU terminar (ate 5 s, senao erro); outros
+    // motivos (exceto apresentar quadro) baixam a VRAM para a CPU.
     void Sync(GSSyncReason reason) override {
         std::lock_guard lock(mutex);
         if(reason==GSSyncReason::Finish) {
@@ -464,6 +532,9 @@ public:
             checked(result,"Wait for GS completion");
         } else if(reason!=GSSyncReason::Presentation) download();
     }
+    // Present: monta o quadro para a tela. Baixa a VRAM e usa a conversao da
+    // CPU (framebuffer do PS2 -> imagem RGBA). Com OROCHI_GPU_TIMING imprime
+    // tempos medios a cada 240 quadros.
     PresentationFrame Present(const GSPresentationRequest &request) override {
         std::lock_guard lock(mutex);
         download();
@@ -507,6 +578,12 @@ private:
     // Builds the GPU form of a primitive with GSCpuBackend's own arithmetic
     // (bounding boxes, edge setup, sprite texel spans), plus the byte ranges
     // it reads and writes.
+    // translate: converte uma primitiva do GS para GpuPrim/GpuDrawState com a
+    // MESMA aritmetica do renderizador da CPU (caixa envolvente, bordas,
+    // coordenadas de textura dos sprites). Tambem devolve as faixas de VRAM
+    // que ela escreve (frame, depth) e le (texture).
+    // Retorna Draw (vai para a GPU), Skip (fora da tela) ou Fallback (algo
+    // nao suportado; rejectLine guarda a linha do motivo para o perfil).
     Translation translate(const GSPrimitiveBatch &batch,GpuPrim &p,GpuDrawState &d,ByteRange &frame,
                           ByteRange &depth,std::array<ByteRange,2> &texture) const {
         auto reject=[&](unsigned line) {rejectLine=line;return Translation::Fallback;};
@@ -656,6 +733,9 @@ private:
             if(known.begin==range.begin && known.end==range.end && known.layout==range.layout) return;
         ranges.push_back(range);
     }
+    // fallback: desenha a primitiva na CPU. Antes desenha o lote da GPU e
+    // baixa a VRAM, para manter a ordem. Com OROCHI_GPU_PROFILE=1 conta e
+    // registra no log os tipos de primitiva que cairam aqui.
     void fallback(const GSPrimitiveBatch &batch) {
         if(profileFallbacks && fallbackAreas.size()<512) {
             const auto &s=batch.state; const auto &c=s.context;
@@ -686,6 +766,9 @@ private:
         for(const uint32_t tile:touched) bins[tile].clear();
         touched.clear();prims.clear();states.clear();queueWrites.clear();queueReads.clear();tileRefs=0;
     }
+    // flushBatch: desenha o lote acumulado na GPU. Monta a lista de tiles e,
+    // para cada tile, os indices das primitivas que o cobrem (na ordem),
+    // envia os buffers e faz UM Dispatch (um grupo de threads por tile).
     void flushBatch() const {
         if(prims.empty()) return;
         auto write=[&](ID3D11Buffer *buffer,const void *data,size_t bytes) {
@@ -715,6 +798,7 @@ private:
         ++stats.batches;stats.tileRefs+=indexList.size();gpuDirty=true;
         touched.clear();prims.clear();states.clear();queueWrites.clear();queueReads.clear();tileRefs=0;
     }
+    // upload: se a copia da CPU mudou (cpuDirty), envia os 4 MB para a GPU.
     void upload() const {
         if(!host || !cpuDirty) return;
         // CPU fallbacks may still be queued for parallel bands.
@@ -723,6 +807,9 @@ private:
     }
     // One entry per word and dispatch; a later write to the same word merges
     // its bits in, keeping the IMAGE order.
+    // queueImageWrite: guarda a escrita de um pixel (palavra, valor, bits).
+    // Duas escritas na mesma palavra viram uma so, respeitando a ordem.
+    // A cada 65536 palavras pendentes, envia para a GPU (flushImageWrites).
     void queueImageWrite(uint32_t word,uint32_t value,uint32_t mask) const {
         uint32_t &slot=pendingImageWords[word/4];
         if(slot) {
@@ -814,6 +901,9 @@ private:
         rawBytes.clear();rawSegments.clear();rawGroups.clear();rawRanges.clear();
         ++stats.imageDispatches;gpuDirty=true;
     }
+    // download: desenha o que estiver pendente e, se a GPU mudou a VRAM
+    // (gpuDirty), copia os 4 MB de volta para a RAM (host). E caro: o log
+    // "readbacks" do resumo conta quantas vezes aconteceu.
     void download() const {
         flushBatch();flushImageWrites();
         if(!gpuDirty || !host) return;
@@ -922,11 +1012,16 @@ private:
 };
 }
 
+// createOrochiGpuBackend: cria o renderizador; em caso de erro devolve
+// nullptr e o motivo em "error" (main.cpp mostra e usa a CPU).
 std::unique_ptr<GSRasterBackend> createOrochiGpuBackend(std::string &error) {
     try { return std::make_unique<OrochiGpuBackend>(); }
     catch(const std::exception &problem) { error=problem.what();return {}; }
 }
 
+// runGpuRegressionTests (--test-gpu): desenha centenas de casos (testes de
+// alfa, profundidade, blend, texturas, paletas, envio de imagens) na GPU
+// e na CPU e exige VRAM identica. Precisa de uma GPU real.
 int runGpuRegressionTests() {
     std::string error;auto backend=createOrochiGpuBackend(error);
     if(!backend) {std::cerr << "[GPU regression] hardware initialization failed: " << error << '\n';return 2;}
