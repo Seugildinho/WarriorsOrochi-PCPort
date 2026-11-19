@@ -1,223 +1,184 @@
-# Warriors Orochi — protótipo nativo a partir do PS2
+<!--
+  Apresentação do projeto para o GitHub.
+  Antes de publicar, troque SEU-USUARIO/SEU-REPOSITORIO pelo endereço do repositório
+  e anexe à Release o zip com o nome WarriorsOrochi-Port-Windows.zip
+  (o conteúdo da pasta "Warriors Orochi", sem a pasta data).
+-->
 
-Projeto experimental para executar no Windows o código da versão de PS2
-de **Warriors Orochi (USA), SLUS-21662, revisão 1.00**.
+<div align="center">
 
-**Ainda não é um port jogável.** O primeiro objetivo é observar a inicialização
-do código recompilado, identificar o primeiro erro real e corrigi-lo com evidências.
-Compilar um executável não comprova funcionamento dos menus ou das batalhas.
+<img src="assets/orochi-logo.png" alt="Warriors Orochi - Port para PC" width="220">
 
-As quinze suítes de regressão passam. A abertura exibe os logotipos da KOEI e
-Omega Force e chega ao título. No teste de 291,20 segundos, START abriu o menu
-principal; História abriu a seleção de histórias e o acampamento de Shu.
-Também foram abertos os menus de armas e habilidades. A arma de Zhao Yun
-mostrou nome, imagem e ataque; a lista inicial de habilidades estava vazia.
+# Warriors Orochi — Port nativo para PC
 
-A integração agora confirma os pacotes realmente recebidos pelo decodificador
-nativo e encaminha o fim de entrada e as consultas de estado para esse mesmo
-decodificador. Não duplica os bytes na fila do IPU físico nem apaga contadores
-para simular consumo. A execução termina normalmente pelo comando de teste.
+**O clássico de PS2 rodando nativamente no Windows, por recompilação estática.**<br>
+Não é emulação do jogo inteiro: o código do PS2 vira código C++ e é compilado para x64.
 
-Os registros ainda mostram falha na reserva do buffer de música após as
-animações. Som audível e batalhas não foram validados. Missão de Ueda,
-dificuldade e apresentação do capítulo foram vistas em builds anteriores e
-precisam ser repetidas nesta compilação. Veja `PROGRESSO.md` e `RETOMADA.md`.
+[![Baixar para Windows](https://img.shields.io/badge/BAIXAR%20PARA%20WINDOWS-WarriorsOrochi.exe-c0392b?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/SEU-USUARIO/SEU-REPOSITORIO/releases/latest/download/WarriorsOrochi-Port-Windows.zip)
 
-Repositório de backup **privado**, por solicitação do responsável. Não tornar
-público sem uma nova decisão dele. Não há versão jogável para baixar.
-O envio deste checkpoint ao GitHub privado foi autorizado em 22/10/2026.
-Novas atualizações remotas dependem de outro pedido do responsável.
+[![Release](https://img.shields.io/github/v/release/SEU-USUARIO/SEU-REPOSITORIO?label=vers%C3%A3o&style=flat-square)](https://github.com/SEU-USUARIO/SEU-REPOSITORIO/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/SEU-USUARIO/SEU-REPOSITORIO/total?style=flat-square&label=downloads)](https://github.com/SEU-USUARIO/SEU-REPOSITORIO/releases)
+![Plataforma](https://img.shields.io/badge/plataforma-Windows%2010%2F11%20x64-0078d6?style=flat-square&logo=windows)
+![Direct3D 11](https://img.shields.io/badge/gr%C3%A1ficos-Direct3D%2011-5c2d91?style=flat-square)
+[![Licença](https://img.shields.io/badge/licen%C3%A7a-GPL--3.0-2ea44f?style=flat-square)](LICENSE)
 
-## Como jogar
+[**Baixar**](#-baixar-e-jogar) · [**Recursos**](#-recursos) · [**Controles**](#-controles) · [**Compilar**](#-compilar-a-partir-do-código) · [**Como funciona**](#-como-funciona) · [**Problemas**](#-reportar-problemas)
 
-O port tem dois programas, lado a lado em `build-tools/ps2xRuntime/Release`:
+</div>
 
-- `WarriorsOrochi-Setup.exe` (`Configurar port.cmd`): escolhe a ISO, em qualquer pasta, e as opções de vídeo, áudio e save automático.
-- `WarriorsOrochi.exe` (`Abrir port.cmd`): abre o jogo com o que foi salvo no Setup. Sem ISO configurada, abre o Setup.
+---
 
-A ISO precisa ser do Warriors Orochi (USA) ou uma versão que mude apenas textos, como a tradução PT-BR. O executável do jogo é lido da própria ISO.
+> [!IMPORTANT]
+> **O jogo não vem junto.** Este projeto não contém a ISO, arquivos do disco nem código gerado a partir dele.
+> Para jogar, você precisa da **sua própria cópia** do *Warriors Orochi* (USA, **SLUS-21662**).
+> A tradução PT-BR feita sobre essa versão também funciona.
 
-## Abordagem
+## 🎮 Baixar e jogar
 
-Usa [PS2Recomp](https://github.com/ran-j/PS2Recomp), fixado no commit
-`eb8688b2fd191129f103a39543002c005b33409c`, para converter o código do
-Emotion Engine em C++ e compilá-lo para x64. A infraestrutura ainda fornece
-serviços do PS2 e intérpretes para componentes auxiliares, como IOP e VU.
-O objetivo é substituir progressivamente dependências específicas do console.
-O iniciador normal usa renderização por CPU (`GSCpuBackend`). Existe um caminho
-experimental Direct3D 11 Compute (`OROCHI_RENDERER=d3d11`) que acelera somente
-sprites de cor constante; texturas e triângulos continuam na CPU. A janela usa
-OpenGL/raylib. Não há renderização Vulkan nesta compilação.
+1. **[Baixe o port (zip)](https://github.com/SEU-USUARIO/SEU-REPOSITORIO/releases/latest/download/WarriorsOrochi-Port-Windows.zip)** e extraia numa pasta com permissão de escrita (não use *Arquivos de Programas*).
+2. Abra **`WarriorsOrochi-Setup.exe`**.
+3. Na aba **Jogo**, escolha a sua ISO em *Selecionar outra ISO*.
+4. Ajuste as abas **Gráficos**, **Áudio**, **Controles** e **Trapaças** como quiser e clique em **Salvar e jogar**.
 
-O [port de ICO](https://github.com/nathanialf/ico-pc) foi uma referência de
-arquitetura; seu código não foi incorporado a este protótipo.
+Depois disso, basta abrir **`WarriorsOrochi.exe`**. Para trocar a ISO ou as opções, abra o Setup de novo.
 
-## Base exata
+### Requisitos
 
-- ISO: `Warriors Orochi (USA).iso`, 2.677.604.352 bytes.
-- SHA-256 da ISO: `1c7a1ee34b56612593625ad327f38e3b955c850320b13cfaecada326f86df85e`.
-- Executável original: `SLUS_216.62`, 2.462.208 bytes.
-- SHA-256 do executável: `40e68b87a4a000000a1b22b07f71f601073109c77fa3b8840d5286afe2eb75db`.
-- Entrada: `0x00100008`. Registrador GP inicial: `0x00360170`.
-- Não há símbolos de funções: a seção de símbolos está vazia.
+| | Mínimo |
+|---|---|
+| Sistema | Windows 10 ou 11, 64 bits |
+| Processador | x64 com **AVX2** |
+| Vídeo | Placa com **Direct3D 11** |
+| Jogo | Sua ISO do *Warriors Orochi* (USA, SLUS-21662) |
 
-Esta etapa usa a ISO original para distinguir problemas do port de problemas
-da tradução. A tradução PT-BR 1.0 e sua publicação permanecem em seu projeto.
+## ✨ Recursos
 
-## Ferramentas locais
+| | |
+|---|---|
+| 🚀 **Nativo** | Código do jogo recompilado para x64; o processador vetorial VU1 também é traduzido antecipadamente para C++. |
+| 🖥️ **Gráficos em alta resolução** | Renderizador baseado no GS do PCSX2 (Direct3D 11), com upscale, **16:9** e correção das linhas e emendas que aparecem ao aumentar a resolução. |
+| ⚔️ **Batalhas cheias a 60 fps** | Na batalha mais lotada que testamos, o jogo se manteve a 60 fps com upscale 8x. |
+| 👥 **Mais soldados na tela** | O original desenha no máximo 51 personagens; aqui o padrão é 100 (até 147), em *Gráficos → Soldados desenhados*. |
+| 🔊 **Áudio** | Música e efeitos com volume ajustável no Setup. |
+| 💾 **Saves seguros** | Memory card em `data\mc0`, com cópia automática do save anterior em `data\mc0-backup`. |
+| 🕹️ **Controles** | Teclado e controles de jogo conectados ao Windows. O controle só age quando a janela do jogo está em foco. |
+| 🧪 **Trapaças opcionais** | Invencível, vida infinita, musou infinito e pontos de crescimento infinitos. Todas vêm desligadas. |
+| ⚙️ **Setup com abas** | Jogo · Gráficos · Áudio · Controles · Trapaças. |
 
-Visual Studio 2022 Build Tools, CMake e Python 3.12. O adaptador IPU2 usa
-libavcodec no próprio processo; FFmpeg 8.1 no PATH serve somente como referência
-dos testes e para a comparação opcional com o caminho antigo. Para IPU2 e
-MPEG-2, a compilação usa as bibliotecas compartilhadas do
-FFmpeg 7.1, baixadas pelo CMake e verificadas por SHA-256. Os dados do pacote
-estão em `config/ffmpeg-windows.json`; suas DLLs são copiadas ao lado do executável.
-Ghidra 12.1.4, extensão
-Emotion Engine Reloaded 2.1.38 e JDK 21 foram colocados em `vendor/`, sem mudar
-o Java global. As versões e os hashes ficam em `config/` e em
-`local/analysis_tools_paths.json`.
+<!-- Screenshots: aperte F12 no jogo, coloque as imagens numa pasta docs/ e descomente.
+<div align="center">
+  <img src="docs/screenshot-1.png" width="45%"> <img src="docs/screenshot-2.png" width="45%">
+</div>
+-->
 
-Use Python 3.12 ou superior, Git e Visual Studio 2022 Build Tools com C++ para
-Windows. Clone este repositório numa pasta ao lado da ISO original, com o nome
-exato `Warriors Orochi (USA).iso`. A pasta do repositório pode ter qualquer nome.
-Prepare a dependência fixada a partir da raiz deste repositório:
+## ⌨️ Controles
+
+| Tecla | Ação |
+|---|---|
+| `Enter` | Start |
+| Setas | Direcional |
+| `W` `A` `S` `D` | Mover |
+| `X` | Confirmar |
+| `C` | Voltar |
+| `F10` | Alternar tela cheia / janela |
+| `F12` | Salvar screenshot em `data\` |
+| `Alt` + `F4` | Fechar o jogo |
+
+A lista completa e a troca de teclas ficam na aba **Controles** do Setup.
+
+## 🛠️ Compilar a partir do código
+
+Coloque o projeto num **caminho curto** (por exemplo `C:\WO`): a compilação cria arquivos muito fundos e o Windows não aceita caminhos com mais de 260 caracteres. Deixe a ISO ao lado da pasta, com o nome exato `Warriors Orochi (USA).iso`.
+
+```powershell
+winget install ezwinports.make   # depois feche e abra o terminal
+make deps       # instala Git, Python e VS 2022 Build Tools (C++) e baixa PS2Recomp e PCSX2 nas versões certas
+make check      # confere se está tudo presente
+make generate   # lê a ISO e gera o código do jogo (demora na primeira vez)
+make install    # compila e monta a pasta "Warriors Orochi"
+make test       # testes de regressão
+```
+
+| Comando | Para quê |
+|---|---|
+| `make reinstall` | Depois de alterar o código: recompila só o que mudou e troca os programas na pasta do jogo (saves e configurações ficam). |
+| `make run` | Abre o Setup. |
+| `make package` | Gera um zip com programa, código e logs. |
+| `make help` | Lista todos os comandos. |
+
+<details>
+<summary><b>Sem make (passo a passo)</b></summary>
 
 ```powershell
 git clone https://github.com/ran-j/PS2Recomp.git vendor/PS2Recomp
 git -C vendor/PS2Recomp checkout eb8688b2fd191129f103a39543002c005b33409c
-```
-
-Atalho: com GNU make instalado (`winget install ezwinports.make`), `make help` lista os passos. Na primeira vez: `make deps` (instala o que faltar e baixa PS2Recomp e PCSX2), `make check`, `make generate` e `make install`; depois de editar `src/`, só `make`. `make reinstall`, depois de alterar o código, recompila só o que mudou (inclusive `.cpp` novos e patches) e troca os programas da pasta do jogo, mantendo saves e configurações, `make test` roda as regressões e `make package` gera um zip com o programa, o código e os logs.
-
-Sequência completa, a partir desta pasta, com Python e FFmpeg disponíveis:
-
-```powershell
+git clone https://github.com/PCSX2/pcsx2.git thirdparty/pcsx2
+git -C thirdparty/pcsx2 checkout fd9d310ccbb6b8b62c976da8886a3c8fd3a10ff3
+git -C thirdparty/pcsx2 apply ../../patches/pcsx2/0001-gs-d3d11-without-dx12-vulkan.patch
+git -C thirdparty/pcsx2 apply ../../patches/pcsx2/0002-sprite-edge-inset.patch
 python tools/inspect_game.py
 python tools/workflow.py tools
 python tools/workflow.py analyze
-python tools/download_analysis_tools.py
-python tools/analyze_ghidra.py
 python tools/workflow.py generate
 python tools/workflow.py native
+python tools/make_helper.py install
 python tools/run_regressions.py
-python tools/run_probe.py --seconds 15
 ```
 
-O checkout fixado de PS2Recomp precisa existir em `vendor/PS2Recomp`.
-O gerador arquiva automaticamente a rodada anterior em `local/generated-DATA-HORA`
-antes de gerar uma nova pasta, para não misturar funções antigas e novas.
-As correções locais em `patches/` são aplicadas pela configuração da compilação.
-O mapa usado é `local/analysis/orochi.ranges.csv`, com intervalos de instruções
-sem sobreposição. O checkpoint inclui `config/orochi.ranges.csv`, somente com nomes
-e endereços, para conservar o mapa testado. Na ausência do mapa local, o gerador
-copia esse checkpoint. Para reproduzir o código atual, é possível pular o download
-e a execução do Ghidra: execute `inspect_game`, `workflow tools`, `workflow analyze`,
-`workflow generate` e `workflow native` nessa ordem.
-O gerador rejeita mapas ausentes ou sobrepostos. Quinze rotinas
-de configuração e envio gráfico usam o código original recompilado, conforme
-`config/analysis.json`, para preservar a estrutura desta versão do SDK.
+Requisitos: Windows 10/11 x64 com AVX2, Visual Studio 2022 Build Tools com C++, Python 3.12+ e Git.
+</details>
 
-Para atualizar a análise com novas evidências sem reimportar o executável, use
-`python tools/analyze_ghidra.py --update`. As funções comprovadas por execução ficam
-em `config/analysis.json`; a recuperação adicional por referências gera
-`local/analysis/indirect_candidates.csv`.
+## 🔬 Como funciona
 
-O jogo também carrega código do disco que não está no executável inicial.
-O primeiro módulo identificado é `ovl_00.bin`, com 142.400 bytes. A configuração
-conserva sua posição na ISO e o SHA-256 em `config/overlay_00.json`.
-`workflow generate` extrai esse módulo da ISO e prepara um ELF adicional **somente
-para gerar C++**; o protótipo continua carregando o ELF original e deixa o próprio
-jogo ler o módulo do disco. A integração verifica os bytes carregados antes de
-liberar seu código recompilado.
+```text
+ ISO do jogo ──► ELF do PS2 (MIPS R5900)
+                     │  PS2Recomp: análise + recompilação estática
+                     ▼
+               código C++ gerado ──┐
+                                   ├──► WarriorsOrochi.exe (x64)
+ adaptadores do port (src/) ───────┤
+ GS do PCSX2 (Direct3D 11) ────────┘
+```
 
-`ovl_01.bin` (OPTIONS e GALLERY, 48.256 bytes, `config/overlay_01.json`) usa o mesmo
-endereço, então não cabe na geração principal: `tools/generate_supplemental.py` o
-recompila à parte com símbolos `ovl01_*` e a carga troca as entradas da tabela de
-funções depois de verificar os bytes. O disco só tem esses dois módulos.
-Para repetir a análise com Ghidra, execute `python tools/analyze_overlay.py --index N`.
-Os mapas testados estão em `config/overlay_00.ranges.csv` e `config/overlay_01.ranges.csv`.
+- **CPU (EE):** as funções do jogo são traduzidas para C++ e compiladas com otimização total.
+- **VU1:** os microprogramas gráficos são traduzidos antecipadamente para C++ e conferidos contra um interpretador.
+- **GS:** o processador gráfico é o do PCSX2 embutido, em Direct3D 11, com correções próprias para upscale.
+- **IOP e áudio:** os serviços do processador de entrada e saída e o SPU2 são atendidos de forma nativa pelo runtime.
+- **Correções do port:** patches versionados em `patches/` sobre versões fixas do PS2Recomp e do PCSX2.
 
-## Diagnósticos e limites
+<details>
+<summary><b>Estrutura do repositório</b></summary>
 
-- Inventário verificado: `relatorios/inventario_ps2.json`.
-- Análise do executável: `logs/analyze.log` e `logs/ghidra.log`.
-- Conversão: `logs/generate.log`.
-- Compilação: `logs/build-native.log`.
-- Teste de inicialização: `relatorios/teste_boot.json` e `logs/boot.*.log`.
-- `--stack` no teste registra a pilha nativa da thread do próprio protótipo.
-- `relatorios/boot-frame.png` registra a imagem desenhada pelo protótipo.
-- Execute o binário com `--test-dma` para os testes de endereçamento e estado DMA.
-- `--test-vsync` verifica o argumento, GP e pilha de três callbacks consecutivos.
-- `--test-gif` compara um envio de imagem completo com o mesmo envio fragmentado.
-- `--test-display` verifica os modos de exibição progressivo e entrelaçado.
-- `--test-pad` verifica tamanho do pacote, aceitação pelo chamador original,
-  falha de porta fechada e proteção dos limites da memória.
-- `--test-sif` verifica a entrega de um pacote do transporte do IOP ao handler
-  original do SDK e ao leitor de estado de som usado pelo jogo. Reinicializar
-  os handlers conserva o estado já recebido.
-- `--test-iop-memory` verifica 100 ciclos de alocar e liberar buffers de música,
-  reutilização de espaços livres, limites, alinhamento e consultas de memória.
-- `--test-iop-loader` verifica a reserva conjunta de módulos e buffers, a
-  liberação de imagens e a rejeição de imagens inválidas ou sobrepostas.
-- `--test-syncv` executa a espera original da animação com os dois campos de
-  vídeo entrelaçado e verifica o retorno do modo progressivo.
-- `--test-mpeg-audio` verifica os seletores originais 3 e 4, pacotes divididos,
-  rejeição de outro canal e a cópia do cabeçalho pelo callback do próprio jogo.
-- `--test-mpeg-transport` verifica a confirmação dos bytes já recebidos,
-  rejeita confirmações incorretas ou repetidas e conserva os quadros pendentes
-  até o fim da apresentação. A fila física do IPU permanece sem alterações.
-- `--test-overlay` verifica que um módulo não recompilado é recusado antes
-  de substituir o código na memória ou executar construtores, e que os módulos
-  de mesmo endereço trocam a tabela de funções nos dois sentidos.
-- `--test-switch` executa as oito entradas da tabela de Ueda, em ambos os
-  caminhos de condição, verificando os resultados do próprio código recompilado.
-- `python tools/run_probe.py --seconds 30 --press-start` injeta START somente no
-  controle interno deste protótipo, para diagnosticar a transição da tela de título.
-- Exemplo de sequência programada para História; os tempos podem precisar de
-  ajuste porque as animações iniciais agora são reproduzidas:
-  `python tools/run_probe.py --seconds 55 --press-start --input 1800:CROSS --input 1830:NONE --capture-frames`.
-  Os números são quadros da janela do protótipo. `NONE` solta os botões.
-  As capturas da sequência ficam somente em `local/probe-frames/`.
-- O teste aceita até 300 segundos; comandos `--input` aceitam os quadros 1..18000.
-  Para controlar o teste depois de observar uma tela, inicie com `--live-inputs`
-  e use, em outro terminal, `python tools/control_probe.py CROSS --frames 30`.
-  O comando fica restrito ao controle interno do protótipo e solta o botão
-  automaticamente em 1..120 quadros. Não envia teclas ao Windows.
-  `python tools/control_probe.py STOP` encerra o teste normalmente, permitindo
-  a captura de memória quando `--dump-ram` foi explicitamente habilitado.
-- `--dump-ram` salva a memória EE, scratchpad e IOP em `local/` após um
-  encerramento normal, inclusive por `control_probe.py STOP`. Também registra
-  o estado do IOP. Matar o processo pelo limite de tempo não produz esses dumps.
-  As capturas servem à investigação local e não são enviadas ao repositório.
-- Funções ausentes interrompem o protótipo; não são ignoradas para simular avanço.
-- A integração `sceMpeg` com FFmpeg está habilitada. A entrega dos canais de
-  áudio usa a tabela do SDK em `0x306b80`; o cabeçalho privado é conservado para
-  o callback original. A reprodução completa ainda não está validada.
-  O adaptador separado de `ipu2` usa o decodificador IPU em um processo nativo, valida o quadro
-  e grava os pixels em blocos de 16×16 antes de entregar a interrupção ao jogo.
-  Esta primeira integração ainda abre o decodificador por quadro; otimização e
-  validação de todas as animações continuam pendentes.
-- O executável lê a ISO local. Os dados e arquivos gerados do jogo ficam privados.
-- Os salvamentos usam `data/mc0`, ao lado dos executáveis, separados do emulador. As ferramentas de teste continuam usando `local/mc0`.
+| Pasta | Conteúdo |
+|---|---|
+| `src/` | Adaptadores do port: Setup, configurações, trapaças, distância de desenho, ponte com o GS, VU1 nativo |
+| `config/` | Configuração da compilação e da recompilação |
+| `tools/` | Pipeline (`workflow.py`), `make_helper.py`, geradores e testes |
+| `patches/` | Correções aplicadas ao PS2Recomp e ao PCSX2 |
+| `assets/` | Ícone, logo e textos que acompanham o programa |
 
-Ainda precisam ser comprovados: equipar habilidades adquiridas, áudio, controle
-físico, batalhas, demais recursos gráficos e salvamento/carregamento.
-Só depois disso faz sentido medir desempenho e integrar a tradução.
+</details>
 
-O formato IPU de entrada do adaptador segue o
-[demultiplexador do FFmpeg](https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/ipudec.c)
-e usa seu [decodificador IPU](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/mpeg12dec.c).
-Os arquivos temporários com quadros e pixels ficam em `local/native-image/` e
-não devem ser incluídos numa distribuição do código do projeto.
+## 🐞 Reportar problemas
 
-## Créditos e distribuição
+Abra uma [issue](https://github.com/SEU-USUARIO/SEU-REPOSITORIO/issues) com:
 
-Preparação e desenvolvimento assistidos por **Codex (OpenAI)**; projeto e testes:
-**Seugildinho**. PS2Recomp e as demais dependências mantêm seus créditos e licenças
-originais. PS2Recomp usa GPL-3.0; qualquer distribuição de uma compilação derivada
-precisa acompanhar seu código correspondente e os avisos aplicáveis.
+- o arquivo **`data\port.log`** (registro da última execução);
+- um screenshot tirado com **F12** no momento do problema (fica em `data\`);
+- em que parte do jogo aconteceu.
 
-O checkpoint local inclui adaptadores, ferramentas, mapa de endereços e doze patches.
-Não inclui ISO, ELF, recursos do jogo, código recompilado gerado, executáveis ou
-dependências. Cada usuário precisa fornecer sua própria cópia do jogo.
-O código deste projeto está sob GPL-3.0; veja `LICENSE` e `NOTICES.md`.
+### Limitações conhecidas
+
+- Em resolução alta, ainda podem aparecer emendas leves em alguns efeitos de pós-processamento.
+- Algumas barras de vida distantes podem aparecer sem o corpo do soldado (comportamento do original, atenuado pela opção *Soldados desenhados*).
+
+## 📜 Licença e créditos
+
+O código do port está sob **[GPL-3.0](LICENSE)** (veja também `NOTICES.md`).
+
+- **[PS2Recomp](https://github.com/ran-j/PS2Recomp)** — recompilador estático de PS2 (GPL-3.0).
+- **[PCSX2](https://github.com/PCSX2/pcsx2)** — renderizador GS (GPL-3.0).
+
+*Warriors Orochi* é marca registrada da Koei Tecmo. Este é um projeto de fãs, sem fins lucrativos e sem vínculo com a Koei Tecmo ou a Sony. Nenhum arquivo do jogo é distribuído aqui.
+
+<div align="center"><sub>Feito com 🗡️ por fãs de Musou.</sub></div>
