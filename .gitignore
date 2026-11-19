@@ -14,3 +14,19 @@ relatorios/
 *.pdb
 *.ilk
 __pycache__/
+
+# ---------------------------------------------------------------------------
+# Dados do jogo e saves gerados ao jogar: NUNCA vao para o repositorio.
+# Ficam so no disco de quem joga (pasta "Warriors Orochi\data").
+#   SLUS_216.62  -> executavel do PS2 extraido da ISO a cada abertura do jogo
+#                   (codigo da Koei Tecmo: nao pode ser distribuido)
+#   iop-staging/ -> modulos do disco copiados durante o jogo
+#   mc0/, mc1/   -> memory cards (saves pessoais de cada jogador)
+#   mc0-backup/  -> copia do save anterior, feita antes de cada autosave
+# Exemplo: depois de jogar, "git status" nao deve listar nada disso.
+# ---------------------------------------------------------------------------
+Warriors Orochi/data/SLUS_216.62
+Warriors Orochi/data/iop-staging/
+Warriors Orochi/data/mc0/
+Warriors Orochi/data/mc1/
+Warriors Orochi/data/mc0-backup/
