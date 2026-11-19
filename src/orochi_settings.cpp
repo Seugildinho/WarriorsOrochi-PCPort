@@ -38,6 +38,35 @@ const std::vector<int> &orochiScales()
     return kScales;
 }
 
+// orochiPadButtonMapToText: mapa -> "n,n,n,...". Ex.: padrao ->
+// "1,3,4,2,7,6,8,5,9,11,10,12,15,13,16,17".
+std::string orochiPadButtonMapToText(const OrochiPadButtonMap &map)
+{
+    std::string text;
+    for (size_t index = 0; index < map.size(); ++index)
+        text += (index ? "," : "") + std::to_string(map[index]);
+    return text;
+}
+
+// orochiPadButtonMapFromText: "n,n,..." -> mapa. Precisa de exatamente 16
+// numeros entre 0 e 17; qualquer outra coisa devolve o padrao inteiro (melhor
+// que um controle com botoes faltando). Ex.: "7,6" -> padrao.
+OrochiPadButtonMap orochiPadButtonMapFromText(const std::string &text)
+{
+    OrochiPadButtonMap map{};
+    const char *at = text.c_str();
+    for (size_t index = 0; index < map.size(); ++index)
+    {
+        char *end = nullptr;
+        const long value = std::strtol(at, &end, 10);
+        if (end == at || value < 0 || value > 17)
+            return kOrochiDefaultPadButtonMap;
+        map[index] = static_cast<int>(value);
+        at = *end == ',' ? end + 1 : end;
+    }
+    return *at == '\0' ? map : kOrochiDefaultPadButtonMap;
+}
+
 std::filesystem::path orochiProgramFolder()
 {
     return orochiPathFromUtf8(GetApplicationDirectory());
@@ -105,6 +134,17 @@ OrochiSettings orochiLoadSettings()
             settings.cheatPoints = value == "on";
         else if (key == "disc" && orochiPathFromUtf8(value).is_absolute())
             settings.disc = value;
+        // Controles. Ex. de linhas: "pad_player1=0:Xbox Controller",
+        // "pad_player2=auto", "keyboard_player=1",
+        // "pad_buttons_player1=1,3,4,2,7,6,8,5,9,11,10,12,15,13,16,17".
+        // Valores invalidos: automatico / jogador 1 / mapa padrao.
+        else if (key == "pad_player1" || key == "pad_player2")
+            settings.padPlayer[key.back() == '1' ? 0 : 1] =
+                (value == "none" || value.find(':') != std::string::npos) ? value : "auto";
+        else if (key == "keyboard_player")
+            settings.keyboardPlayer = value == "2" ? 2 : value == "0" ? 0 : 1;
+        else if (key == "pad_buttons_player1" || key == "pad_buttons_player2")
+            settings.padButtons[key.back() == '1' ? 0 : 1] = orochiPadButtonMapFromText(value);
     }
     settings.pcsx2 = settings.pcsx2 && kOrochiHasPcsx2;
     if (std::find(kScales.begin(), kScales.end(), settings.scale) == kScales.end())
@@ -138,5 +178,11 @@ void orochiSaveSettings(const OrochiSettings &settings)
          << "cheat_life=" << (settings.cheatLife ? "on" : "off") << '\n'
          << "cheat_musou=" << (settings.cheatMusou ? "on" : "off") << '\n'
          << "cheat_points=" << (settings.cheatPoints ? "on" : "off") << '\n'
+         // Controles (formato descrito em orochiLoadSettings).
+         << "pad_player1=" << settings.padPlayer[0] << '\n'
+         << "pad_player2=" << settings.padPlayer[1] << '\n'
+         << "keyboard_player=" << settings.keyboardPlayer << '\n'
+         << "pad_buttons_player1=" << orochiPadButtonMapToText(settings.padButtons[0]) << '\n'
+         << "pad_buttons_player2=" << orochiPadButtonMapToText(settings.padButtons[1]) << '\n'
          << "disc=" << settings.disc << '\n';
 }

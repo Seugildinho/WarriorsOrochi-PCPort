@@ -8,6 +8,8 @@
 #include "raylib.h"
 
 #include <algorithm>
+// std::abs(float), usado na lista de controles conectados.
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -67,6 +69,18 @@ namespace
         CheatLife,
         CheatMusou,
         CheatPoints,
+        // ---- Aba Controles (novas linhas) ----
+        // PadPlayer1/2   : qual controle e de cada jogador (Automatico,
+        //                  Nenhum ou um controle conectado especifico).
+        // KeyboardPlayer : qual jogador o teclado controla (1, 2 ou ninguem).
+        // ButtonsPlayer1/2 : abre a tela para trocar os botoes do jogador.
+        // KeyboardKeys   : abre a lista de teclas do teclado (so leitura).
+        PadPlayer1,
+        PadPlayer2,
+        KeyboardPlayer,
+        ButtonsPlayer1,
+        ButtonsPlayer2,
+        KeyboardKeys,
         Play,
         Save,
         Quit,
@@ -100,6 +114,14 @@ namespace
         case Row::CheatMusou:
         case Row::CheatPoints:
             return Tab::Cheats;
+        // Linhas da aba Controles.
+        case Row::PadPlayer1:
+        case Row::PadPlayer2:
+        case Row::KeyboardPlayer:
+        case Row::ButtonsPlayer1:
+        case Row::ButtonsPlayer2:
+        case Row::KeyboardKeys:
+            return Tab::Controls;
         default:
             return Tab::Count;
         }
@@ -125,6 +147,130 @@ namespace
         {"Fechar o jogo", "Alt+F4"},
     };
 
+    // ---------------------------------------------------------------------
+    // CONTROLES: nomes mostrados na tela de botoes
+    // ---------------------------------------------------------------------
+    // Nome de cada botao do PS2, na ordem do mapa (orochi_settings.h,
+    // kOrochiPs2ButtonCount): 0 cima ... 15 R3.
+    const char *const kPs2ButtonNamesInMapOrder[kOrochiPs2ButtonCount] = {
+        "Direcional ↑", "Direcional ↓", "Direcional ←", "Direcional →",
+        "X (pular, confirmar)", "Círculo (musou, voltar)", "Quadrado (ataque normal)",
+        "Triângulo (ataque carregado)", "L1", "R1", "L2", "R2", "Start", "Select", "L3", "R3"};
+
+    // Nome do botao FISICO do controle (numero do enum GamepadButton do
+    // raylib). Mostra o nome no Xbox e no PlayStation, porque o raylib usa a
+    // posicao do botao, nao a letra. Ex.: 7 -> "A / Cruz" (botao de baixo).
+    const char *physicalGamepadButtonName(int physicalButton)
+    {
+        switch (physicalButton)
+        {
+        case GAMEPAD_BUTTON_LEFT_FACE_UP: return "Direcional ↑";
+        case GAMEPAD_BUTTON_LEFT_FACE_RIGHT: return "Direcional →";
+        case GAMEPAD_BUTTON_LEFT_FACE_DOWN: return "Direcional ↓";
+        case GAMEPAD_BUTTON_LEFT_FACE_LEFT: return "Direcional ←";
+        case GAMEPAD_BUTTON_RIGHT_FACE_UP: return "Y / Triângulo";
+        case GAMEPAD_BUTTON_RIGHT_FACE_RIGHT: return "B / Círculo";
+        case GAMEPAD_BUTTON_RIGHT_FACE_DOWN: return "A / Cruz";
+        case GAMEPAD_BUTTON_RIGHT_FACE_LEFT: return "X / Quadrado";
+        case GAMEPAD_BUTTON_LEFT_TRIGGER_1: return "LB / L1";
+        case GAMEPAD_BUTTON_LEFT_TRIGGER_2: return "LT / L2";
+        case GAMEPAD_BUTTON_RIGHT_TRIGGER_1: return "RB / R1";
+        case GAMEPAD_BUTTON_RIGHT_TRIGGER_2: return "RT / R2";
+        case GAMEPAD_BUTTON_MIDDLE_LEFT: return "Back / Select";
+        case GAMEPAD_BUTTON_MIDDLE: return "Guide / PS";
+        case GAMEPAD_BUTTON_MIDDLE_RIGHT: return "Start";
+        case GAMEPAD_BUTTON_LEFT_THUMB: return "Analógico esq. (L3)";
+        case GAMEPAD_BUTTON_RIGHT_THUMB: return "Analógico dir. (R3)";
+        default: return "Nenhum";
+        }
+    }
+
+    // O mesmo arquivo opcional de mapeamentos que o jogo carrega
+    // (ps2_pad.cpp, loadGamepadMappingsOnce): sem ele, o Setup poderia
+    // enxergar controles diferentes dos que o jogo enxerga.
+    void loadGamepadMappingsLikeTheGame()
+    {
+        const std::string path = std::string(GetApplicationDirectory()) + "gamecontrollerdb.txt";
+        if (!FileExists(path.c_str()))
+            return;
+        if (char *text = LoadFileText(path.c_str()))
+        {
+            SetGamepadMappings(text);
+            UnloadFileText(text);
+        }
+    }
+
+    // Quantos controles o raylib acompanha (indices 0..3), igual ao jogo.
+    constexpr int kSetupMaxGamepads = 4;
+
+    // Texto salvo para "este controle especifico": "<indice>:<nome>".
+    // Ex.: controle 0 chamado "Xbox Controller" -> "0:Xbox Controller".
+    std::string specificControllerChoiceText(int gamepadIndex)
+    {
+        return std::to_string(gamepadIndex) + ":" + GetGamepadName(gamepadIndex);
+    }
+
+    // Separa "<indice>:<nome>" (valor de padPlayer). Retorna false para
+    // "auto"/"none". Ex.: "1:DualSense" -> index 1, name "DualSense".
+    bool splitSpecificControllerChoice(const std::string &choice, int &index, std::string &name)
+    {
+        const size_t colon = choice.find(':');
+        if (colon == std::string::npos || colon == 0)
+            return false;
+        index = std::atoi(choice.c_str());
+        name = choice.substr(colon + 1);
+        return true;
+    }
+
+    // Mesmo criterio do jogo (ps2_pad.cpp, findConnectedGamepadMatchingChoice):
+    // mesma posicao e nome; senao, o primeiro com o mesmo nome; senao -1.
+    int findConnectedGamepadForChoice(const std::string &choice)
+    {
+        int index = -1;
+        std::string name;
+        if (!splitSpecificControllerChoice(choice, index, name))
+            return -1;
+        if (index >= 0 && index < kSetupMaxGamepads && IsGamepadAvailable(index) && name == GetGamepadName(index))
+            return index;
+        for (int other = 0; other < kSetupMaxGamepads; ++other)
+            if (IsGamepadAvailable(other) && name == GetGamepadName(other))
+                return other;
+        return -1;
+    }
+
+    // Qual controle o JOGO vai dar ao jogador (0 = jogador 1, 1 = jogador 2),
+    // com as escolhas atuais do Setup. Copia da regra do jogo
+    // (ps2_pad.cpp, gamepadIndexForPlayerPort), sem a checagem de foco:
+    //   "none" -> -1; especifico conectado -> ele; automatico (ou especifico
+    //   desconectado) -> o proximo controle livre, na ordem dos jogadores.
+    int gamepadTheGameWillGivePlayer(const OrochiSettings &settings, int player)
+    {
+        std::array<int, 2> specificIndex{-1, -1};
+        std::array<bool, 2> usesAutomatic{false, false};
+        for (int other = 0; other < 2; ++other)
+        {
+            if (settings.padPlayer[other] == "none")
+                continue;
+            specificIndex[other] = findConnectedGamepadForChoice(settings.padPlayer[other]);
+            usesAutomatic[other] = specificIndex[other] < 0;
+        }
+        if (settings.padPlayer[player] == "none")
+            return -1;
+        if (specificIndex[player] >= 0)
+            return specificIndex[player];
+        const int automaticRank = (player == 1 && usesAutomatic[0]) ? 1 : 0;
+        int freeSeen = 0;
+        for (int index = 0; index < kSetupMaxGamepads; ++index)
+        {
+            if (!IsGamepadAvailable(index) || index == specificIndex[0] || index == specificIndex[1])
+                continue;
+            if (freeSeen == automaticRank)
+                return index;
+            ++freeSeen;
+        }
+        return -1;
+    }
+
     enum class Outcome
     {
         Quit,
@@ -147,6 +293,9 @@ namespace
                 codepoints.push_back(c);
             for (int c : {0x2014, 0x2026, 0x2190, 0x2191, 0x2192, 0x2193})
                 codepoints.push_back(c);
+            // "●" (U+25CF): marca o controle que esta sendo apertado na lista
+            // "Controles conectados" da aba Controles.
+            codepoints.push_back(0x25CF);
             auto open = [&](const char *file, int size) {
                 const std::string path = std::string("C:/Windows/Fonts/") + file;
                 if (!FileExists(path.c_str()))
@@ -201,6 +350,281 @@ namespace
         Tab m_tab = Tab::Game;
         Row m_focus = Row::Play;
         std::string m_problem;
+
+        // ---- Telas extras da aba Controles ----
+        // Page::Main = a tela normal com abas. As outras ocupam a janela toda
+        // ate o usuario voltar (Esc, Backspace, B do controle ou "Voltar").
+        enum class Page
+        {
+            Main,
+            ButtonsPlayer1, // trocar botoes do jogador 1
+            ButtonsPlayer2, // trocar botoes do jogador 2
+            KeyboardKeys,   // lista de teclas do teclado (so leitura)
+        };
+        Page m_page = Page::Main;
+        // Na tela de botoes: qual botao do PS2 esta selecionado (0..15, ordem
+        // de kPs2ButtonNamesInMapOrder) e se estamos esperando o usuario
+        // apertar o novo botao no controle.
+        int m_buttonFocus = 0;
+        bool m_waitingForNewButton = false;
+        // Valor anterior dos gatilhos de cada controle, para perceber o
+        // momento em que um gatilho e apertado (eixo passa de 0.5).
+        mutable std::array<std::array<float, 2>, kSetupMaxGamepads> m_previousTriggerAxes{};
+        // Ultima vez (GetTime, segundos) em que cada controle teve um botao
+        // apertado: a lista "Controles conectados" acende o controle por 0,6 s.
+        mutable std::array<double, kSetupMaxGamepads> m_lastGamepadActivity{-10.0, -10.0, -10.0, -10.0};
+
+        // Abre uma tela extra. Esc deixa de fechar o Setup (raylib fecha a
+        // janela com Esc por padrao) e passa a significar "voltar".
+        void openSubPage(Page page)
+        {
+            m_page = page;
+            m_buttonFocus = 0;
+            m_waitingForNewButton = false;
+            SetExitKey(KEY_NULL);
+        }
+
+        // Volta para a tela de abas, com o foco na linha que abriu a tela extra.
+        void closeSubPage()
+        {
+            m_focus = m_page == Page::ButtonsPlayer1 ? Row::ButtonsPlayer1
+                    : m_page == Page::ButtonsPlayer2 ? Row::ButtonsPlayer2
+                                                     : Row::KeyboardKeys;
+            m_page = Page::Main;
+            m_waitingForNewButton = false;
+            SetExitKey(KEY_ESCAPE);
+        }
+
+        // Jogador (0 ou 1) da tela de botoes aberta.
+        int playerOfButtonsPage() const { return m_page == Page::ButtonsPlayer2 ? 1 : 0; }
+
+        // Grava "physicalButton" para o botao do PS2 selecionado. Se outro
+        // botao do PS2 ja usava esse botao fisico, os dois TROCAM (assim
+        // nunca ha dois botoes do PS2 no mesmo botao do controle).
+        // Ex.: padrao (X=A, quadrado=X do Xbox); escolher "X do Xbox" para o
+        // X do PS2 -> X=X do Xbox e quadrado=A.
+        void assignPhysicalButtonToFocusedPs2Button(int physicalButton)
+        {
+            OrochiPadButtonMap &map = m_settings.padButtons[playerOfButtonsPage()];
+            const int previous = map[m_buttonFocus];
+            for (int index = 0; index < kOrochiPs2ButtonCount; ++index)
+                if (index != m_buttonFocus && map[index] == physicalButton)
+                    map[index] = previous;
+            map[m_buttonFocus] = physicalButton;
+        }
+
+        // Enquanto espera o novo botao: devolve o botao fisico apertado agora
+        // em QUALQUER controle conectado, ou 0 se nada foi apertado neste
+        // quadro. Gatilhos contam pelo eixo (controles XInput).
+        int physicalButtonPressedOnAnyGamepad() const
+        {
+            int pressed = GAMEPAD_BUTTON_UNKNOWN;
+            for (int pad = 0; pad < kSetupMaxGamepads; ++pad)
+            {
+                if (!IsGamepadAvailable(pad))
+                    continue;
+                for (int button = GAMEPAD_BUTTON_LEFT_FACE_UP; button <= GAMEPAD_BUTTON_RIGHT_THUMB && !pressed; ++button)
+                    if (IsGamepadButtonPressed(pad, button))
+                        pressed = button;
+                const float left = GetGamepadAxisMovement(pad, GAMEPAD_AXIS_LEFT_TRIGGER);
+                const float right = GetGamepadAxisMovement(pad, GAMEPAD_AXIS_RIGHT_TRIGGER);
+                if (!pressed && left > 0.5f && m_previousTriggerAxes[pad][0] <= 0.5f)
+                    pressed = GAMEPAD_BUTTON_LEFT_TRIGGER_2;
+                if (!pressed && right > 0.5f && m_previousTriggerAxes[pad][1] <= 0.5f)
+                    pressed = GAMEPAD_BUTTON_RIGHT_TRIGGER_2;
+                m_previousTriggerAxes[pad] = {left, right};
+            }
+            return pressed;
+        }
+
+        // Retangulo do botao do PS2 "index" na tela de botoes: duas colunas
+        // de 8 (0..7 a esquerda, 8..15 a direita).
+        Rectangle ps2ButtonRect(int index) const
+        {
+            const float k = scale();
+            const int column = index / 8, line = index % 8;
+            return {k * (60 + column * 425), k * (kRowsTop + line * 44), k * 415, k * 40};
+        }
+        // Botao "Voltar" das telas extras (mesmo lugar do botao "Salvar").
+        Rectangle backButtonRect() const
+        {
+            const float k = scale();
+            return {k * 395, k * 664, k * 170, k * 52};
+        }
+
+        // Teclado/controle/mouse das telas extras.
+        void inputSubPage()
+        {
+            const bool pad = IsGamepadAvailable(0);
+            auto pressed = [](int key) { return IsKeyPressed(key) || IsKeyPressedRepeat(key); };
+            auto padPressed = [pad](int button) { return pad && IsGamepadButtonPressed(0, button); };
+            const Vector2 mouse = GetMousePosition();
+            const bool click = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+            if (m_waitingForNewButton)
+            {
+                // Esperando o novo botao: Esc cancela; qualquer botao do
+                // controle e gravado (inclusive B, Start etc.).
+                if (IsKeyPressed(KEY_ESCAPE) || click)
+                {
+                    m_waitingForNewButton = false;
+                    return;
+                }
+                if (const int physical = physicalButtonPressedOnAnyGamepad())
+                {
+                    assignPhysicalButtonToFocusedPs2Button(physical);
+                    m_waitingForNewButton = false;
+                }
+                return;
+            }
+            // Mantem os gatilhos atualizados mesmo fora da espera, para que um
+            // gatilho ja apertado nao conte como "apertado agora" depois.
+            physicalButtonPressedOnAnyGamepad();
+
+            if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE) || padPressed(GAMEPAD_BUTTON_RIGHT_FACE_RIGHT) ||
+                (click && CheckCollisionPointRec(mouse, backButtonRect())))
+            {
+                closeSubPage();
+                return;
+            }
+            if (m_page == Page::KeyboardKeys)
+                return;
+
+            // Navegacao: ↑↓ dentro da coluna, ←→ troca de coluna.
+            if (pressed(KEY_DOWN) || padPressed(GAMEPAD_BUTTON_LEFT_FACE_DOWN))
+                m_buttonFocus = (m_buttonFocus + 1) % kOrochiPs2ButtonCount;
+            if (pressed(KEY_UP) || padPressed(GAMEPAD_BUTTON_LEFT_FACE_UP))
+                m_buttonFocus = (m_buttonFocus + kOrochiPs2ButtonCount - 1) % kOrochiPs2ButtonCount;
+            if (pressed(KEY_RIGHT) || pressed(KEY_LEFT) || padPressed(GAMEPAD_BUTTON_LEFT_FACE_RIGHT) ||
+                padPressed(GAMEPAD_BUTTON_LEFT_FACE_LEFT))
+                m_buttonFocus = (m_buttonFocus + 8) % kOrochiPs2ButtonCount;
+            OrochiPadButtonMap &map = m_settings.padButtons[playerOfButtonsPage()];
+            // Delete: so este botao volta ao padrao. R: todos voltam ao padrao.
+            if (IsKeyPressed(KEY_DELETE))
+            {
+                const int wanted = kOrochiDefaultPadButtonMap[m_buttonFocus];
+                assignPhysicalButtonToFocusedPs2Button(wanted);
+            }
+            if (IsKeyPressed(KEY_R))
+                map = kOrochiDefaultPadButtonMap;
+            // Enter/Espaco/A do controle 1 ou clique: comeca a esperar o novo
+            // botao. O aperto que abriu a espera nao conta: a leitura so olha
+            // botoes apertados nos quadros seguintes.
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER) || IsKeyPressed(KEY_SPACE) ||
+                padPressed(GAMEPAD_BUTTON_RIGHT_FACE_DOWN))
+                m_waitingForNewButton = true;
+            for (int index = 0; index < kOrochiPs2ButtonCount; ++index)
+                if (CheckCollisionPointRec(mouse, ps2ButtonRect(index)))
+                {
+                    if (GetMouseDelta().x != 0.0f || GetMouseDelta().y != 0.0f)
+                        m_buttonFocus = index;
+                    if (click)
+                    {
+                        m_buttonFocus = index;
+                        m_waitingForNewButton = true;
+                    }
+                }
+        }
+
+        // Desenha as telas extras (cabecalho, conteudo, ajuda e "Voltar").
+        void drawSubPage() const
+        {
+            const float k = scale();
+            const Color gold{226, 186, 92, 255}, ink{232, 234, 240, 255}, dim{120, 126, 140, 255},
+                focus{60, 82, 130, 255}, panel{20, 26, 40, 230};
+            BeginDrawing();
+            DrawRectangleGradientV(0, 0, GetScreenWidth(), GetScreenHeight(), Color{14, 18, 30, 255}, Color{40, 22, 30, 255});
+            text(m_fonts.title, "WARRIORS OROCHI", k * 60, k * 30, k * 44, gold);
+            const char *title = m_page == Page::ButtonsPlayer1   ? "Controles — botões do jogador 1"
+                              : m_page == Page::ButtonsPlayer2 ? "Controles — botões do jogador 2"
+                                                               : "Controles — teclas do teclado";
+            text(m_fonts.text, title, k * 60, k * 122, k * 26, gold);
+            DrawRectangleRec({k * 50, k * 168, k * 860, k * (kPanelBottom - 168)}, panel);
+
+            std::string about;
+            if (m_page == Page::KeyboardKeys)
+            {
+                // A lista que antes ficava direto na aba Controles.
+                float y = kRowsTop - 6;
+                for (const KeyLine &line : kKeys)
+                {
+                    text(m_fonts.small, line.action, k * 76, k * y, k * 20, ink);
+                    text(m_fonts.small, line.keys, k * 460, k * y, k * 20, gold);
+                    y += 29;
+                }
+                about = "O teclado controla o jogador escolhido em \"Teclado controla\". As teclas ainda não podem "
+                        "ser trocadas.";
+            }
+            else
+            {
+                const OrochiPadButtonMap &map = m_settings.padButtons[playerOfButtonsPage()];
+                for (int index = 0; index < kOrochiPs2ButtonCount; ++index)
+                {
+                    const Rectangle r = ps2ButtonRect(index);
+                    const bool focused = index == m_buttonFocus;
+                    if (focused)
+                        DrawRectangleRounded(r, 0.2f, 6, m_waitingForNewButton ? Color{130, 90, 40, 255} : focus);
+                    text(m_fonts.small, kPs2ButtonNamesInMapOrder[index], r.x + k * 12, r.y + k * 9, k * 20, ink);
+                    const bool changed = map[index] != kOrochiDefaultPadButtonMap[index];
+                    const std::string shown = focused && m_waitingForNewButton ? "aperte…" : physicalGamepadButtonName(map[index]);
+                    const float width = MeasureTextEx(m_fonts.small, shown.c_str(), k * 20, 0.0f).x;
+                    text(m_fonts.small, shown, r.x + r.width - width - k * 12, r.y + k * 9, k * 20, changed ? gold : ink);
+                }
+                about = m_waitingForNewButton
+                            ? std::string("Aperte no controle o botão que vai fazer \"") +
+                                  kPs2ButtonNamesInMapOrder[m_buttonFocus] + "\". Esc cancela."
+                            : "Enter (ou A / clique): trocar o botão escolhido. Se o novo botão já fizer outra ação, "
+                              "as duas trocam de lugar. Delete: volta este ao padrão. R: restaura todos. Em dourado: "
+                              "botões diferentes do padrão.";
+            }
+            wrapped(m_fonts.small, about, k * 60, k * 572, k * 840, k * 20, ink);
+            const Rectangle back = backButtonRect();
+            DrawRectangleRounded(back, 0.25f, 6, CheckCollisionPointRec(GetMousePosition(), back) ? focus : Color{44, 50, 66, 255});
+            centered(m_fonts.text, "Voltar", back, k * 26, ink);
+            text(m_fonts.small, "↑↓←→ escolher    Enter trocar    Delete padrão    R restaurar todos    Esc voltar",
+                 k * 60, k * 730, k * 18, dim);
+            EndDrawing();
+        }
+
+        // Lista "Controles conectados" na aba Controles, abaixo das linhas.
+        // Cada controle acende (dourado, com ●) enquanto um botao dele e
+        // apertado e por 0,6 s depois: e assim que o usuario descobre qual
+        // controle fisico e o "1", o "2"... Ex. de linha:
+        //   "● 1 · Xbox Controller — jogador 1"
+        void drawConnectedControllersList(float k) const
+        {
+            const Color gold{226, 186, 92, 255}, ink{232, 234, 240, 255}, dim{120, 126, 140, 255};
+            float y = kRowsTop + 6 * kRowPitch + 8; // logo abaixo das 6 linhas da aba
+            bool any = false;
+            for (int pad = 0; pad < kSetupMaxGamepads; ++pad)
+            {
+                if (!IsGamepadAvailable(pad))
+                    continue;
+                any = true;
+                bool active = false;
+                for (int button = GAMEPAD_BUTTON_LEFT_FACE_UP; button <= GAMEPAD_BUTTON_RIGHT_THUMB; ++button)
+                    active = active || IsGamepadButtonDown(pad, button);
+                for (int axis = GAMEPAD_AXIS_LEFT_X; axis <= GAMEPAD_AXIS_RIGHT_TRIGGER; ++axis)
+                {
+                    const float movement = GetGamepadAxisMovement(pad, axis);
+                    // Gatilhos ficam em -1 soltos; analogicos em 0.
+                    active = active || (axis >= GAMEPAD_AXIS_LEFT_TRIGGER ? movement > 0.0f : std::abs(movement) > 0.5f);
+                }
+                if (active)
+                    m_lastGamepadActivity[pad] = GetTime();
+                const bool lit = GetTime() - m_lastGamepadActivity[pad] < 0.6;
+                const int player = gamepadTheGameWillGivePlayer(m_settings, 0) == pad   ? 1
+                                 : gamepadTheGameWillGivePlayer(m_settings, 1) == pad ? 2
+                                                                                     : 0;
+                const std::string line = std::string(lit ? "● " : "   ") + std::to_string(pad + 1) + " · " +
+                                         GetGamepadName(pad) + " — " +
+                                         (player ? "jogador " + std::to_string(player) : std::string("sem jogador"));
+                text(m_fonts.small, line, k * 76, k * y, k * 20, lit ? gold : ink);
+                y += 22;
+            }
+            if (!any)
+                text(m_fonts.small, "Nenhum controle conectado (o teclado continua funcionando).", k * 76, k * y, k * 20, dim);
+        }
 
         static bool isButton(Row row) { return row == Row::Play || row == Row::Save || row == Row::Quit; }
 
@@ -264,8 +688,53 @@ namespace
             case Row::CheatLife: return "Vida infinita";
             case Row::CheatMusou: return "Musou infinito";
             case Row::CheatPoints: return "Pontos infinitos";
+            case Row::PadPlayer1: return "Controle do jogador 1";
+            case Row::PadPlayer2: return "Controle do jogador 2";
+            case Row::KeyboardPlayer: return "Teclado controla";
+            case Row::ButtonsPlayer1: return "Botões do jogador 1";
+            case Row::ButtonsPlayer2: return "Botões do jogador 2";
+            case Row::KeyboardKeys: return "Teclas do teclado";
             default: return "";
             }
+        }
+
+        // Texto do valor das linhas "Controle do jogador N" (player 0 ou 1).
+        // Exemplos:
+        //   "auto" com um controle livre -> "Automático: 1 · Xbox Controller"
+        //   "none"                        -> "Nenhum"
+        //   "0:Xbox Controller" conectado -> "1 · Xbox Controller"
+        //   desconectado                  -> "Xbox Controller (desconectado)"
+        // O numero mostrado e o indice + 1 (o usuario conta a partir de 1),
+        // o mesmo da lista "Controles conectados" da aba.
+        std::string controllerChoiceText(int player) const
+        {
+            const std::string &choice = m_settings.padPlayer[player];
+            if (choice == "none")
+                return "Nenhum";
+            const int given = gamepadTheGameWillGivePlayer(m_settings, player);
+            const std::string givenText =
+                given >= 0 ? std::to_string(given + 1) + " · " + GetGamepadName(given) : std::string("nenhum conectado");
+            if (choice == "auto")
+                return "Automático: " + givenText;
+            int index = -1;
+            std::string name;
+            splitSpecificControllerChoice(choice, index, name);
+            return findConnectedGamepadForChoice(choice) >= 0 ? givenText : name + " (desconectado)";
+        }
+
+        // Opcoes para "Controle do jogador N", na ordem em que ←/→ passam:
+        // Automatico, Nenhum, cada controle conectado e, se o escolhido estiver
+        // desconectado, ele mesmo (para nao perder a escolha so de passar por ela).
+        std::vector<std::string> controllerChoicesFor(int player) const
+        {
+            std::vector<std::string> choices{"auto", "none"};
+            for (int index = 0; index < kSetupMaxGamepads; ++index)
+                if (IsGamepadAvailable(index))
+                    choices.push_back(specificControllerChoiceText(index));
+            const std::string &current = m_settings.padPlayer[player];
+            if (std::find(choices.begin(), choices.end(), current) == choices.end())
+                choices.push_back(current);
+            return choices;
         }
 
         std::string value(Row row) const
@@ -319,6 +788,24 @@ namespace
                 return s.cheatMusou ? "Ligada" : "Desligada";
             case Row::CheatPoints:
                 return s.cheatPoints ? "Ligada" : "Desligada";
+            case Row::PadPlayer1:
+                return controllerChoiceText(0);
+            case Row::PadPlayer2:
+                return controllerChoiceText(1);
+            case Row::KeyboardPlayer:
+                return s.keyboardPlayer == 2 ? "Jogador 2" : s.keyboardPlayer == 0 ? "Ninguém (desligado)" : "Jogador 1";
+            case Row::ButtonsPlayer1:
+            case Row::ButtonsPlayer2: {
+                // "Padrão" ou quantos botoes foram trocados. Ex.: "2 trocados".
+                const OrochiPadButtonMap &map = s.padButtons[row == Row::ButtonsPlayer1 ? 0 : 1];
+                int changed = 0;
+                for (int index = 0; index < kOrochiPs2ButtonCount; ++index)
+                    changed += map[index] != kOrochiDefaultPadButtonMap[index];
+                return (changed == 0 ? std::string("Padrão") : std::to_string(changed) + " trocado" + (changed > 1 ? "s" : "")) +
+                       " — Enter para configurar";
+            }
+            case Row::KeyboardKeys:
+                return "Enter para ver";
             default:
                 return "";
             }
@@ -377,6 +864,19 @@ namespace
             case Row::CheatPoints:
                 return "Pontos de crescimento sempre em 99999 no acampamento. O save guarda o "
                        "valor que estiver lá ao salvar.";
+            case Row::PadPlayer1:
+            case Row::PadPlayer2:
+                return "Qual controle é deste jogador. Automático: o 1º controle livre vai para o jogador 1 e o "
+                       "seguinte para o jogador 2. Aperte um botão no controle para ver na lista abaixo qual é ele.";
+            case Row::KeyboardPlayer:
+                return "Qual jogador o teclado controla, junto com o controle desse jogador. Útil para jogar a "
+                       "dois com um só controle.";
+            case Row::ButtonsPlayer1:
+            case Row::ButtonsPlayer2:
+                return "Troca qual botão do controle faz cada ação do PS2 (por exemplo, pular no B em vez do A). "
+                       "Cada jogador tem o seu próprio mapa.";
+            case Row::KeyboardKeys:
+                return "Mostra as teclas do teclado e os atalhos do port (tela cheia, screenshot).";
             case Row::Play:
                 return "Salva as opções e abre o jogo.";
             case Row::Save:
@@ -456,6 +956,31 @@ namespace
                 break;
             case Row::CheatPoints:
                 s.cheatPoints = !s.cheatPoints;
+                break;
+            case Row::PadPlayer1:
+            case Row::PadPlayer2: {
+                // Passa para a opcao anterior/seguinte de controllerChoicesFor.
+                const int player = row == Row::PadPlayer1 ? 0 : 1;
+                const std::vector<std::string> choices = controllerChoicesFor(player);
+                const int at = static_cast<int>(std::find(choices.begin(), choices.end(), s.padPlayer[player]) - choices.begin());
+                s.padPlayer[player] = choices[step(at, static_cast<int>(choices.size()))];
+                break;
+            }
+            case Row::KeyboardPlayer: {
+                // Ordem: jogador 1 -> jogador 2 -> ninguem -> jogador 1.
+                const int order[] = {1, 2, 0};
+                const int at = s.keyboardPlayer == 2 ? 1 : s.keyboardPlayer == 0 ? 2 : 0;
+                s.keyboardPlayer = order[step(at, 3)];
+                break;
+            }
+            case Row::ButtonsPlayer1:
+                openSubPage(Page::ButtonsPlayer1);
+                break;
+            case Row::ButtonsPlayer2:
+                openSubPage(Page::ButtonsPlayer2);
+                break;
+            case Row::KeyboardKeys:
+                openSubPage(Page::KeyboardKeys);
                 break;
             default:
                 break;
@@ -562,6 +1087,12 @@ namespace
         // Returns true when the screen is done, with the choice in `outcome`.
         bool input(Outcome &outcome)
         {
+            // Telas extras (botoes / teclas) tem a sua propria entrada.
+            if (m_page != Page::Main)
+            {
+                inputSubPage();
+                return false;
+            }
             const bool pad = IsGamepadAvailable(0);
             auto pressed = [](int key) { return IsKeyPressed(key) || IsKeyPressedRepeat(key); };
             auto padPressed = [pad](int button) { return pad && IsGamepadButtonPressed(0, button); };
@@ -588,6 +1119,11 @@ namespace
             }
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER) || padPressed(GAMEPAD_BUTTON_MIDDLE_RIGHT))
             {
+                // Linhas que abrem telas extras: Enter abre a tela (sem isso,
+                // Enter numa linha comum inicia o jogo, como antes).
+                if (m_focus == Row::ButtonsPlayer1 || m_focus == Row::ButtonsPlayer2 || m_focus == Row::KeyboardKeys)
+                    change(m_focus, 1);
+                else
                 if (m_focus == Row::Browse)
                     change(m_focus, 1);
                 else if (isButton(m_focus))
@@ -664,6 +1200,12 @@ namespace
 
         void draw() const
         {
+            // Telas extras (botoes / teclas) se desenham sozinhas.
+            if (m_page != Page::Main)
+            {
+                drawSubPage();
+                return;
+            }
             const float k = scale();
             const Color gold{226, 186, 92, 255}, ink{232, 234, 240, 255}, dim{120, 126, 140, 255},
                 focus{60, 82, 130, 255}, panel{20, 26, 40, 230}, tabIdle{30, 36, 54, 230};
@@ -684,16 +1226,21 @@ namespace
             }
             DrawRectangleRec({k * 50, k * 168, k * 860, k * (kPanelBottom - 168)}, panel);
 
+            // Bloco original desativado: a lista de teclas ocupava a aba
+            // Controles inteira; agora a aba tem opcoes e a lista foi para a
+            // tela "Teclas do teclado" (drawSubPage).
+            // if (m_tab == Tab::Controls)
+            // {
+            //     float y = kRowsTop - 6;
+            //     for (const KeyLine &line : kKeys)
+            //     {
+            //         text(m_fonts.small, line.action, k * 76, k * y, k * 20, ink);
+            //         text(m_fonts.small, line.keys, k * 460, k * y, k * 20, gold);
+            //         y += 29;
+            //     }
+            // }
             if (m_tab == Tab::Controls)
-            {
-                float y = kRowsTop - 6;
-                for (const KeyLine &line : kKeys)
-                {
-                    text(m_fonts.small, line.action, k * 76, k * y, k * 20, ink);
-                    text(m_fonts.small, line.keys, k * 460, k * y, k * 20, gold);
-                    y += 29;
-                }
-            }
+                drawConnectedControllersList(k);
 
             for (Row row : visible())
             {
@@ -748,6 +1295,9 @@ int main()
     InitWindow(960, kWindowHeight, "Warriors Orochi - Setup");
     SetTargetFPS(60);
     orochiRestoreWindow(GetWindowHandle());
+    // Os mesmos mapeamentos extras de controle que o jogo usa, para que a
+    // lista de controles do Setup seja igual a do jogo.
+    loadGamepadMappingsLikeTheGame();
     Settings settings = orochiLoadSettings();
     std::vector<std::filesystem::path> discs;
     size_t chosen = 0;

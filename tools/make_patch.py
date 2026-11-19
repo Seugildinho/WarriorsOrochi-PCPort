@@ -25,7 +25,12 @@ def main():
         raise SystemExit(f'{target.name} already exists')
     revision = json.loads((PORT / 'config/toolchain.json').read_text())['ps2recomp_commit']
     patches = sorted((PORT / 'patches').glob('*.patch'))
-    with tempfile.TemporaryDirectory(prefix='make-patch-', dir=PORT / 'local') as directory:
+    # Linha original desativada pelo mesmo motivo de tools/runtime_patches.py:
+    # dentro do repositorio git, "git apply" ignorava a pasta temporaria e o
+    # patch novo saia comparado com o PS2Recomp original, sem os patches
+    # anteriores. A pasta temporaria do sistema fica fora do repositorio.
+    # with tempfile.TemporaryDirectory(prefix='make-patch-', dir=PORT / 'local') as directory:
+    with tempfile.TemporaryDirectory(prefix='orochi-make-patch-') as directory:
         stage = Path(directory)
         for side in ('a', 'b'):
             for name_ in files:

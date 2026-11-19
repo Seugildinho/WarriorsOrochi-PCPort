@@ -1,0 +1,323 @@
+diff --git a/ps2xRuntime/src/lib/ps2_pad.cpp b/ps2xRuntime/src/lib/ps2_pad.cpp
+index c0040aa..2a66df4 100644
+--- a/ps2xRuntime/src/lib/ps2_pad.cpp
++++ b/ps2xRuntime/src/lib/ps2_pad.cpp
+@@ -4,6 +4,11 @@
+ #include <cmath>
+ #include <cstring>
+ #include <string>
++// [Warriors Orochi port, patch 0054] Includes para a escolha de controle por
++// jogador e o remapeamento de botoes (std::array, std::getenv, log no console).
++#include <array>
++#include <cstdlib>
++#include <iostream>
+ 
+ namespace
+ {
+@@ -74,6 +79,238 @@ namespace
+         value = std::clamp(value, -1.0f, 1.0f);
+         return static_cast<uint8_t>(std::lround(127.5f + value * 127.5f));
+     }
++
++    // =====================================================================
++    // [Warriors Orochi port, patch 0054] CONTROLE DE CADA JOGADOR E
++    // REMAPEAMENTO DE BOTOES
++    // =====================================================================
++    // O Setup (WarriorsOrochi-Setup.exe, aba Controles) grava as escolhas no
++    // orochi-settings.ini e o jogo as repassa para ca em variaveis de
++    // ambiente (src/game_settings.cpp):
++    //
++    //   OROCHI_PAD_PLAYER1 / OROCHI_PAD_PLAYER2 : qual controle e de cada jogador
++    //       "auto"           -> automatico (1o controle livre para o jogador 1,
++    //                           o seguinte para o jogador 2; e o comportamento
++    //                           antigo quando nada foi escolhido)
++    //       "none"           -> nenhum controle (ex.: jogador 1 so no teclado)
++    //       "<indice>:<nome>" -> um controle especifico. Ex.: "1:Xbox Controller"
++    //                           = o controle chamado "Xbox Controller" que estava
++    //                           na posicao 1 quando foi escolhido.
++    //   OROCHI_KEYBOARD_PLAYER : "1" (padrao), "2" ou "0" (teclado desligado)
++    //   OROCHI_PAD_BUTTONS_PLAYER1 / _PLAYER2 : 16 numeros separados por
++    //       virgula, um por botao do PS2, NESTA ORDEM (kOrochiPs2ButtonMasksInSettingsOrder):
++    //         cima, baixo, esquerda, direita, X, circulo, quadrado, triangulo,
++    //         L1, R1, L2, R2, Start, Select, L3, R3
++    //       Cada numero e o botao fisico do controle no enum GamepadButton do
++    //       raylib (1 = direcional cima ... 17 = analogico direito apertado;
++    //       0 = nenhum). Ex.: trocar X e quadrado do padrao:
++    //         "1,3,4,2,8,6,7,5,9,11,10,12,15,13,16,17"
++    // Nenhuma variavel definida = comportamento identico ao de antes.
++
++    // Mascaras dos botoes do PS2 na ordem usada pelas variaveis acima.
++    constexpr std::array<uint16_t, 16> kOrochiPs2ButtonMasksInSettingsOrder = {
++        PAD_UP, PAD_DOWN, PAD_LEFT, PAD_RIGHT, PAD_CROSS, PAD_CIRCLE, PAD_SQUARE, PAD_TRIANGLE,
++        PAD_L1, PAD_R1, PAD_L2, PAD_R2, PAD_START, PAD_SELECT, PAD_L3, PAD_R3};
++
++    // Mapeamento padrao (o mesmo da tabela kButtons original em readState):
++    // cima=1 (LEFT_FACE_UP), baixo=3, esquerda=4, direita=2, X=7 (RIGHT_FACE_DOWN,
++    // "A" do Xbox), circulo=6, quadrado=8, triangulo=5, L1=9, R1=11, L2=10,
++    // R2=12, Start=15 (MIDDLE_RIGHT), Select=13 (MIDDLE_LEFT), L3=16, R3=17.
++    constexpr std::array<int, 16> kOrochiDefaultPhysicalButtonForEachPs2Button = {
++        GAMEPAD_BUTTON_LEFT_FACE_UP, GAMEPAD_BUTTON_LEFT_FACE_DOWN, GAMEPAD_BUTTON_LEFT_FACE_LEFT,
++        GAMEPAD_BUTTON_LEFT_FACE_RIGHT, GAMEPAD_BUTTON_RIGHT_FACE_DOWN, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT,
++        GAMEPAD_BUTTON_RIGHT_FACE_LEFT, GAMEPAD_BUTTON_RIGHT_FACE_UP, GAMEPAD_BUTTON_LEFT_TRIGGER_1,
++        GAMEPAD_BUTTON_RIGHT_TRIGGER_1, GAMEPAD_BUTTON_LEFT_TRIGGER_2, GAMEPAD_BUTTON_RIGHT_TRIGGER_2,
++        GAMEPAD_BUTTON_MIDDLE_RIGHT, GAMEPAD_BUTTON_MIDDLE_LEFT, GAMEPAD_BUTTON_LEFT_THUMB,
++        GAMEPAD_BUTTON_RIGHT_THUMB};
++
++    // A escolha de controle de UM jogador, lida de OROCHI_PAD_PLAYER1/2.
++    struct OrochiPlayerControllerChoice
++    {
++        enum class Kind
++        {
++            Automatic,      // "auto": o proximo controle livre
++            NoController,   // "none": este jogador nao usa controle
++            SpecificDevice, // "<indice>:<nome>": um controle especifico
++        } kind = Kind::Automatic;
++        int indexWhenChosen = -1; // posicao do controle quando foi escolhido no Setup
++        std::string deviceName;   // nome do controle (GetGamepadName), ex.: "Xbox Controller"
++    };
++
++    // Le uma variavel OROCHI_PAD_PLAYERn. Valor ausente ou invalido = automatico.
++    // Exemplos: "none" -> NoController; "0:Wireless Controller" -> SpecificDevice
++    // com indice 0 e nome "Wireless Controller".
++    OrochiPlayerControllerChoice readPlayerControllerChoiceFromEnvironment(const char *variableName)
++    {
++        OrochiPlayerControllerChoice choice;
++        const char *text = std::getenv(variableName);
++        if (!text || !*text || std::strcmp(text, "auto") == 0)
++            return choice;
++        if (std::strcmp(text, "none") == 0)
++        {
++            choice.kind = OrochiPlayerControllerChoice::Kind::NoController;
++            return choice;
++        }
++        const char *colon = std::strchr(text, ':');
++        if (!colon || colon == text)
++            return choice; // formato desconhecido: fica automatico
++        choice.kind = OrochiPlayerControllerChoice::Kind::SpecificDevice;
++        choice.indexWhenChosen = std::atoi(text);
++        choice.deviceName = colon + 1;
++        return choice;
++    }
++
++    // Le OROCHI_PAD_BUTTONS_PLAYERn. Qualquer erro (numero faltando, valor
++    // fora de 0..17) devolve o mapeamento padrao inteiro, para nunca deixar o
++    // jogador com botoes quebrados.
++    std::array<int, 16> readButtonMapFromEnvironment(const char *variableName)
++    {
++        const char *text = std::getenv(variableName);
++        if (!text || !*text)
++            return kOrochiDefaultPhysicalButtonForEachPs2Button;
++        std::array<int, 16> map{};
++        const char *at = text;
++        for (size_t index = 0; index < map.size(); ++index)
++        {
++            char *end = nullptr;
++            const long value = std::strtol(at, &end, 10);
++            if (end == at || value < GAMEPAD_BUTTON_UNKNOWN || value > GAMEPAD_BUTTON_RIGHT_THUMB)
++                return kOrochiDefaultPhysicalButtonForEachPs2Button;
++            map[index] = static_cast<int>(value);
++            at = (*end == ',') ? end + 1 : end;
++        }
++        return map;
++    }
++
++    // Tudo que vem das variaveis, lido UMA vez (as variaveis nao mudam
++    // durante o jogo). Indice 0 = jogador 1 (porta 0), 1 = jogador 2 (porta 1).
++    struct OrochiControllerSettingsFromEnvironment
++    {
++        std::array<OrochiPlayerControllerChoice, 2> controllerChoiceForPlayerPort;
++        std::array<std::array<int, 16>, 2> buttonMapForPlayerPort;
++        int keyboardPlayerPort = 0; // 0 = jogador 1, 1 = jogador 2, -1 = teclado desligado
++    };
++
++    const OrochiControllerSettingsFromEnvironment &controllerSettingsFromEnvironment()
++    {
++        static const OrochiControllerSettingsFromEnvironment settings = [] {
++            OrochiControllerSettingsFromEnvironment loaded;
++            loaded.controllerChoiceForPlayerPort[0] = readPlayerControllerChoiceFromEnvironment("OROCHI_PAD_PLAYER1");
++            loaded.controllerChoiceForPlayerPort[1] = readPlayerControllerChoiceFromEnvironment("OROCHI_PAD_PLAYER2");
++            loaded.buttonMapForPlayerPort[0] = readButtonMapFromEnvironment("OROCHI_PAD_BUTTONS_PLAYER1");
++            loaded.buttonMapForPlayerPort[1] = readButtonMapFromEnvironment("OROCHI_PAD_BUTTONS_PLAYER2");
++            if (const char *keyboard = std::getenv("OROCHI_KEYBOARD_PLAYER"))
++                loaded.keyboardPlayerPort = std::strcmp(keyboard, "2") == 0 ? 1 : std::strcmp(keyboard, "0") == 0 ? -1 : 0;
++            return loaded;
++        }();
++        return settings;
++    }
++
++    // Procura, entre os controles conectados, o que foi escolhido no Setup.
++    // Ordem de preferencia:
++    //   1. o controle na mesma posicao E com o mesmo nome;
++    //   2. o primeiro controle com o mesmo nome (a ordem mudou ao reconectar);
++    // Retorna -1 se nenhum controle com esse nome estiver conectado.
++    // Ex.: escolhido "1:Xbox Controller", conectados [0:"DualSense", 1:"Xbox
++    // Controller"] -> 1. Se so houver [0:"Xbox Controller"] -> 0.
++    int findConnectedGamepadMatchingChoice(const OrochiPlayerControllerChoice &choice)
++    {
++        if (choice.indexWhenChosen >= 0 && choice.indexWhenChosen < kMaxGamepads &&
++            IsGamepadAvailable(choice.indexWhenChosen) &&
++            choice.deviceName == GetGamepadName(choice.indexWhenChosen))
++            return choice.indexWhenChosen;
++        for (int index = 0; index < kMaxGamepads; ++index)
++            if (IsGamepadAvailable(index) && choice.deviceName == GetGamepadName(index))
++                return index;
++        return -1;
++    }
++
++    // Qual controle (indice do raylib, 0..3) joga na porta "port" do PS2.
++    // -1 = nenhum. Substitui gamepadForPort (que continua abaixo, sem uso,
++    // so como referencia). Regras:
++    //   - Janela do jogo fora de foco: nenhum (igual ao patch 0050).
++    //   - Portas 2 e 3 (multitap): comportamento antigo, gamepadForPort.
++    //   - Jogador com "none": nenhum.
++    //   - Jogador com controle especifico conectado: esse controle.
++    //   - Automatico (ou especifico desconectado): o proximo controle que nao
++    //     foi escolhido especificamente por ninguem, na ordem dos jogadores.
++    // Ex.: P1 automatico, P2 = "Xbox Controller", conectados [0:"Xbox
++    // Controller", 1:"DualSense"] -> P2 joga com 0 e P1 com 1 (o livre).
++    int gamepadIndexForPlayerPort(int port)
++    {
++        if (port < 0)
++            return -1;
++        if (port >= 2)
++            return gamepadForPort(port);
++        if (!IsWindowFocused())
++            return -1;
++        const auto &settings = controllerSettingsFromEnvironment();
++        using Kind = OrochiPlayerControllerChoice::Kind;
++        // Resolve os dois jogadores: indice do controle especifico ou -1.
++        std::array<int, 2> specificIndex{-1, -1};
++        std::array<bool, 2> usesAutomatic{false, false};
++        for (int player = 0; player < 2; ++player)
++        {
++            const auto &choice = settings.controllerChoiceForPlayerPort[player];
++            if (choice.kind == Kind::NoController)
++                continue;
++            if (choice.kind == Kind::SpecificDevice)
++                specificIndex[player] = findConnectedGamepadMatchingChoice(choice);
++            usesAutomatic[player] = specificIndex[player] < 0;
++        }
++        if (settings.controllerChoiceForPlayerPort[port].kind == Kind::NoController)
++            return -1;
++        if (specificIndex[port] >= 0)
++            return specificIndex[port];
++        // Automatico: quantos jogadores automaticos vem antes deste?
++        const int automaticRank = (port == 1 && usesAutomatic[0]) ? 1 : 0;
++        int freeSeen = 0;
++        for (int index = 0; index < kMaxGamepads; ++index)
++        {
++            if (!IsGamepadAvailable(index) || index == specificIndex[0] || index == specificIndex[1])
++                continue;
++            if (freeSeen == automaticRank)
++                return index;
++            ++freeSeen;
++        }
++        return -1;
++    }
++
++    // Botao fisico apertado? Igual a IsGamepadButtonDown, mas L2/R2 tambem
++    // contam pelo eixo do gatilho (em controles XInput os gatilhos sao eixos
++    // de -1 a 1 e nem todo mapeamento os repete como botao). Assim um botao
++    // do PS2 mapeado para um gatilho funciona em qualquer controle.
++    bool isPhysicalGamepadButtonDown(int gamepad, int physicalButton)
++    {
++        if (physicalButton <= GAMEPAD_BUTTON_UNKNOWN)
++            return false; // 0 = "nenhum botao" no mapeamento
++        if (IsGamepadButtonDown(gamepad, physicalButton))
++            return true;
++        if (physicalButton == GAMEPAD_BUTTON_LEFT_TRIGGER_2)
++            return GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_TRIGGER) > kTriggerThreshold;
++        if (physicalButton == GAMEPAD_BUTTON_RIGHT_TRIGGER_2)
++            return GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_RIGHT_TRIGGER) > kTriggerThreshold;
++        return false;
++    }
++
++    // Escreve no log (data\port.log) sempre que o controle de um jogador muda,
++    // para identificar qual controle ficou com quem. Ex.:
++    //   [Orochi:pad] jogador 1: controle 0 (Xbox Controller)
++    //   [Orochi:pad] jogador 2: sem controle
++    // Fora de foco a janela devolve -1; isso nao e registrado para nao
++    // encher o log cada vez que o usuario troca de janela.
++    void logPlayerControllerWhenItChanges(int port, int gamepad)
++    {
++        static std::array<int, 2> lastLoggedGamepad{-2, -2};
++        if (port < 0 || port >= 2 || !IsWindowFocused() || lastLoggedGamepad[port] == gamepad)
++            return;
++        lastLoggedGamepad[port] = gamepad;
++        if (gamepad >= 0)
++            std::cout << "[Orochi:pad] jogador " << (port + 1) << ": controle " << gamepad << " ("
++                      << GetGamepadName(gamepad) << ")" << std::endl;
++        else
++            std::cout << "[Orochi:pad] jogador " << (port + 1) << ": sem controle" << std::endl;
++    }
+ }
+ 
+ bool PSPadBackend::readState(int port, int /*slot*/, uint8_t *data, size_t size)
+@@ -93,7 +330,11 @@ bool PSPadBackend::readState(int port, int /*slot*/, uint8_t *data, size_t size)
+     { btns &= ~mask; };
+ 
+     loadGamepadMappingsOnce();
+-    const int gamepad = gamepadForPort(port);
++    // [patch 0054] Linha original desativada: o controle agora vem da escolha
++    // do Setup (gamepadIndexForPlayerPort), nao so da ordem de conexao.
++    // const int gamepad = gamepadForPort(port);
++    const int gamepad = gamepadIndexForPlayerPort(port);
++    logPlayerControllerWhenItChanges(port, gamepad);
+     if (gamepad >= 0)
+     {
+         struct ButtonMap
+@@ -119,16 +360,33 @@ bool PSPadBackend::readState(int port, int /*slot*/, uint8_t *data, size_t size)
+             {GAMEPAD_BUTTON_LEFT_THUMB, PAD_L3},
+             {GAMEPAD_BUTTON_RIGHT_THUMB, PAD_R3},
+         };
+-        for (const auto &entry : kButtons)
++        // [patch 0054] Bloco original desativado: a tabela fixa kButtons (acima,
++        // mantida como referencia do padrao) e os gatilhos fixos em L2/R2 foram
++        // trocados pelo mapa de botoes de cada jogador, logo abaixo.
++        // for (const auto &entry : kButtons)
++        // {
++        //     if (IsGamepadButtonDown(gamepad, entry.button))
++        //         clearBit(entry.mask);
++        // }
++        // // XInput triggers are axes in [-1, 1]; not every mapping mirrors them as buttons.
++        // if (GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_TRIGGER) > kTriggerThreshold)
++        //     clearBit(PAD_L2);
++        // if (GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_RIGHT_TRIGGER) > kTriggerThreshold)
++        //     clearBit(PAD_R2);
++        (void)kButtons; // so referencia; evita aviso de variavel sem uso
++
++        // [patch 0054] Para cada botao do PS2, olha o botao fisico escolhido
++        // para este jogador. Portas 2/3 (multitap) usam o mapa padrao.
++        // Ex.: com o padrao, apertar "A" do Xbox (botao 7) libera PAD_CROSS (X).
++        // Os gatilhos contam pelo eixo tambem (isPhysicalGamepadButtonDown).
++        const std::array<int, 16> &physicalButtonForEachPs2Button =
++            port < 2 ? controllerSettingsFromEnvironment().buttonMapForPlayerPort[port]
++                     : kOrochiDefaultPhysicalButtonForEachPs2Button;
++        for (size_t ps2Button = 0; ps2Button < kOrochiPs2ButtonMasksInSettingsOrder.size(); ++ps2Button)
+         {
+-            if (IsGamepadButtonDown(gamepad, entry.button))
+-                clearBit(entry.mask);
++            if (isPhysicalGamepadButtonDown(gamepad, physicalButtonForEachPs2Button[ps2Button]))
++                clearBit(kOrochiPs2ButtonMasksInSettingsOrder[ps2Button]);
+         }
+-        // XInput triggers are axes in [-1, 1]; not every mapping mirrors them as buttons.
+-        if (GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_TRIGGER) > kTriggerThreshold)
+-            clearBit(PAD_L2);
+-        if (GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_RIGHT_TRIGGER) > kTriggerThreshold)
+-            clearBit(PAD_R2);
+ 
+         data[6] = axisToByte(GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_X));
+         data[7] = axisToByte(GetGamepadAxisMovement(gamepad, GAMEPAD_AXIS_LEFT_Y));
+@@ -137,7 +395,11 @@ bool PSPadBackend::readState(int port, int /*slot*/, uint8_t *data, size_t size)
+     }
+ 
+     // The keyboard always drives player 1, together with any gamepad on port 0.
+-    if (port == 0)
++    // [patch 0054] Linha original desativada: o teclado agora controla o
++    // jogador escolhido no Setup (OROCHI_KEYBOARD_PLAYER; padrao jogador 1,
++    // entao sem configuracao nada muda). -1 = teclado desligado.
++    // if (port == 0)
++    if (port == controllerSettingsFromEnvironment().keyboardPlayerPort)
+     {
+         if (IsKeyDown(KEY_UP))
+             clearBit(PAD_UP);

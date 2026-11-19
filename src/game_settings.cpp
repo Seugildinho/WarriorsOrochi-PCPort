@@ -74,6 +74,15 @@ void applyOrochiSettings(const OrochiSettings &settings)
     //                    vazamento de textura e meio-pixel nativo (sem as linhas
     //                    que o upscale criava no HUD e nos efeitos)
     // Exemplo com tudo padrao: "deinterlace=1,fxaa=0,edge=1,hpo=5".
+    // Controles -> variaveis lidas por ps2_pad.cpp (patch 0054). Ex.:
+    //   OROCHI_PAD_PLAYER1=0:Xbox Controller   OROCHI_PAD_PLAYER2=auto
+    //   OROCHI_KEYBOARD_PLAYER=1
+    //   OROCHI_PAD_BUTTONS_PLAYER1=1,3,4,2,7,6,8,5,9,11,10,12,15,13,16,17
+    setDefault("OROCHI_PAD_PLAYER1", settings.padPlayer[0]);
+    setDefault("OROCHI_PAD_PLAYER2", settings.padPlayer[1]);
+    setDefault("OROCHI_KEYBOARD_PLAYER", std::to_string(settings.keyboardPlayer));
+    setDefault("OROCHI_PAD_BUTTONS_PLAYER1", orochiPadButtonMapToText(settings.padButtons[0]));
+    setDefault("OROCHI_PAD_BUTTONS_PLAYER2", orochiPadButtonMapToText(settings.padButtons[1]));
     setDefault("OROCHI_PCSX2_FIXES", std::string("deinterlace=") + (settings.deinterlace ? "0" : "1") +
                                          ",fxaa=" + (settings.fxaa ? "1" : "0") +
                                          (settings.seamFix ? ",edge=1,hpo=5" : ",edge=0"));

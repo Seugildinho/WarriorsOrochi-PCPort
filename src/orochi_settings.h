@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+// Para os mapas de botoes dos controles (16 botoes do PS2 por jogador).
+#include <array>
 
 inline constexpr wchar_t kOrochiGameProgram[] = L"WarriorsOrochi.exe";
 inline constexpr wchar_t kOrochiSetupProgram[] = L"WarriorsOrochi-Setup.exe";
@@ -19,6 +21,30 @@ struct OrochiWindowSize
 {
     int width, height;
 };
+
+// ---------------------------------------------------------------------------
+// CONTROLES: botoes do PS2 na ordem usada pelo ini, pelo Setup e pelo runtime
+// (vendor/PS2Recomp/ps2xRuntime/src/lib/ps2_pad.cpp, patch 0054). NAO mude a
+// ordem: ela e o formato salvo no orochi-settings.ini.
+//   0 cima, 1 baixo, 2 esquerda, 3 direita, 4 X, 5 circulo, 6 quadrado,
+//   7 triangulo, 8 L1, 9 R1, 10 L2, 11 R2, 12 Start, 13 Select, 14 L3, 15 R3
+// Cada posicao guarda o botao FISICO do controle, no numero do enum
+// GamepadButton do raylib: 1 direcional cima, 2 direita, 3 baixo, 4 esquerda,
+// 5 botao de cima (Y/triangulo), 6 da direita (B/circulo), 7 de baixo
+// (A/X), 8 da esquerda (X/quadrado), 9 LB/L1, 10 LT/L2, 11 RB/R1, 12 RT/R2,
+// 13 Back/Select, 14 Guide/PS, 15 Start, 16 analogico esquerdo apertado,
+// 17 analogico direito apertado; 0 = nenhum.
+// ---------------------------------------------------------------------------
+inline constexpr int kOrochiPs2ButtonCount = 16;
+using OrochiPadButtonMap = std::array<int, kOrochiPs2ButtonCount>;
+// Padrao: o mesmo layout de sempre (A do Xbox = X do PS2, B = circulo...).
+inline constexpr OrochiPadButtonMap kOrochiDefaultPadButtonMap = {1, 3, 4, 2, 7, 6, 8, 5, 9, 11, 10, 12, 15, 13, 16, 17};
+
+// Texto <-> mapa, no formato do ini e da variavel OROCHI_PAD_BUTTONS_PLAYERn.
+// Ex.: kOrochiDefaultPadButtonMap <-> "1,3,4,2,7,6,8,5,9,11,10,12,15,13,16,17".
+// Texto invalido (faltando numero, fora de 0..17) devolve o padrao inteiro.
+std::string orochiPadButtonMapToText(const OrochiPadButtonMap &map);
+OrochiPadButtonMap orochiPadButtonMapFromText(const std::string &text);
 
 struct OrochiSettings
 {
@@ -45,6 +71,16 @@ struct OrochiSettings
     bool autoSave = true;
     // Cheats (OROCHI_CHEATS): damage ignored; life, musou and growth points kept full.
     bool cheatInvincible = false, cheatLife = false, cheatMusou = false, cheatPoints = false;
+    // Controles (aba Controles do Setup; lidos no jogo por ps2_pad.cpp):
+    //   padPlayer[0] / padPlayer[1]: controle do jogador 1 / 2:
+    //     "auto" (automatico), "none" (nenhum) ou "<indice>:<nome>",
+    //     ex.: "0:Xbox Controller".
+    //   keyboardPlayer: 1 ou 2 = jogador que o teclado controla, 0 = desligado.
+    //   padButtons[0] / padButtons[1]: mapa de botoes de cada jogador
+    //     (formato explicado em kOrochiPs2ButtonCount, acima).
+    std::array<std::string, 2> padPlayer{"auto", "auto"};
+    int keyboardPlayer = 1;
+    std::array<OrochiPadButtonMap, 2> padButtons{kOrochiDefaultPadButtonMap, kOrochiDefaultPadButtonMap};
     std::string disc; // full path, in UTF-8; empty until one is chosen
 
     // wide(): 16:9 de fato ativo (so funciona com o renderizador PCSX2).

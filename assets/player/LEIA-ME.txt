@@ -21,6 +21,20 @@ Controles de jogo conectados ao Windows tambem funcionam.
 F10 alterna entre tela cheia e janela. Para fechar o jogo, use Alt+F4.
 F12 salva um screenshot (screenshot-data-hora.png) na pasta data.
 
+CONTROLES DE JOGO (aba Controles do Setup)
+- Controle do jogador 1 / 2: Automatico (o 1o controle livre vai para o
+  jogador 1, o seguinte para o jogador 2), Nenhum, ou um controle especifico.
+  O controle escolhido e reconhecido pelo nome, mesmo se mudar de porta USB.
+- A lista abaixo das opcoes mostra os controles conectados e de qual jogador
+  e cada um. Aperte um botao no controle e ele acende na lista.
+- Teclado controla: jogador 1 (padrao), jogador 2 ou ninguem. Assim da para
+  jogar a dois com um controle e o teclado.
+- Botoes do jogador 1 / 2: escolha a acao, aperte Enter (ou clique) e depois
+  o botao do controle que vai fazer essa acao. Se o botao ja fizer outra
+  acao, as duas trocam. Delete volta uma acao ao padrao, R restaura todas.
+- O log data\port.log registra qual controle ficou com cada jogador, por
+  exemplo: "[Orochi:pad] jogador 1: controle 0 (Xbox Controller)".
+
 SOLDADOS NA TELA
 No original, so os soldados mais proximos aparecem de corpo inteiro; os mais
 distantes mostram so a barra de vida. Em Graficos > "Soldados desenhados" da

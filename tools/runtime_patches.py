@@ -26,7 +26,15 @@ def synchronize(port, vendor, revision, apply=False):
             raise RuntimeError(f'Unsafe patch path: {name}')
     known = {name: set() for name in paths}
     (port/'local').mkdir(exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='patch-replay-', dir=port/'local') as directory:
+    # Linha original desativada: a pasta temporaria ficava em port_pc/local.
+    # Desde que port_pc virou um repositorio git, "git apply" rodando la dentro
+    # usa caminhos relativos a RAIZ do repositorio (nao a pasta temporaria):
+    # nada era aplicado, arquivos novos de patch (ex.: iop_spu2.cpp do 0041)
+    # nao eram criados e a verificacao falhava com FileNotFoundError.
+    # A pasta temporaria do sistema (ex.: C:\Users\<voce>\AppData\Local\Temp)
+    # fica fora do repositorio, entao "git apply" volta a usar a pasta atual.
+    # with tempfile.TemporaryDirectory(prefix='patch-replay-', dir=port/'local') as directory:
+    with tempfile.TemporaryDirectory(prefix='orochi-patch-replay-') as directory:
         stage = Path(directory)
         for name in paths:
             source = subprocess.run(['git', '-C', str(vendor), 'show', f'{revision}:{name}'],
